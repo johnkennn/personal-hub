@@ -4,12 +4,22 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.5;
+  color: #222;
+  background: #fafafa;
 }
 
-#root {
-  min-height: 100vh;
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
 }

@@ -1,18 +1,20 @@
-import { Route, Routes } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 
+import { MainLayout } from '../layouts/MainLayout'
 import { AboutPage } from '../pages/About'
 import { BlogPage } from '../pages/Blog'
 import { HomePage } from '../pages/Home'
 import { ProjectsPage } from '../pages/Projects'
-import { ROUTES } from './paths'
 
-export function AppRouter() {
-  return (
-    <Routes>
-      <Route path={ROUTES.HOME} element={<HomePage />} />
-      <Route path={ROUTES.ABOUT} element={<AboutPage />} />
-      <Route path={ROUTES.BLOG} element={<BlogPage />} />
-      <Route path={ROUTES.PROJECTS} element={<ProjectsPage />} />
-    </Routes>
-  )
-}
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <MainLayout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'about', element: <AboutPage /> },
+      { path: 'blog', element: <BlogPage /> },
+      { path: 'projects', element: <ProjectsPage /> },
+    ],
+  },
+])
