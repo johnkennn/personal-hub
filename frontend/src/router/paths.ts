@@ -4,6 +4,8 @@ export const ROUTES = {
   BLOG: '/blog',
   BLOG_DETAIL: '/blog/:id',
   PROJECTS: '/projects',
+  LOGIN: '/login',
+  ARTICLE_NEW: '/blog/new',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]

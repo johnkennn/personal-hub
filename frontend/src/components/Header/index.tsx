@@ -1,9 +1,32 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, NavLink } from 'react-router-dom'
 
-import { NAV_ITEMS } from '../../router/paths'
+import {
+  clearAuth,
+  getUsername,
+  isLoggedIn,
+  subscribeAuthChange,
+} from '../../utils/authStorage'
+import { NAV_ITEMS, ROUTES } from '../../router/paths'
 import styles from './Header.module.css'
 
 export function Header() {
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
+  const [username, setUsername] = useState(getUsername)
+
+  useEffect(() => {
+    const sync = () => {
+      setLoggedIn(isLoggedIn())
+      setUsername(getUsername())
+    }
+
+    return subscribeAuthChange(sync)
+  }, [])
+
+  function handleLogout() {
+    clearAuth()
+  }
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -24,6 +47,18 @@ export function Header() {
             </NavLink>
           ))}
         </nav>
+        <div>
+          {loggedIn ? (
+            <>
+              <span>{username}</span>{' '}
+              <button type="button" onClick={handleLogout}>
+                退出
+              </button>
+            </>
+          ) : (
+            <Link to={ROUTES.LOGIN}>Login</Link>
+          )}
+        </div>
       </div>
     </header>
   )

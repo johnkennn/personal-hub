@@ -7,7 +7,7 @@ export function HomePage() {
 
   useEffect(() => {
     fetchHello().then((res) => {
-      console.log(res)
+      // console.log(res)
       setText(res.data.data)
     }).catch(() => {
       setText('接口请求失败')
