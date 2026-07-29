@@ -8,6 +8,7 @@ import { HomePage } from '../pages/Home'
 import { ProjectsPage } from '../pages/Projects'
 import { LoginPage } from '../pages/Login'
 import { ArticleNewPage } from '../pages/Blog/New'
+import { ProjectDetailPage } from '../pages/Projects/Details'
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,8 @@ export const router = createBrowserRouter([
       { path: 'blog/:id', element: <BlogDetailPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'login', element: <LoginPage /> },
+      { path: 'projects', element: <ProjectsPage /> },
+      { path: 'projects/:id', element: <ProjectDetailPage /> },
     ],
   },
 ])

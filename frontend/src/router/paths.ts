@@ -6,6 +6,7 @@ export const ROUTES = {
   PROJECTS: '/projects',
   LOGIN: '/login',
   ARTICLE_NEW: '/blog/new',
+  PROJECT_DETAIL: '/projects/:id',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
@@ -19,4 +20,8 @@ export const NAV_ITEMS = [
 
 export function blogDetailPath(id: number | string) {
   return `/blog/${id}`
+}
+
+export function projectDetailPath(id: number | string) {
+  return `/projects/${id}`
 }

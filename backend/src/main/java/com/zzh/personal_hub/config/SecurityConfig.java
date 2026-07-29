@@ -36,6 +36,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/articles", "/api/articles/*").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/articles").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/*").permitAll()
                     .anyRequest().permitAll()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
