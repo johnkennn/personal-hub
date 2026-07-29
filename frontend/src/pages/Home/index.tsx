@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import { fetchHello } from '../../api/hello'
+import { ROUTES } from '../../router/paths'
 
 export function HomePage() {
-  const [text, setText] = useState('')
+  return (
+    <div>
+      <p>Personal Hub</p>
+      <h1>用作品与文字，记录全栈成长</h1>
+      <p>
+        这里是我的个人站点：分享技术博客，展示项目实践，并持续迭代可上线的工程能力。
+      </p>
 
-  useEffect(() => {
-    fetchHello().then((res) => {
-      // console.log(res)
-      setText(res.data.data)
-    }).catch(() => {
-      setText('接口请求失败')
-    })
-  }, [])
-
-  return <h1>{text}</h1>
+      <p>
+        <Link to={ROUTES.BLOG}>阅读博客</Link>
+        {' · '}
+        <Link to={ROUTES.PROJECTS}>查看项目</Link>
+        {' · '}
+        <Link to={ROUTES.ABOUT}>关于我</Link>
+      </p>
+    </div>
+  )
 }
