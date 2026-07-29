@@ -4,6 +4,7 @@ import com.zzh.personal_hub.blog.entity.Article;
 import com.zzh.personal_hub.blog.repository.ArticleRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.blog.dto.ArticleCreateRequest;
+import com.zzh.personal_hub.blog.dto.ArticleUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
@@ -32,6 +33,17 @@ public class ArticleService {
         article.setContent(request.getContent());
         article.setPublished(Boolean.TRUE.equals(request.getPublished()));
         article.setCreatedAt(Instant.now());
+        article.setUpdatedAt(Instant.now());
+        return articleRepository.save(article);
+    }
+
+    public Article updateArticle(Long id, ArticleUpdateRequest request) {
+        Article article = articleRepository
+                .findById(id)
+                .orElseThrow(() -> new BusinessException(404, "文章不存在"));
+        article.setTitle(request.getTitle());
+        article.setContent(request.getContent());
+        article.setPublished(request.getPublished());
         article.setUpdatedAt(Instant.now());
         return articleRepository.save(article);
     }

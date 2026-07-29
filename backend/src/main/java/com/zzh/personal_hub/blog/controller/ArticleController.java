@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import com.zzh.personal_hub.blog.dto.ArticleUpdateRequest;
 
 import jakarta.validation.Valid;
 
@@ -39,5 +41,12 @@ public class ArticleController {
     @PostMapping
     public ApiResponse<Article> create(@Valid @RequestBody ArticleCreateRequest request) {
         return ApiResponse.success(articleService.createArticle(request));
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<Article> update(
+            @PathVariable Long id,
+            @Valid @RequestBody ArticleUpdateRequest request) {
+        return ApiResponse.success(articleService.updateArticle(id, request));
     }
 }
