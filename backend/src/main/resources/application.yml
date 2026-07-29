@@ -1,0 +1,24 @@
+app:
+  jwt:
+    secret: ${JWT_SECRET:personal-hub-dev-secret-key-change-me-32b}
+    expiration-ms: 86400000   # 24 小时
+spring:
+  application:
+    name: personal-hub
+  profiles:
+    active: local
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/personal_hub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: ${DB_PASSWORD:changeme}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

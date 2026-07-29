@@ -2,6 +2,7 @@ export const ROUTES = {
   HOME: '/',
   ABOUT: '/about',
   BLOG: '/blog',
+  BLOG_DETAIL: '/blog/:id',
   PROJECTS: '/projects',
 } as const
 
@@ -13,3 +14,7 @@ export const NAV_ITEMS = [
   { path: ROUTES.BLOG, label: 'Blog' },
   { path: ROUTES.PROJECTS, label: 'Projects' },
 ] as const
+
+export function blogDetailPath(id: number | string) {
+  return `/blog/${id}`
+}

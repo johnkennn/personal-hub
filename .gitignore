@@ -47,3 +47,7 @@ target/
 # Temporary
 # =========================
 *.tmp
+# =========================
+# Local secrets (do not commit)
+# =========================
+**/application-local.yml
