@@ -10,6 +10,8 @@ import { LoginPage } from '../pages/Login'
 import { ArticleNewPage } from '../pages/Blog/New'
 import { ProjectDetailPage } from '../pages/Projects/Details'
 import { ProjectNewPage } from '../pages/Projects/New'
+import { ArticleEditPage } from '../pages/Blog/Edit'
+import { ProjectEditPage } from '../pages/Projects/Edit'
 
 export const router = createBrowserRouter([
   {
@@ -20,10 +22,12 @@ export const router = createBrowserRouter([
       { path: 'about', element: <AboutPage /> },
       { path: 'blog', element: <BlogPage /> },
       { path: 'blog/new', element: <ArticleNewPage /> },
+      { path: 'blog/:id/edit', element: <ArticleEditPage /> },
       { path: 'blog/:id', element: <BlogDetailPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/new', element: <ProjectNewPage /> },
+      { path: 'projects/:id/edit', element: <ProjectEditPage /> },
       { path: 'projects/:id', element: <ProjectDetailPage /> },
     ],
   },

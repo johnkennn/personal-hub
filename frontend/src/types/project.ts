@@ -18,3 +18,12 @@ export interface Project {
     demoUrl?: string
     published?: boolean
   }
+
+  export interface ProjectUpdateRequest {
+    name: string
+    description: string
+    techStack?: string
+    repoUrl?: string
+    demoUrl?: string
+    published: boolean
+  }

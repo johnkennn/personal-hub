@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -38,6 +39,11 @@ public class ArticleController {
         return ApiResponse.success(articleService.getPublishedById(id));
     }
 
+    @GetMapping("/{id}/manage")
+    public ApiResponse<Article> manageDetail(@PathVariable Long id) {
+        return ApiResponse.success(articleService.getById(id));
+    }
+
     @PostMapping
     public ApiResponse<Article> create(@Valid @RequestBody ArticleCreateRequest request) {
         return ApiResponse.success(articleService.createArticle(request));
@@ -48,5 +54,11 @@ public class ArticleController {
             @PathVariable Long id,
             @Valid @RequestBody ArticleUpdateRequest request) {
         return ApiResponse.success(articleService.updateArticle(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        articleService.deleteArticle(id);
+        return ApiResponse.success(null);
     }
 }

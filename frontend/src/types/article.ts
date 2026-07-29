@@ -12,3 +12,9 @@
     content: string
     published?: boolean
   }
+
+  export interface ArticleUpdateRequest {
+    title: string
+    content: string
+    published: boolean
+  }

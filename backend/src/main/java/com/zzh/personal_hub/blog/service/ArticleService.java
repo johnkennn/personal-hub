@@ -21,6 +21,12 @@ public class ArticleService {
         return articleRepository.findByPublishedTrueOrderByCreatedAtDesc();
     }
 
+    public Article getById(Long id) {
+        return articleRepository
+                .findById(id)
+                .orElseThrow(() -> new BusinessException(404, "文章不存在"));
+    }
+
     public Article getPublishedById(Long id) {
         return articleRepository
                 .findByIdAndPublishedTrue(id)
@@ -46,5 +52,12 @@ public class ArticleService {
         article.setPublished(request.getPublished());
         article.setUpdatedAt(Instant.now());
         return articleRepository.save(article);
+    }
+
+    public void deleteArticle(Long id) {
+        if (!articleRepository.existsById(id)) {
+            throw new BusinessException(404, "文章不存在");
+        }
+        articleRepository.deleteById(id);
     }
 }

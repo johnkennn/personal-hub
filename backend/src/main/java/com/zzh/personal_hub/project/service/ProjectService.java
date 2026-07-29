@@ -1,5 +1,6 @@
 package com.zzh.personal_hub.project.service;
 import com.zzh.personal_hub.project.dto.ProjectCreateRequest;
+import com.zzh.personal_hub.project.dto.ProjectUpdateRequest;
 import java.time.Instant;
 import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.project.repository.ProjectRepository;
@@ -25,6 +26,12 @@ public class ProjectService {
                 .orElseThrow(() -> new BusinessException(404, "项目不存在"));
     }
 
+    public Project getById(Long id) {
+        return projectRepository
+                .findById(id)
+                .orElseThrow(() -> new BusinessException(404, "项目不存在"));
+    }
+
     public Project create(ProjectCreateRequest request) {
         Project project = new Project();
         project.setName(request.getName());
@@ -36,5 +43,24 @@ public class ProjectService {
         project.setCreatedAt(Instant.now());
         project.setUpdatedAt(Instant.now());
         return projectRepository.save(project);
+    }
+
+    public Project update(Long id, ProjectUpdateRequest request) {
+        Project project = getById(id);
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
+        project.setTechStack(request.getTechStack());
+        project.setRepoUrl(request.getRepoUrl());
+        project.setDemoUrl(request.getDemoUrl());
+        project.setPublished(request.getPublished());
+        project.setUpdatedAt(Instant.now());
+        return projectRepository.save(project);
+    }
+
+    public void delete(Long id) {
+        if (!projectRepository.existsById(id)) {
+            throw new BusinessException(404, "项目不存在");
+        }
+        projectRepository.deleteById(id);
     }
 }

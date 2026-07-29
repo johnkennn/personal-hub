@@ -3,11 +3,13 @@ export const ROUTES = {
   ABOUT: '/about',
   BLOG: '/blog',
   BLOG_DETAIL: '/blog/:id',
+  ARTICLE_EDIT: '/blog/:id/edit',
   PROJECTS: '/projects',
   LOGIN: '/login',
   ARTICLE_NEW: '/blog/new',
   PROJECT_DETAIL: '/projects/:id',
   PROJECT_NEW: '/projects/new',
+  PROJECT_EDIT: '/projects/:id/edit',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
@@ -25,4 +27,12 @@ export function blogDetailPath(id: number | string) {
 
 export function projectDetailPath(id: number | string) {
   return `/projects/${id}`
+}
+
+export function blogEditPath(id: number | string) {
+  return `/blog/${id}/edit`
+}
+
+export function projectEditPath(id: number | string) {
+  return `/projects/${id}/edit`
 }

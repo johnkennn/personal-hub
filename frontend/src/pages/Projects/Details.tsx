@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 
-import { fetchProjectById } from '../../api/project'
-import { ROUTES } from '../../router/paths'
+import { fetchProjectById, deleteProject } from '../../api/project'
+import { ROUTES, projectEditPath } from '../../router/paths'
 import type { Project } from '../../types/project'
-
+import { isLoggedIn } from '../../utils/authStorage'
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [project, setProject] = useState<Project | null>(null)
   const [error, setError] = useState('')
-
+  const navigate = useNavigate()
   useEffect(() => {
     if (!id) return
 
@@ -47,6 +47,12 @@ export function ProjectDetailPage() {
     return <p>加载中...</p>
   }
 
+  async function handleDelete() {
+    if (!window.confirm('确认删除这个项目？不可恢复')) return
+    await deleteProject(project.id)
+    navigate(ROUTES.PROJECTS)
+  }
+
   return (
     <article>
       <p>
@@ -67,6 +73,12 @@ export function ProjectDetailPage() {
           <a href={project.demoUrl} target="_blank" rel="noreferrer">
             Demo
           </a>
+        </p>
+      ) : null}
+      {isLoggedIn() ? (
+        <p>
+          <Link to={projectEditPath(id)}>编辑</Link>
+          <button onClick={handleDelete}>删除</button>
         </p>
       ) : null}
     </article>

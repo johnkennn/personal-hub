@@ -11,5 +11,16 @@ export function fetchArticles() {
 }
 
 export function fetchArticleById(id: number | string) {
-    return request.get<ApiResponse<Article>>(`/api/articles/${id}`)
-  }
+  return request.get<ApiResponse<Article>>(`/api/articles/${id}`)
+}
+
+export function fetchArticleForManage(id: number | string) {
+  return request.get<ApiResponse<Article>>(`/api/articles/${id}/manage`)
+}
+export function updateArticle(id: number | string, data: ArticleUpdateRequest) {
+  return request.put<ApiResponse<Article>>(`/api/articles/${id}`, data)
+}
+
+export function deleteArticle(id: number | string) {
+  return request.delete<ApiResponse<null>>(`/api/articles/${id}`)
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 import {
   clearAuth,
@@ -11,6 +11,7 @@ import { NAV_ITEMS, ROUTES } from '../../router/paths'
 import styles from './Header.module.css'
 
 export function Header() {
+  const navigate = useNavigate()
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [username, setUsername] = useState(getUsername)
 
@@ -25,6 +26,8 @@ export function Header() {
 
   function handleLogout() {
     clearAuth()
+    // Leave admin contexts (edit/new/detail with manage actions) after logout
+    navigate(ROUTES.HOME, { replace: true })
   }
 
   return (

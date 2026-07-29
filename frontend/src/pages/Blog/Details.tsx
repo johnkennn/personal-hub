@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 
-import { fetchArticleById } from '../../api/blog'
-import { ROUTES } from '../../router/paths'
+import { fetchArticleById, deleteArticle } from '../../api/blog'
+import { ROUTES,blogEditPath } from '../../router/paths'
+import { isLoggedIn } from '../../utils/authStorage'
 import type { Article } from '../../types/article'
 
 export function BlogDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [article, setArticle] = useState<Article | null>(null)
   const [error, setError] = useState('')
-
+  const navigate = useNavigate()
   useEffect(() => {
     if (!id) return
 
@@ -47,6 +48,12 @@ export function BlogDetailPage() {
     return <p>加载中...</p>
   }
 
+  async function handleDelete() {
+    if (!window.confirm('确认删除这篇文章？不可恢复')) return
+    await deleteArticle(article.id)
+    navigate(ROUTES.BLOG)
+  }
+
   return (
     <article>
       <p>
@@ -54,6 +61,12 @@ export function BlogDetailPage() {
       </p>
       <h1>{article.title}</h1>
       <div>{article.content}</div>
+      {isLoggedIn() ? (
+        <p>
+          <Link to={blogEditPath(id)}>编辑</Link>
+          <button onClick={handleDelete}>删除</button>
+        </p>
+      ) : null}
     </article>
   )
 }
