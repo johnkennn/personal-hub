@@ -30,6 +30,11 @@ public class ProjectController {
         return ApiResponse.success(projectService.listPublished());
     }
 
+    @GetMapping("/manage")
+    public ApiResponse<List<Project>> listAll() {
+        return ApiResponse.success(projectService.listAll());
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<Project> get(@PathVariable Long id) {
         return ApiResponse.success(projectService.getPublishedById(id));

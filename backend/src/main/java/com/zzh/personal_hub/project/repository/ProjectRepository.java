@@ -10,4 +10,5 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     List<Project> findByPublishedTrueOrderByCreatedAtDesc();
     Optional<Project> findByIdAndPublishedTrue(Long id);
+    List<Project> findAllByOrderByUpdatedAtDesc();
 }

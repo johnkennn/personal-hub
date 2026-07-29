@@ -9,6 +9,7 @@ export function ProjectEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
+  const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [techStack, setTechStack] = useState('')

@@ -7,9 +7,11 @@ export const ROUTES = {
   PROJECTS: '/projects',
   LOGIN: '/login',
   ARTICLE_NEW: '/blog/new',
+  ADMIN_ARTICLES: '/admin/articles',
   PROJECT_DETAIL: '/projects/:id',
   PROJECT_NEW: '/projects/new',
   PROJECT_EDIT: '/projects/:id/edit',
+  ADMIN_PROJECTS: '/admin/projects',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]

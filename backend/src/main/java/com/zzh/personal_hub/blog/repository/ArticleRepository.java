@@ -9,4 +9,5 @@ import java.util.Optional; // 可选的
 public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findByPublishedTrueOrderByCreatedAtDesc();
     Optional<Article> findByIdAndPublishedTrue(Long id);
+    List<Article> findAllByOrderByUpdatedAtDesc();
 }

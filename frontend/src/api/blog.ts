@@ -24,3 +24,7 @@ export function updateArticle(id: number | string, data: ArticleUpdateRequest) {
 export function deleteArticle(id: number | string) {
   return request.delete<ApiResponse<null>>(`/api/articles/${id}`)
 }
+
+export function fetchAllArticles() {
+  return request.get<ApiResponse<Article[]>>('/api/articles/manage')
+}

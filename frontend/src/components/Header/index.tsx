@@ -54,6 +54,8 @@ export function Header() {
           {loggedIn ? (
             <>
               <span>{username}</span>{' '}
+              <Link to={ROUTES.ADMIN_ARTICLES}>文章管理</Link>{' '}
+              <Link to={ROUTES.ADMIN_PROJECTS}>项目管理</Link>{' '}
               <button type="button" onClick={handleLogout}>
                 退出
               </button>

@@ -23,3 +23,6 @@ export function createProject(data: ProjectCreateRequest) {
   export function deleteProject(id: number | string) {
     return request.delete<ApiResponse<null>>(`/api/projects/${id}`)
   }
+export function fetchAllProjects() {
+  return request.get<ApiResponse<Project[]>>('/api/projects/manage')
+}

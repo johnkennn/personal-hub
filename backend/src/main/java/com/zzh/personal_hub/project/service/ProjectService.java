@@ -63,4 +63,8 @@ public class ProjectService {
         }
         projectRepository.deleteById(id);
     }
+
+    public List<Project> listAll() {
+        return projectRepository.findAllByOrderByUpdatedAtDesc();
+    }
 }

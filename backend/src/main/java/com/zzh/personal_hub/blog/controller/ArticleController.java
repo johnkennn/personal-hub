@@ -34,6 +34,11 @@ public class ArticleController {
         return ApiResponse.success(articleService.listPublished());
     }
 
+    @GetMapping("/manage")
+    public ApiResponse<List<Article>> listAll() {
+        return ApiResponse.success(articleService.listAll());
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<Article> detail(@PathVariable Long id) {
         return ApiResponse.success(articleService.getPublishedById(id));

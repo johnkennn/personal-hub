@@ -60,4 +60,8 @@ public class ArticleService {
         }
         articleRepository.deleteById(id);
     }
+
+    public List<Article> listAll() {
+        return articleRepository.findAllByOrderByUpdatedAtDesc();
+    }
 }
