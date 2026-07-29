@@ -9,3 +9,12 @@ export interface Project {
     createdAt: string
     updatedAt: string
   }
+
+  export interface ProjectCreateRequest {
+    name: string
+    description: string
+    techStack?: string
+    repoUrl?: string
+    demoUrl?: string
+    published?: boolean
+  }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { projectDetailPath } from '../../router/paths'
+import { ROUTES,projectDetailPath } from '../../router/paths'
+import { isLoggedIn } from '../../utils/authStorage'
 
 import { fetchProjects } from '../../api/project'
 import type { Project } from '../../types/project'
@@ -22,6 +23,11 @@ export function ProjectsPage() {
   return (
     <div>
       <h1>Projects</h1>
+      {isLoggedIn() ? (
+        <p>
+          <Link to={ROUTES.PROJECT_NEW}>新建项目</Link>
+        </p>
+      ) : null}
       <ul>
         {projects.map((project) => (
           <li key={project.id}>
