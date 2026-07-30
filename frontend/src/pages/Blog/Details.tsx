@@ -48,9 +48,11 @@ export function BlogDetailPage() {
     return <p>加载中...</p>
   }
 
+  const currentArticle = article
+
   async function handleDelete() {
     if (!window.confirm('确认删除这篇文章？不可恢复')) return
-    await deleteArticle(article.id)
+    await deleteArticle(currentArticle.id)
     navigate(ROUTES.BLOG)
   }
 

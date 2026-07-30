@@ -47,9 +47,11 @@ export function ProjectDetailPage() {
     return <p>加载中...</p>
   }
 
+  const currentProject = project
+
   async function handleDelete() {
     if (!window.confirm('确认删除这个项目？不可恢复')) return
-    await deleteProject(project.id)
+    await deleteProject(currentProject.id)
     navigate(ROUTES.PROJECTS)
   }
 

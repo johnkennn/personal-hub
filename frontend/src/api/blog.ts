@@ -1,7 +1,10 @@
 import { request } from './request'
 import type { ApiResponse } from '../types/api'
-import type { Article } from '../types/article'
-import type { ArticleCreateRequest } from '../types/article'
+import type {
+  Article,
+  ArticleCreateRequest,
+  ArticleUpdateRequest,
+} from '../types/article'
 
 export function createArticle(data: ArticleCreateRequest) {
   return request.post<ApiResponse<Article>>('/api/articles', data)

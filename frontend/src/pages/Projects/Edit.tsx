@@ -31,9 +31,9 @@ export function ProjectEditPage() {
         const project = res.data.data
         setName(project.name)
         setDescription(project.description)
-        setTechStack(project.techStack)
-        setRepoUrl(project.repoUrl)
-        setDemoUrl(project.demoUrl)
+        setTechStack(project.techStack ?? '')
+        setRepoUrl(project.repoUrl ?? '')
+        setDemoUrl(project.demoUrl ?? '')
         setPublished(project.published)
       })
       .catch(() => setError('加载项目失败'))
