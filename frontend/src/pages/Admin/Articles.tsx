@@ -1,60 +1,92 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { App, Button, Space, Table, Tag, Typography } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { motion } from 'framer-motion'
 
 import { deleteArticle, fetchAllArticles } from '../../api/blog'
-import { ROUTES, blogEditPath, blogDetailPath } from '../../router/paths'
+import { ROUTES, blogEditPath, articleDetailPath } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
 import type { Article } from '../../types/article'
+import styles from '../../styles/ui.module.css'
 
 export function AdminArticlesPage() {
   const navigate = useNavigate()
+  const { message, modal } = App.useApp()
   const [articles, setArticles] = useState<Article[]>([])
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
       return
     }
-
     fetchAllArticles()
-      .then((res) => setArticles(res.data.data))
-      .catch(() => setError('加载失败'))
-  }, [navigate])
+      .then((res) => setArticles(res.data.data ?? []))
+      .catch(() => message.error('加载失败'))
+      .finally(() => setLoading(false))
+  }, [navigate, message])
 
-  async function handleDelete(id: number) {
-    if (!window.confirm('确认删除？不可恢复')) return
-    await deleteArticle(id)
-    setArticles((prev) => prev.filter((item) => item.id !== id))
+  function handleDelete(id: number) {
+    modal.confirm({
+      title: '确认删除？',
+      okType: 'danger',
+      onOk: async () => {
+        await deleteArticle(id)
+        setArticles((prev) => prev.filter((item) => item.id !== id))
+        message.success('已删除')
+      },
+    })
   }
 
-  if (error) return <h1>{error}</h1>
+  const columns: ColumnsType<Article> = [
+    { title: '标题', dataIndex: 'title', ellipsis: true },
+    {
+      title: '状态',
+      dataIndex: 'published',
+      width: 100,
+      render: (published: boolean) =>
+        published ? <Tag color="success">已发布</Tag> : <Tag>草稿</Tag>,
+    },
+    {
+      title: '操作',
+      width: 220,
+      render: (_, article) => (
+        <Space>
+          {article.published ? (
+            <Link to={articleDetailPath(article.id)}>查看</Link>
+          ) : null}
+          <Link to={blogEditPath(article.id)}>编辑</Link>
+          <Button type="link" danger onClick={() => handleDelete(article.id)}>
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ]
 
   return (
-    <div>
-      <h1>文章管理</h1>
-      <p>
-        <Link to={ROUTES.ARTICLE_NEW}>新建文章</Link>
-      </p>
-      <ul>
-        {articles.map((article) => (
-          <li key={article.id}>
-            <strong>{article.title}</strong>
-            {' — '}
-            {article.published ? '已发布' : '草稿'}
-            {' · '}
-            {article.published ? (
-              <Link to={blogDetailPath(article.id)}>查看</Link>
-            ) : null}
-            {' · '}
-            <Link to={blogEditPath(article.id)}>编辑</Link>
-            {' · '}
-            <button type="button" onClick={() => handleDelete(article.id)}>
-              删除
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <div className={styles.pageHead}>
+        <Typography.Title level={2} className={styles.pageTitle}>
+          文章管理
+        </Typography.Title>
+        <Link to={ROUTES.ARTICLE_NEW}>
+          <Button type="primary">新建文章</Button>
+        </Link>
+      </div>
+      <Table
+        rowKey="id"
+        loading={loading}
+        columns={columns}
+        dataSource={articles}
+        pagination={{
+          pageSize: 5,
+          showSizeChanger: true,
+          pageSizeOptions: [5, 10, 20],
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+      />
+    </motion.div>
   )
 }

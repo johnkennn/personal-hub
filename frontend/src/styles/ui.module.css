@@ -1,0 +1,107 @@
+.panel {
+  width: 100%;
+  max-width: 420px;
+  margin: 2rem auto 0;
+  padding: 2rem 1.75rem 1.75rem !important;
+  border: 1px solid var(--ph-border) !important;
+  background: linear-gradient(
+    160deg,
+    rgba(26, 38, 33, 0.95),
+    rgba(15, 23, 20, 0.92)
+  ) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.widePanel {
+  max-width: 720px;
+}
+
+.brand {
+  margin: 0 0 0.35rem;
+  font-family: var(--ph-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ph-accent);
+  letter-spacing: 0.02em;
+}
+
+.pageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pageTitle {
+  margin: 0 !important;
+  font-family: var(--ph-font-display) !important;
+}
+
+.pageDesc {
+  margin: 0.35rem 0 0 !important;
+  color: var(--ph-muted) !important;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.contentCard {
+  height: 100%;
+  border: 1px solid var(--ph-border) !important;
+  background: rgba(22, 32, 28, 0.9) !important;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.contentCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(124, 184, 154, 0.45) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.cardLink {
+  color: inherit !important;
+  text-decoration: none;
+}
+
+.cardLink:hover {
+  color: inherit !important;
+}
+
+.articleBody {
+  max-width: 720px;
+  margin: 0 auto;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 1.05rem;
+  color: var(--ph-text);
+}
+
+.muted {
+  color: var(--ph-muted);
+}
+
+.section {
+  margin-top: 3rem;
+}
+
+.studioCard {
+  border: 1px solid var(--ph-border) !important;
+  background: rgba(22, 32, 28, 0.92) !important;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.studioCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(124, 184, 154, 0.5) !important;
+}

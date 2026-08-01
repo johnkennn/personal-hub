@@ -1,0 +1,59 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(72vh, 640px);
+  padding: 1rem 0 2rem;
+}
+
+.brand {
+  margin: 0 0 0.75rem;
+  font-family: var(--ph-font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ph-accent);
+  line-height: 1.15;
+}
+
+.headline {
+  margin: 0 0 0.75rem !important;
+  max-width: 16em;
+  font-family: var(--ph-font-display) !important;
+  font-size: clamp(1.5rem, 3.5vw, 2.15rem) !important;
+  font-weight: 600 !important;
+  color: var(--ph-text) !important;
+}
+
+.lead {
+  margin: 0 0 1.75rem !important;
+  max-width: 34em;
+  font-size: 1.05rem !important;
+  color: var(--ph-muted) !important;
+}
+
+.actions {
+  gap: 0.75rem !important;
+}
+
+.cta {
+  min-width: 7.5rem;
+}
+
+.ctaGhost {
+  background: var(--ph-accent-soft) !important;
+  border-color: transparent !important;
+  color: var(--ph-text) !important;
+}
+
+.ctaGhost:hover {
+  border-color: var(--ph-accent) !important;
+  color: var(--ph-accent) !important;
+}
+
+@media (max-width: 575px) {
+  .hero {
+    min-height: auto;
+    padding-top: 1.5rem;
+  }
+}

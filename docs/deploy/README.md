@@ -67,9 +67,32 @@ VITE_API_BASE_URL=
 
 ```bash
 cd frontend
+npm ci   # 或 npm install
 npm run build
 # 产物：dist/
 ```
+
+### 演示版：仅更新前端（推荐你本机执行）
+
+后端可暂不升级 jar；只刷新静态资源即可演示。
+
+```bash
+# 1) 本机打包
+cd /path/to/personal-hub/frontend
+npm install
+npm run build
+
+# 2) 上传 dist 到服务器（示例：rsync）
+rsync -avz --delete dist/ user@YOUR_SERVER_IP:/var/www/personal-hub/
+
+# 或 scp：
+# scp -r dist/* user@YOUR_SERVER_IP:/var/www/personal-hub/
+
+# 3) 服务器上确认 Nginx 指向该目录后重载（通常无需，静态文件即生效）
+ssh user@YOUR_SERVER_IP 'sudo nginx -t && sudo systemctl reload nginx'
+```
+
+生产请确认 `frontend/.env.production` 中 `VITE_API_BASE_URL=` 为空（同源 `/api`）。
 
 ---
 

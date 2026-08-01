@@ -2,6 +2,7 @@ package com.zzh.personal_hub.auth.controller;
 
 import com.zzh.personal_hub.auth.dto.LoginRequest;
 import com.zzh.personal_hub.auth.dto.LoginResponse;
+import com.zzh.personal_hub.auth.dto.RegisterRequest;
 import com.zzh.personal_hub.auth.service.AuthService;
 import com.zzh.personal_hub.common.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -21,5 +22,10 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
+    }
+
+    @PostMapping("/register")
+    public ApiResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ApiResponse.success(authService.register(request));
     }
 }

@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     // More specific matchers must come before wildcards (first match wins)
                     .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/articles/manage").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/articles/*/manage").authenticated()
@@ -49,6 +50,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.PUT, "/api/projects/*").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/projects/*").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/*").permitAll()
+                    .requestMatchers("/api/me/**").authenticated()
                     .anyRequest().permitAll()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())

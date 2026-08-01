@@ -4,6 +4,20 @@
   box-sizing: border-box;
 }
 
+:root {
+  --ph-bg: #0f1714;
+  --ph-bg-elevated: #16201c;
+  --ph-text: #e8f0ec;
+  --ph-muted: #8fa398;
+  --ph-accent: #7cb89a;
+  --ph-accent-soft: rgba(124, 184, 154, 0.14);
+  --ph-border: #2a3a33;
+  --ph-font-display: 'Noto Serif SC', 'Songti SC', serif;
+  --ph-font-body: 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
+  --ph-radius: 10px;
+  --ph-max: 1100px;
+}
+
 html,
 body,
 #root {
@@ -12,14 +26,30 @@ body,
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  color: #222;
-  background: #fafafa;
+  font-family: var(--ph-font-body);
+  line-height: 1.6;
+  color: var(--ph-text);
+  background-color: var(--ph-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 184, 154, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(60, 90, 80, 0.25), transparent);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-  margin: 0;
-  font-size: 1.75rem;
+a {
+  color: var(--ph-accent);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--ph-font-display);
   font-weight: 600;
+  line-height: 1.25;
+  color: var(--ph-text);
+}
+
+#root .ant-layout {
+  background: transparent;
 }

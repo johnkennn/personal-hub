@@ -1,17 +1,24 @@
 import { Outlet } from 'react-router-dom'
+import { Layout } from 'antd'
 
+import { FloatingDock } from '../components/FloatingDock'
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
 import styles from './MainLayout.module.css'
 
+const { Content } = Layout
+
 export function MainLayout() {
   return (
-    <div className={styles.layout}>
+    <Layout className={styles.layout}>
       <Header />
-      <main className={styles.main}>
-        <Outlet />
-      </main>
+      <Content className={styles.main}>
+        <div className={styles.mainInner}>
+          <Outlet />
+        </div>
+      </Content>
       <Footer />
-    </div>
+      <FloatingDock />
+    </Layout>
   )
 }

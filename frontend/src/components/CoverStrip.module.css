@@ -1,0 +1,35 @@
+.cover {
+  position: relative;
+  height: 96px;
+  margin: -16px -16px 14px;
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px 14px;
+}
+
+.compact {
+  height: 72px;
+  margin: -12px -12px 12px;
+}
+
+.glow {
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 55%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  font-family: var(--ph-font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.02em;
+}
