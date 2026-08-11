@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin } from 'antd'
 import { motion } from 'framer-motion'
@@ -18,44 +18,47 @@ type FormValues = {
   published: boolean
 }
 
+function findMockProject(id: string | undefined) {
+  if (!id) return null
+  const numId = Number(id)
+  return (
+    MOCK_PROJECT_DRAFTS.find((p) => p.id === numId) ||
+    MOCK_PROJECT_PUBLISHED.find((p) => p.id === numId) ||
+    null
+  )
+}
+
 export function ProjectEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
-  const [loading, setLoading] = useState(true)
-  const [isMock, setIsMock] = useState(false)
   const fromStudio = location.pathname.startsWith('/studio')
+
+  const mock = useMemo(() => findMockProject(id), [id])
+  const isMock = Boolean(mock)
+
+  const [loading, setLoading] = useState(() => !findMockProject(id))
+  const [hydratedId, setHydratedId] = useState(id)
+
+  if (id !== hydratedId) {
+    setHydratedId(id)
+    setLoading(!findMockProject(id))
+  }
 
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
-      return
     }
-    if (!id) return
+  }, [navigate])
 
-    const numId = Number(id)
-    const mock =
-      MOCK_PROJECT_DRAFTS.find((p) => p.id === numId) ||
-      MOCK_PROJECT_PUBLISHED.find((p) => p.id === numId)
-
-    if (mock) {
-      setIsMock(true)
-      form.setFieldsValue({
-        name: mock.name,
-        description: mock.description,
-        techStack: mock.techStack ?? '',
-        repoUrl: mock.repoUrl ?? '',
-        demoUrl: mock.demoUrl ?? '',
-        published: mock.published,
-      })
-      setLoading(false)
-      return
-    }
-
+  useEffect(() => {
+    if (!id || mock) return
+    let cancelled = false
     fetchProjectForManage(id)
       .then((res) => {
+        if (cancelled) return
         const project = res.data.data
         form.setFieldsValue({
           name: project.name,
@@ -66,9 +69,16 @@ export function ProjectEditPage() {
           published: project.published,
         })
       })
-      .catch(() => message.error('加载项目失败'))
-      .finally(() => setLoading(false))
-  }, [id, navigate, form, message])
+      .catch(() => {
+        if (!cancelled) message.error('加载项目失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, mock, form, message])
 
   async function onFinish(values: FormValues) {
     if (!id) return
@@ -105,6 +115,17 @@ export function ProjectEditPage() {
     )
   }
 
+  const initialValues: FormValues | undefined = mock
+    ? {
+        name: mock.name,
+        description: mock.description,
+        techStack: mock.techStack ?? '',
+        repoUrl: mock.repoUrl ?? '',
+        demoUrl: mock.demoUrl ?? '',
+        published: mock.published,
+      }
+    : undefined
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
@@ -122,7 +143,7 @@ export function ProjectEditPage() {
         />
       ) : null}
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑项目">
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form key={id} form={form} layout="vertical" onFinish={onFinish} initialValues={initialValues}>
           <Form.Item name="name" label="名称" rules={[{ required: true }]}>
             <Input size="large" />
           </Form.Item>

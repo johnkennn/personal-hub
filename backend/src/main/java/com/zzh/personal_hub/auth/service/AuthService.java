@@ -42,7 +42,7 @@ public class AuthService {
     
         // 4) 发令牌（和注册成功时一样）
         String token = jwtService.generateToken(user.getUsername());
-        return new LoginResponse(user.getUsername(), token);
+        return new LoginResponse(user.getUsername(), token, user.getId(), user.getRole().name());
     }
 
     @Transactional
@@ -71,6 +71,6 @@ public class AuthService {
 
         // 注册成功后直接发 JWT，前端少调一次登录（体验更好）
         String token = jwtService.generateToken(user.getUsername());
-        return new LoginResponse(user.getUsername(), token);
+        return new LoginResponse(user.getUsername(), token, user.getId(), user.getRole().name());
     }
 }

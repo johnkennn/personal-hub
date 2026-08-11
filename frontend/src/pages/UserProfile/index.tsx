@@ -41,22 +41,49 @@ export function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>()
   const { message } = App.useApp()
   const creator = userId ? getDemoCreator(userId) : null
-  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
-  const [following, setFollowing] = useState(false)
-  const [followerCount, setFollowerCount] = useState(0)
-  const [followingCount, setFollowingCount] = useState(0)
-  const [myFollowing, setMyFollowing] = useState<number[]>([])
+  const creatorId = creator?.id
 
-  function refresh() {
-    if (!creator) return
-    setFollowing(isFollowing(creator.id))
-    setFollowerCount(getFollowerCount(creator.id))
-    setFollowingCount(getFollowingCount(creator.username))
-    setMyFollowing(getFollowingIds())
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
+  const [following, setFollowing] = useState(() =>
+    creator ? isFollowing(creator.id) : false,
+  )
+  const [followerCount, setFollowerCount] = useState(() =>
+    creator ? getFollowerCount(creator.id) : 0,
+  )
+  const [followingCount, setFollowingCount] = useState(() =>
+    creator ? getFollowingCount(creator.username) : 0,
+  )
+  const [myFollowing, setMyFollowing] = useState(getFollowingIds)
+  const [hydratedId, setHydratedId] = useState(creatorId)
+
+  // userId / creator 变化时在渲染期同步本地关注态，避免 effect 内同步 setState
+  if (creatorId !== hydratedId) {
+    setHydratedId(creatorId)
+    if (creator) {
+      setFollowing(isFollowing(creator.id))
+      setFollowerCount(getFollowerCount(creator.id))
+      setFollowingCount(getFollowingCount(creator.username))
+      setMyFollowing(getFollowingIds())
+    } else {
+      setFollowing(false)
+      setFollowerCount(0)
+      setFollowingCount(0)
+      setMyFollowing([])
+    }
   }
 
   useEffect(() => {
-    refresh()
+    if (!creator) return
+    const id = creator.id
+    const username = creator.username
+
+    function refresh() {
+      setFollowing(isFollowing(id))
+      setFollowerCount(getFollowerCount(id))
+      setFollowingCount(getFollowingCount(username))
+      setMyFollowing(getFollowingIds())
+    }
+
     const offS = subscribeSocialChange(refresh)
     const offA = subscribeAuthChange(() => {
       setLoggedIn(isLoggedIn())
@@ -66,7 +93,7 @@ export function UserProfilePage() {
       offS()
       offA()
     }
-  }, [creator?.id])
+  }, [creator])
 
   const articles = useMemo(
     () => (creator ? getDemoArticlesByAuthor(creator.id) : []),
@@ -96,19 +123,22 @@ export function UserProfilePage() {
     )
   }
 
-  const isSelf = loggedIn && getUsername() === creator.username
+  const profile = creator
+  const isSelf = loggedIn && getUsername() === profile.username
 
   function onFollow() {
     try {
-      const next = toggleFollow(creator!.id)
+      const next = toggleFollow(profile.id)
       setFollowing(next)
-      refresh()
-      message.success(next ? `已关注 ${creator!.displayName}` : '已取消关注')
+      setFollowerCount(getFollowerCount(profile.id))
+      setFollowingCount(getFollowingCount(profile.username))
+      setMyFollowing(getFollowingIds())
+      message.success(next ? `已关注 ${profile.displayName}` : '已取消关注')
       if (next) {
         pushActivity({
-          title: `你关注了 ${creator!.displayName}`,
+          title: `你关注了 ${profile.displayName}`,
           desc: '可在首页「关注动态」查看其新发布',
-          href: userProfilePath(creator!.id),
+          href: userProfilePath(profile.id),
         })
       }
     } catch {
@@ -121,15 +151,15 @@ export function UserProfilePage() {
       <Card className={styles.contentCard} variant="borderless" style={{ marginBottom: 24 }}>
         <Space align="start" size="large" wrap style={{ width: '100%', justifyContent: 'space-between' }}>
           <Space align="start" size="large">
-            <Avatar size={88} src={creator.avatarUrl}>
-              {creator.displayName.slice(0, 1)}
+            <Avatar size={88} src={profile.avatarUrl}>
+              {profile.displayName.slice(0, 1)}
             </Avatar>
             <div>
               <Typography.Title level={2} style={{ margin: 0, fontFamily: 'var(--ph-font-display)' }}>
-                {creator.displayName}
+                {profile.displayName}
               </Typography.Title>
-              <Typography.Text type="secondary">@{creator.username}</Typography.Text>
-              <Typography.Paragraph style={{ marginTop: 12, maxWidth: 480 }}>{creator.bio}</Typography.Paragraph>
+              <Typography.Text type="secondary">@{profile.username}</Typography.Text>
+              <Typography.Paragraph style={{ marginTop: 12, maxWidth: 480 }}>{profile.bio}</Typography.Paragraph>
               <Space size="large">
                 <Statistic title="粉丝" value={followerCount} />
                 <Statistic title="关注" value={followingCount} />

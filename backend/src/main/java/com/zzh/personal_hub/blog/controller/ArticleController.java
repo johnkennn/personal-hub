@@ -46,7 +46,7 @@ public class ArticleController {
 
     @GetMapping("/{id}/manage")
     public ApiResponse<Article> manageDetail(@PathVariable Long id) {
-        return ApiResponse.success(articleService.getById(id));
+        return ApiResponse.success(articleService.getMyArticle(id));
     }
 
     @PostMapping

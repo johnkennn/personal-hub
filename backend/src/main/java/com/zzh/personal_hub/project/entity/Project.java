@@ -45,4 +45,11 @@ public class Project {
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    /** 作者用户 id，对应 users.id */
+    @Column(name = "author_id", nullable = false)
+    private Long authorId;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt; // null = 未删除
 }

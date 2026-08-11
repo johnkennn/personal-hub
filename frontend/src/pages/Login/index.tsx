@@ -22,7 +22,7 @@ export function LoginPage() {
     try {
       const res = await login(values)
       const data = res.data.data
-      setAuth(data.token, data.username)
+      setAuth(data.token, data.username, data.userId, data.role)
       message.success('登录成功')
       navigate(ROUTES.HOME)
     } catch {

@@ -23,7 +23,7 @@ export function RegisterPage() {
     try {
       const res = await register(values)
       const data = res.data.data
-      setAuth(data.token, data.username)
+      setAuth(data.token, data.username, data.userId, data.role)
       message.success('注册成功，已自动登录')
       navigate(ROUTES.HOME)
     } catch {

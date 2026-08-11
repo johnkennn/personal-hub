@@ -17,11 +17,20 @@ export function ProjectDetailPage() {
   const [fromDemo, setFromDemo] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadedId, setLoadedId] = useState<string | undefined>(undefined)
+
+  // id 变化时在渲染期重置，避免在 effect 里同步 setState
+  if (id !== loadedId) {
+    setLoadedId(id)
+    setLoading(true)
+    setProject(null)
+    setFromDemo(false)
+    setError('')
+  }
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    setLoading(true)
     loadPublicProject(id)
       .then((res) => {
         if (cancelled) return
@@ -37,11 +46,25 @@ export function ProjectDetailPage() {
     }
   }, [id])
 
+  if (!id) {
+    return (
+      <Result
+        status="404"
+        title="项目不存在"
+        extra={
+          <Link to={ROUTES.PROJECTS}>
+            <Button type="primary">返回列表</Button>
+          </Link>
+        }
+      />
+    )
+  }
+
   if (loading) {
     return <Skeleton active paragraph={{ rows: 8 }} />
   }
 
-  if (!id || error || !project) {
+  if (error || !project) {
     return (
       <Result
         status="404"

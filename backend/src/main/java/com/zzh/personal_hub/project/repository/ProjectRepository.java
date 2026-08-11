@@ -8,7 +8,9 @@ import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
-    List<Project> findByPublishedTrueOrderByCreatedAtDesc();
-    Optional<Project> findByIdAndPublishedTrue(Long id);
+    List<Project> findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
+    Optional<Project> findByIdAndPublishedTrueAndDeletedAtIsNull(Long id);
     List<Project> findAllByOrderByUpdatedAtDesc();
+    List<Project> findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
+    List<Project> findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
 }

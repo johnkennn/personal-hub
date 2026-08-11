@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs } from 'antd'
 import { motion } from 'framer-motion'
@@ -13,45 +13,53 @@ import styles from '../../styles/ui.module.css'
 
 type FormValues = { title: string; content: string; published: boolean }
 
+function findMockArticle(id: string | undefined) {
+  if (!id) return null
+  const numId = Number(id)
+  return (
+    getStudioArticles('articleDrafts').find((a) => a.id === numId) ||
+    MOCK_ARTICLE_DRAFTS.find((a) => a.id === numId) ||
+    MOCK_ARTICLE_PUBLISHED.find((a) => a.id === numId) ||
+    null
+  )
+}
+
 export function ArticleEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
-  const [loading, setLoading] = useState(true)
-  const [isMock, setIsMock] = useState(false)
-  const [preview, setPreview] = useState({ title: '', content: '' })
   const fromStudio = location.pathname.startsWith('/studio')
+
+  const mock = useMemo(() => findMockArticle(id), [id])
+  const isMock = Boolean(mock)
+
+  const [loading, setLoading] = useState(() => !findMockArticle(id))
+  const [preview, setPreview] = useState(() =>
+    mock ? { title: mock.title, content: mock.content } : { title: '', content: '' },
+  )
+  const [hydratedId, setHydratedId] = useState(id)
+
+  if (id !== hydratedId) {
+    setHydratedId(id)
+    const next = findMockArticle(id)
+    setLoading(!next)
+    setPreview(next ? { title: next.title, content: next.content } : { title: '', content: '' })
+  }
 
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
-      return
     }
-    if (!id) return
+  }, [navigate])
 
-    const numId = Number(id)
-    const persisted = getStudioArticles('articleDrafts').find((a) => a.id === numId)
-    const mock =
-      persisted ||
-      MOCK_ARTICLE_DRAFTS.find((a) => a.id === numId) ||
-      MOCK_ARTICLE_PUBLISHED.find((a) => a.id === numId)
-
-    if (mock) {
-      setIsMock(true)
-      form.setFieldsValue({
-        title: mock.title,
-        content: mock.content,
-        published: mock.published,
-      })
-      setPreview({ title: mock.title, content: mock.content })
-      setLoading(false)
-      return
-    }
-
+  useEffect(() => {
+    if (!id || mock) return
+    let cancelled = false
     fetchArticleForManage(id)
       .then((res) => {
+        if (cancelled) return
         const article = res.data.data
         form.setFieldsValue({
           title: article.title,
@@ -60,9 +68,16 @@ export function ArticleEditPage() {
         })
         setPreview({ title: article.title, content: article.content })
       })
-      .catch(() => message.error('加载文章失败'))
-      .finally(() => setLoading(false))
-  }, [id, navigate, form, message])
+      .catch(() => {
+        if (!cancelled) message.error('加载文章失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, mock, form, message])
 
   async function onFinish(values: FormValues) {
     if (!id) return
@@ -92,6 +107,14 @@ export function ArticleEditPage() {
     )
   }
 
+  const initialValues: FormValues | undefined = mock
+    ? {
+        title: mock.title,
+        content: mock.content,
+        published: mock.published,
+      }
+    : undefined
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
@@ -110,9 +133,11 @@ export function ArticleEditPage() {
       ) : null}
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑文章">
         <Form
+          key={id}
           form={form}
           layout="vertical"
           onFinish={onFinish}
+          initialValues={initialValues}
           onValuesChange={(_, all) => setPreview({ title: all.title ?? '', content: all.content ?? '' })}
         >
           <Form.Item name="title" label="标题" rules={[{ required: true }]}>

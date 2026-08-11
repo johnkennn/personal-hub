@@ -42,7 +42,7 @@ public class ProjectController {
 
     @GetMapping("/{id}/manage")
     public ApiResponse<Project> manageDetail(@PathVariable Long id) {
-        return ApiResponse.success(projectService.getById(id));
+        return ApiResponse.success(projectService.getMyProject(id));
     }
 
     @PostMapping

@@ -2,6 +2,7 @@ const TOKEN_KEY = 'personal_hub_token'
 const USERNAME_KEY = 'personal_hub_username'
 const ROLE_KEY = 'personal_hub_role'
 const AUTH_CHANGE_EVENT = 'personal-hub-auth-changed'
+const USER_ID_KEY = 'personal_hub_user_id'
 
 export type UserRole = 'AUTHOR' | 'ADMIN'
 
@@ -13,10 +14,11 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-export function setAuth(token: string, username: string, role: UserRole = 'AUTHOR'): void {
+export function setAuth(token: string, username: string, userId: number, role: UserRole = 'AUTHOR'): void {
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(USERNAME_KEY, username)
   localStorage.setItem(ROLE_KEY, role)
+  localStorage.setItem(USER_ID_KEY, userId.toString())
   notifyAuthChange()
 }
 
@@ -30,6 +32,7 @@ export function clearAuth(): void {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USERNAME_KEY)
   localStorage.removeItem(ROLE_KEY)
+  localStorage.removeItem(USER_ID_KEY)
   notifyAuthChange()
 }
 
@@ -44,6 +47,11 @@ export function getRole(): UserRole {
 
 export function isAdmin(): boolean {
   return getRole() === 'ADMIN'
+}
+
+export function getUserId(): number | null {
+  const userId = localStorage.getItem(USER_ID_KEY)
+  return userId ? Number(userId) : null
 }
 
 export function isLoggedIn(): boolean {

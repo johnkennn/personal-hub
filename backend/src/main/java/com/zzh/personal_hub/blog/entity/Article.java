@@ -31,9 +31,16 @@ public class Article {
     @Column(nullable = false)
     private Boolean published = false;
 
+    /** 作者用户 id，对应 users.id */
+    @Column(name = "author_id", nullable = false)
+    private Long authorId;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt; // null = 未删除
 }

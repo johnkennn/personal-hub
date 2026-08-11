@@ -27,7 +27,7 @@ export function HomePage() {
   const [projects, setProjects] = useState<PublicProject[]>([])
   const [fromDemo, setFromDemo] = useState(false)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
-  const [followingIds, setFollowingIds] = useState<number[]>([])
+  const [followingIds, setFollowingIds] = useState(getFollowingIds)
 
   useEffect(() => {
     return subscribeAuthChange(() => {
@@ -37,7 +37,6 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    setFollowingIds(getFollowingIds())
     return subscribeSocialChange(() => setFollowingIds(getFollowingIds()))
   }, [])
 

@@ -20,11 +20,19 @@ export function BlogDetailPage() {
   const [fromDemo, setFromDemo] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadedId, setLoadedId] = useState<string | undefined>(undefined)
+
+  if (id !== loadedId) {
+    setLoadedId(id)
+    setLoading(true)
+    setArticle(null)
+    setFromDemo(false)
+    setError('')
+  }
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    setLoading(true)
     loadPublicArticle(id)
       .then((res) => {
         if (cancelled) return
@@ -40,11 +48,25 @@ export function BlogDetailPage() {
     }
   }, [id])
 
+  if (!id) {
+    return (
+      <Result
+        status="404"
+        title="文章不存在"
+        extra={
+          <Link to={ROUTES.ARTICLES}>
+            <Button type="primary">返回列表</Button>
+          </Link>
+        }
+      />
+    )
+  }
+
   if (loading) {
     return <Skeleton active paragraph={{ rows: 8 }} />
   }
 
-  if (!id || error || !article) {
+  if (error || !article) {
     return (
       <Result
         status="404"
