@@ -13,7 +13,6 @@ import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import java.util.List;
 import java.util.Objects;
-
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
@@ -173,5 +172,10 @@ public class ProjectService {
             n++;
         }
         return n;
+    }
+
+    public List<Project> listPublishedByAuthor(Long authorId) {
+        return projectRepository
+                .findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(authorId);
     }
 }

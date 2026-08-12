@@ -14,7 +14,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import java.util.List;
+import com.zzh.personal_hub.blog.entity.Article;
+import com.zzh.personal_hub.project.entity.Project;
+import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.project.service.ProjectService;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -22,7 +26,8 @@ public class UsersController {
 
     private final ProfileService profileService;
     private final FollowService followService;
-
+    private final ArticleService articleService;
+    private final ProjectService projectService;
     @GetMapping("/{id}/profile")
     public ApiResponse<ProfileResponse> getPublicProfile(@PathVariable Long id) {
         return ApiResponse.success(profileService.getPublicProfile(id));
@@ -56,5 +61,15 @@ public class UsersController {
     public ApiResponse<Void> unfollow(@PathVariable Long id) {
         followService.unfollow(id);
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/{id}/articles")
+    public ApiResponse<List<Article>> getPublishedArticles(@PathVariable Long id) {
+        return ApiResponse.success(articleService.listPublishedByAuthor(id));
+    }
+
+    @GetMapping("/{id}/projects")
+    public ApiResponse<List<Project>> getPublishedProjects(@PathVariable Long id) {
+        return ApiResponse.success(projectService.listPublishedByAuthor(id));
     }
 }

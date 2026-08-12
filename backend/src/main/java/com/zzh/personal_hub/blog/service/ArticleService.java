@@ -175,4 +175,9 @@ public class ArticleService {
         }
         return n;
     }
+
+    public List<Article> listPublishedByAuthor(Long authorId) {
+        return articleRepository
+                .findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(authorId);
+    }
 }
