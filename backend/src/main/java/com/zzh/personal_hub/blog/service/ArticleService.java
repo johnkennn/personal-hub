@@ -5,23 +5,21 @@ import com.zzh.personal_hub.blog.dto.ArticleUpdateRequest;
 import com.zzh.personal_hub.blog.entity.Article;
 import com.zzh.personal_hub.blog.repository.ArticleRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
+import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.user.entity.User;
-import com.zzh.personal_hub.user.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     public List<Article> listPublished() {
         return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
@@ -34,7 +32,7 @@ public class ArticleService {
     }
 
     public Article createArticle(ArticleCreateRequest request) {
-        User me = currentUser(); // 谁登录，谁就是作者
+        User me = currentUserService.requireUser(); // 谁登录，谁就是作者
 
         Article article = new Article();
         article.setAuthorId(me.getId());
@@ -47,11 +45,10 @@ public class ArticleService {
     }
 
     public Article updateArticle(Long id, ArticleUpdateRequest request) {
-        User me = currentUser();
         Article article = articleRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(404, "文章不存在"));
-        assertOwner(article, me);
+        currentUserService.assertOwner(article.getAuthorId(), "无权操作该文章");
         if (article.getDeletedAt() != null) {
             throw new BusinessException(404, "文章不存在");
         }
@@ -72,11 +69,10 @@ public class ArticleService {
     }
 
     public void deleteArticle(Long id) {
-        User me = currentUser();
         Article article = articleRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(404, "文章不存在"));
-        assertOwner(article, me);
+        currentUserService.assertOwner(article.getAuthorId(), "无权操作该文章");
         if (article.getDeletedAt() != null) {
             throw new BusinessException(404, "文章不存在");
         }
@@ -86,12 +82,12 @@ public class ArticleService {
     }
 
     public List<Article> listMyDrafts() {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         return articleRepository.findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
     }
     
     public List<Article> listMyPublished() {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         return articleRepository.findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
     }
 
@@ -99,29 +95,45 @@ public class ArticleService {
         return articleRepository.findAllByOrderByUpdatedAtDesc();
     }
 
-    private User currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
-            throw new BusinessException(401, "未登录或登录已失效");
-        }
-        return userRepository
-                .findByUsername(auth.getName())
-                .orElseThrow(() -> new BusinessException(401, "未登录或用户不存在"));
+    public List<Article> listAllForAdmin() {
+        currentUserService.requireAdmin();
+        return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
 
-    private void assertOwner(Article article, User me) {
-        if (!Objects.equals(article.getAuthorId(), me.getId())) {
-            throw new BusinessException(403, "无权操作该文章");
+    @Transactional
+    public Article unpublishByAdmin(Long id) {
+        currentUserService.requireAdmin();
+        Article article = getActiveForAdmin(id);
+        article.setPublished(false);
+        article.setUpdatedAt(Instant.now());
+        article = articleRepository.save(article);
+        return article;
+    }
+
+    @Transactional
+    public void deleteByAdmin(Long id) {
+        currentUserService.requireAdmin();
+        Article article = getActiveForAdmin(id);
+        article.setDeletedAt(Instant.now());
+        article.setUpdatedAt(Instant.now());
+        articleRepository.save(article);
+    }
+
+    private Article getActiveForAdmin(Long id) {
+        Article article = articleRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "文章不存在"));
+        if (article.getDeletedAt() != null || !Boolean.TRUE.equals(article.getPublished())) {
+            throw new BusinessException(404, "文章不存在");
         }
+        return article;
     }
 
     /** 作者查看自己的文章（含草稿） */
     public Article getMyArticle(Long id) {
-        User me = currentUser();
         Article article = articleRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(404, "文章不存在"));
-        assertOwner(article, me);
+        currentUserService.assertOwner(article.getAuthorId(), "无权操作该文章");
         if (article.getDeletedAt() != null) {
             throw new BusinessException(404, "文章不存在");
         }
@@ -129,12 +141,12 @@ public class ArticleService {
     }
 
     public int batchPublish(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Article a = articleRepository.findById(id).orElse(null);
             if (a == null || a.getDeletedAt() != null) continue;
-            if (!Objects.equals(a.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(a.getAuthorId(), meId)) continue;
             if (Boolean.TRUE.equals(a.getPublished())) continue; // 已发布跳过
             a.setPublished(true);
             a.setUpdatedAt(Instant.now());
@@ -146,12 +158,12 @@ public class ArticleService {
     // batchUnpublish：仅 published=true → false
     // batchDelete：写 deletedAt（同单条软删）
     public int batchUnpublish(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Article a = articleRepository.findById(id).orElse(null);
             if (a == null || a.getDeletedAt() != null) continue;
-            if (!Objects.equals(a.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(a.getAuthorId(), meId)) continue;
             if (!Boolean.TRUE.equals(a.getPublished())) continue; // 未发布跳过
             a.setPublished(false);
             a.setUpdatedAt(Instant.now());
@@ -162,12 +174,12 @@ public class ArticleService {
     }
 
     public int batchDelete(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Article a = articleRepository.findById(id).orElse(null);
             if (a == null || a.getDeletedAt() != null) continue;
-            if (!Objects.equals(a.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(a.getAuthorId(), meId)) continue;
             a.setDeletedAt(Instant.now());
             a.setUpdatedAt(Instant.now());
             articleRepository.save(a);

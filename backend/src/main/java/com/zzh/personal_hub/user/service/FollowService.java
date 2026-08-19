@@ -12,11 +12,9 @@ import com.zzh.personal_hub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.zzh.personal_hub.common.security.CurrentUserService;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,11 +25,11 @@ public class FollowService {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-
+    private final CurrentUserService currentUserService;
     /** 当前登录用户关注 followeeId（幂等） */
     @Transactional
     public void follow(Long followeeId) {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         assertUserExists(followeeId);
         if (me.getId().equals(followeeId)) {
             throw new BusinessException(400, "不能关注自己");
@@ -48,7 +46,7 @@ public class FollowService {
     /** 取消关注（幂等） */
     @Transactional
     public void unfollow(Long followeeId) {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         followRepository.deleteByFollowerIdAndFolloweeId(me.getId(), followeeId);
     }
 
@@ -65,15 +63,7 @@ public class FollowService {
     }
 
     public boolean isFollowedByCurrentUser(Long followeeId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
-            return false;
-        }
-        if ("anonymousUser".equals(auth.getName())) {
-            return false;
-        }
-        return userRepository
-                .findByUsername(auth.getName())
+        return currentUserService.findUser()
                 .map(me -> !me.getId().equals(followeeId) && isFollowing(me.getId(), followeeId))
                 .orElse(false);
     }
@@ -124,16 +114,6 @@ public class FollowService {
             return 20;
         }
         return Math.min(size, 50);
-    }
-
-    private User currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) {
-            throw new BusinessException(401, "未登录或登录已失效");
-        }
-        return userRepository
-                .findByUsername(auth.getName())
-                .orElseThrow(() -> new BusinessException(401, "未登录或用户不存在"));
     }
 
     private void assertUserExists(Long userId) {

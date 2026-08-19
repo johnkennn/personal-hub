@@ -7,18 +7,16 @@ import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import com.zzh.personal_hub.user.entity.User;
-import com.zzh.personal_hub.user.repository.UserRepository;
 import java.util.List;
-import java.util.Objects;
+import com.zzh.personal_hub.common.security.CurrentUserService;
+import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
     public List<Project> listPublished() {
         return projectRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -31,7 +29,7 @@ public class ProjectService {
 
     public Project create(ProjectCreateRequest request) {
         Project project = new Project();
-        User me = currentUser(); // 可把 ArticleService 里同款 currentUser 拷过来，或以后抽公共组件
+        User me = currentUserService.requireUser(); // 谁登录，谁就是作者
         project.setAuthorId(me.getId());
         project.setName(request.getName());
         project.setDescription(request.getDescription());
@@ -45,11 +43,10 @@ public class ProjectService {
     }
 
     public Project update(Long id, ProjectUpdateRequest request) {
-        User me = currentUser();
         Project project = projectRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(404, "项目不存在"));
-        assertOwner(project, me);
+        currentUserService.assertOwner(project.getAuthorId(), "无权操作该项目");
         if (project.getDeletedAt() != null) {
             throw new BusinessException(404, "项目不存在");
         }
@@ -73,11 +70,10 @@ public class ProjectService {
     }
 
     public void delete(Long id) {
-        User me = currentUser();
         Project project = projectRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(404, "项目不存在"));
-        assertOwner(project, me);
+        currentUserService.assertOwner(project.getAuthorId(), "无权操作该项目");
         if (project.getDeletedAt() != null) {
             throw new BusinessException(404, "项目不存在");
         }
@@ -91,36 +87,19 @@ public class ProjectService {
     }
 
     public List<Project> listMyDrafts() {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         return projectRepository.findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
     }
 
     public List<Project> listMyPublished() {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
         return projectRepository.findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
     }
 
-    private void assertOwner(Project project, User me) {
-        if (!java.util.Objects.equals(project.getAuthorId(), me.getId())) {
-            throw new BusinessException(403, "无权操作该项目");
-        }
-    }
-
-    private User currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
-            throw new BusinessException(401, "未登录或登录已失效");
-        }
-        return userRepository
-                .findByUsername(auth.getName())
-                .orElseThrow(() -> new BusinessException(401, "未登录或用户不存在"));
-    }
-
     public Project getMyProject(Long id) {
-        User me = currentUser();
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "项目不存在"));
-        assertOwner(project, me);
+        currentUserService.assertOwner(project.getAuthorId(), "无权操作该项目");
         if (project.getDeletedAt() != null) {
             throw new BusinessException(404, "项目不存在");
         }
@@ -128,12 +107,12 @@ public class ProjectService {
     }
 
     public int batchPublish(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Project p = projectRepository.findById(id).orElse(null);
             if (p == null || p.getDeletedAt() != null) continue;
-            if (!Objects.equals(p.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(p.getAuthorId(), meId)) continue;
             if (Boolean.TRUE.equals(p.getPublished())) continue; // 已发布跳过
             p.setPublished(true);
             p.setUpdatedAt(Instant.now());
@@ -144,12 +123,12 @@ public class ProjectService {
     }
 
     public int batchUnpublish(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Project p = projectRepository.findById(id).orElse(null);
             if (p == null || p.getDeletedAt() != null) continue;
-            if (!Objects.equals(p.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(p.getAuthorId(), meId)) continue;
             if (!Boolean.TRUE.equals(p.getPublished())) continue; // 未发布跳过
             p.setPublished(false);
             p.setUpdatedAt(Instant.now());
@@ -160,12 +139,12 @@ public class ProjectService {
     }
 
     public int batchDelete(List<Long> ids) {
-        User me = currentUser();
+        Long meId = currentUserService.requireUser().getId();
         int n = 0;
         for (Long id : ids) {
             Project p = projectRepository.findById(id).orElse(null);
             if (p == null || p.getDeletedAt() != null) continue;
-            if (!Objects.equals(p.getAuthorId(), me.getId())) continue;
+            if (!java.util.Objects.equals(p.getAuthorId(), meId)) continue;
             p.setDeletedAt(Instant.now());
             p.setUpdatedAt(Instant.now());
             projectRepository.save(p);
@@ -177,5 +156,37 @@ public class ProjectService {
     public List<Project> listPublishedByAuthor(Long authorId) {
         return projectRepository
                 .findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(authorId);
+    }
+
+    public List<Project> listAllForAdmin() {
+        currentUserService.requireAdmin();
+        return projectRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
+    }
+
+    @Transactional
+    public Project unpublishByAdmin(Long id) {
+        currentUserService.requireAdmin();
+        Project project = getPublishedForAdmin(id);
+        project.setPublished(false);
+        project.setUpdatedAt(Instant.now());
+        return projectRepository.save(project);
+    }
+
+    @Transactional
+    public void deleteByAdmin(Long id) {
+        currentUserService.requireAdmin();
+        Project project = getPublishedForAdmin(id);
+        project.setDeletedAt(Instant.now());
+        project.setUpdatedAt(Instant.now());
+        projectRepository.save(project);
+    }
+
+    private Project getPublishedForAdmin(Long id) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "项目不存在"));
+        if (project.getDeletedAt() != null || !Boolean.TRUE.equals(project.getPublished())) {
+            throw new BusinessException(404, "项目不存在");
+        }
+        return project;
     }
 }

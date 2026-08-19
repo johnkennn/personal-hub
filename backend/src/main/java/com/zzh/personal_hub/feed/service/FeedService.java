@@ -2,7 +2,6 @@ package com.zzh.personal_hub.feed.service;
 
 import com.zzh.personal_hub.blog.entity.Article;
 import com.zzh.personal_hub.blog.repository.ArticleRepository;
-import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.feed.dto.FeedItemDto;
 import com.zzh.personal_hub.social.entity.ContentLike;
 import com.zzh.personal_hub.social.repository.ContentLikeRepository;
@@ -14,10 +13,8 @@ import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.repository.FollowRepository;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
+import com.zzh.personal_hub.common.security.CurrentUserService;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -35,10 +32,11 @@ public class FeedService {
     private final ArticleRepository articleRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
     private final ContentLikeRepository contentLikeRepository;
 
     public List<FeedItemDto> listFollowingFeed() {
-        User me = currentUser();
+        User me = currentUserService.requireUser();
 
         List<Long> followeeIds = followRepository.findByFollowerId(me.getId()).stream()
                 .map(Follow::getFolloweeId)
@@ -70,7 +68,7 @@ public class FeedService {
                     a.getAuthorId(),
                     author != null ? author.getUsername() : "unknown",
                     a.getCreatedAt(),
-                0L));
+                0));
         }
 
         for (Project p : projects) {
@@ -82,7 +80,7 @@ public class FeedService {
                     p.getAuthorId(),
                     author != null ? author.getUsername() : "unknown",
                     p.getCreatedAt(),
-                0L));
+                0));
         }
 
         items.sort(Comparator.comparing(FeedItemDto::getCreatedAt,
@@ -212,15 +210,5 @@ public class FeedService {
         }
         return contentLikeRepository.findByTargetTypeAndTargetIdIn(type, targetIds).stream()
                 .collect(Collectors.groupingBy(ContentLike::getTargetId, Collectors.counting()));
-    }
-
-    private User currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getName() == null
-                || "anonymousUser".equals(auth.getName())) {
-            throw new BusinessException(401, "未登录或登录已失效");
-        }
-        return userRepository.findByUsername(auth.getName())
-                .orElseThrow(() -> new BusinessException(401, "未登录或用户不存在"));
     }
 }

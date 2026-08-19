@@ -8,29 +8,28 @@ import com.zzh.personal_hub.user.entity.UserProfile;
 import com.zzh.personal_hub.user.repository.UserProfileRepository;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.zzh.personal_hub.common.security.CurrentUserService;
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
 
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
     private final UserProfileRepository userProfileRepository;
     private final FollowService followService;
 
     @Transactional(readOnly = true)
     public ProfileResponse getMyProfile() {
-        User user = currentUser();
+        User user = currentUserService.requireUser();
         UserProfile profile = requireProfile(user.getId());
         return toResponse(user, profile);
     }
 
     @Transactional
     public ProfileResponse updateMyProfile(ProfileRequest request) {
-        User user = currentUser();
+        User user = currentUserService.requireUser();
         UserProfile profile = requireProfile(user.getId());
         if (request.getNickname() != null) {
             profile.setNickname(request.getNickname());
@@ -71,16 +70,6 @@ public class ProfileService {
                 followerCount,
                 followingCount,
                 following);
-    }
-
-    private User currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
-            throw new BusinessException(401, "未登录或登录已失效");
-        }
-        return userRepository
-                .findByUsername(auth.getName())
-                .orElseThrow(() -> new BusinessException(401, "未登录或用户不存在"));
     }
 
     private UserProfile requireProfile(Long userId) {
