@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.zzh.personal_hub.common.security.CurrentUserService;
+import com.zzh.personal_hub.media.MediaStorageService;
+import org.springframework.web.multipart.MultipartFile;
+
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
@@ -19,11 +22,22 @@ public class ProfileService {
     private final CurrentUserService currentUserService;
     private final UserProfileRepository userProfileRepository;
     private final FollowService followService;
+    private final MediaStorageService mediaStorageService;
 
     @Transactional(readOnly = true)
     public ProfileResponse getMyProfile() {
         User user = currentUserService.requireUser();
         UserProfile profile = requireProfile(user.getId());
+        return toResponse(user, profile);
+    }
+
+    @Transactional
+    public ProfileResponse uploadAvatar(MultipartFile file) {
+        User user = currentUserService.requireUser();
+        UserProfile profile = requireProfile(user.getId());
+        String url = mediaStorageService.saveImage(file, "avatars/" + user.getId());
+        profile.setAvatarUrl(url);
+        userProfileRepository.save(profile);
         return toResponse(user, profile);
     }
 

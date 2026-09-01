@@ -6,10 +6,12 @@ import com.zzh.personal_hub.blog.entity.Article;
 import com.zzh.personal_hub.blog.repository.ArticleRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.security.CurrentUserService;
+import com.zzh.personal_hub.media.MediaStorageService;
 import com.zzh.personal_hub.user.entity.User;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +22,7 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final CurrentUserService currentUserService;
+    private final MediaStorageService mediaStorageService;
 
     public List<Article> listPublished() {
         return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
@@ -85,7 +88,7 @@ public class ArticleService {
         User me = currentUserService.requireUser();
         return articleRepository.findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
     }
-    
+
     public List<Article> listMyPublished() {
         User me = currentUserService.requireUser();
         return articleRepository.findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(me.getId());
@@ -117,6 +120,24 @@ public class ArticleService {
         article.setDeletedAt(Instant.now());
         article.setUpdatedAt(Instant.now());
         articleRepository.save(article);
+    }
+
+    @Transactional
+    public Article uploadCover(Long id, MultipartFile file) {
+        Article article = articleRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "文章不存在"));
+        currentUserService.assertOwner(article.getAuthorId(), "无权操作该文章");
+        if (article.getDeletedAt() != null) {
+            throw new BusinessException(404, "文章不存在");
+        }
+        if (Boolean.TRUE.equals(article.getPublished())) {
+            throw new BusinessException(400, "已发布内容不可编辑，请先下架");
+        }
+
+        String url = mediaStorageService.saveImage(file, "covers/articles/" + id);
+        article.setCoverUrl(url);
+        article.setUpdatedAt(Instant.now());
+        return articleRepository.save(article);
     }
 
     private Article getActiveForAdmin(Long id) {
@@ -155,8 +176,7 @@ public class ArticleService {
         }
         return n;
     }
-    // batchUnpublish：仅 published=true → false
-    // batchDelete：写 deletedAt（同单条软删）
+
     public int batchUnpublish(List<Long> ids) {
         Long meId = currentUserService.requireUser().getId();
         int n = 0;

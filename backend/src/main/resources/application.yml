@@ -4,18 +4,20 @@ app:
     expiration-ms: 86400000   # 24 小时
   cors:
     allowed-origins: http://localhost:5173
+  media:
+    # 本地开发：项目下的目录；生产再改成 /var/www/personal-hub-media
+    root-dir: ${MEDIA_ROOT:./data/media}
+    public-prefix: /media
 spring:
   application:
     name: personal-hub
   profiles:
     active: local
-
   datasource:
     url: jdbc:mysql://localhost:3306/personal_hub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
     password: ${DB_PASSWORD:changeme}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,3 +26,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB

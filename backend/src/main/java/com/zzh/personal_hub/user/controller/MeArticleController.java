@@ -12,6 +12,8 @@ import com.zzh.personal_hub.blog.dto.BatchIdsRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 import java.util.List;
 
@@ -50,5 +52,12 @@ public class MeArticleController {
     @PostMapping("/batch-delete")
     public ApiResponse<Map<String, Integer>> batchDelete(@Valid @RequestBody BatchIdsRequest req) {
         return ApiResponse.success(Map.of("affected", articleService.batchDelete(req.getIds())));
+    }
+
+    @PostMapping("/{id}/cover")
+    public ApiResponse<Article> uploadCover(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.success(articleService.uploadCover(id, file));
     }
 }

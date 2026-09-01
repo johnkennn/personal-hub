@@ -43,4 +43,7 @@ public class Article {
 
     @Column(name = "deleted_at")
     private Instant deletedAt; // null = 未删除
+
+    @Column(name = "cover_url", length = 512)
+    private String coverUrl;
 }
