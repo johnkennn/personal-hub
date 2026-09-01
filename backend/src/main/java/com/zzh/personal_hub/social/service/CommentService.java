@@ -1,20 +1,25 @@
 package com.zzh.personal_hub.social.service;
 
-import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+
 import com.zzh.personal_hub.social.repository.CommentRepository;
 import com.zzh.personal_hub.social.entity.Comment;
 import com.zzh.personal_hub.social.ContentTargetType;
-import com.zzh.personal_hub.common.exception.BusinessException;
-import java.util.List;
-import com.zzh.personal_hub.blog.service.ArticleService;
-import com.zzh.personal_hub.project.service.ProjectService;
-import java.time.Instant;
-import org.springframework.transaction.annotation.Transactional;
 import com.zzh.personal_hub.social.dto.CommentResponse;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.repository.UserRepository;
+import com.zzh.personal_hub.notification.service.NotificationService;
+import com.zzh.personal_hub.common.exception.BusinessException;
+import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.project.service.ProjectService;
+
+import java.util.List;
+import java.time.Instant;
+
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+
 @Service
 @RequiredArgsConstructor
 public class CommentService {
@@ -23,6 +28,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final ArticleService articleService;
     private final ProjectService projectService;
+    private final NotificationService notificationService;
 
     public List<CommentResponse> list(ContentTargetType type, Long targetId) {
         assertPublishedTarget(type, targetId);
@@ -33,10 +39,12 @@ public class CommentService {
                 .toList();
     }
 
+    @Transactional
     public CommentResponse create(ContentTargetType type, Long targetId,  String body) {
         assertPublishedTarget(type, targetId);
         Comment comment = new Comment();
-        comment.setUserId(currentUserService.requireUser().getId());
+        User me = currentUserService.requireUser();
+        comment.setUserId(me.getId());
         comment.setTargetType(type);
         comment.setTargetId(targetId);
         comment.setBody(body);
@@ -44,7 +52,16 @@ public class CommentService {
         comment.setUpdatedAt(Instant.now());
         comment.setDeletedAt(null);
         comment = commentRepository.save(comment);
+        Long authorId = resolveAuthorId(type, targetId);
+        notificationService.notifyComment(me.getId(), authorId, type.name(), targetId);
         return toResponse(comment);
+    }
+
+    private Long resolveAuthorId(ContentTargetType type, Long targetId) {
+        if (type == ContentTargetType.ARTICLE) {
+            return articleService.getPublishedById(targetId).getAuthorId();
+        }
+        return projectService.getPublishedById(targetId).getAuthorId();
     }
 
     @Transactional

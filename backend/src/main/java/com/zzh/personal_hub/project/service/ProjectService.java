@@ -1,22 +1,31 @@
 package com.zzh.personal_hub.project.service;
+
 import com.zzh.personal_hub.project.dto.ProjectCreateRequest;
 import com.zzh.personal_hub.project.dto.ProjectUpdateRequest;
-import java.time.Instant;
+import com.zzh.personal_hub.media.MediaStorageService;
+import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import com.zzh.personal_hub.user.entity.User;
-import java.util.List;
-import com.zzh.personal_hub.common.security.CurrentUserService;
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final CurrentUserService currentUserService;
+    private final MediaStorageService mediaStorageService;
+
     public List<Project> listPublished() {
         return projectRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -104,6 +113,24 @@ public class ProjectService {
             throw new BusinessException(404, "项目不存在");
         }
         return project;
+    }
+
+    @Transactional
+    public Project uploadCover(Long id, MultipartFile file) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "项目不存在"));
+        currentUserService.assertOwner(project.getAuthorId(), "无权操作该项目");
+        if (project.getDeletedAt() != null) {
+            throw new BusinessException(404, "项目不存在");
+        }
+        if (Boolean.TRUE.equals(project.getPublished())) {
+            throw new BusinessException(400, "已发布内容不可编辑，请先下架");
+        }
+
+        String url = mediaStorageService.saveImage(file, "covers/projects/" + id);
+        project.setCoverUrl(url);
+        project.setUpdatedAt(Instant.now());
+        return projectRepository.save(project);
     }
 
     public int batchPublish(List<Long> ids) {
