@@ -16,6 +16,15 @@ spring:
     restart:
       enabled: false      
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never   # 对外不暴露库密码等细节
+
 app:
   jwt:
     secret: ${JWT_SECRET}

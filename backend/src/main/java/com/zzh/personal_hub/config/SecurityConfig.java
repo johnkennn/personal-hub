@@ -74,6 +74,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/me/**").authenticated()
                     .requestMatchers("/api/admin/**").authenticated()
                     .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
                     .anyRequest().permitAll()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
