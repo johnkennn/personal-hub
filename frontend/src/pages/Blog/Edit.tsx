@@ -1,28 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs } from 'antd'
 import { motion } from 'framer-motion'
 
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { fetchArticleForManage, updateArticle } from '../../api/blog'
-import { MOCK_ARTICLE_DRAFTS, MOCK_ARTICLE_PUBLISHED } from '../../mocks/studioMock'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
-import { getStudioArticles } from '../../utils/studioStorage'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = { title: string; content: string; published: boolean }
-
-function findMockArticle(id: string | undefined) {
-  if (!id) return null
-  const numId = Number(id)
-  return (
-    getStudioArticles('articleDrafts').find((a) => a.id === numId) ||
-    MOCK_ARTICLE_DRAFTS.find((a) => a.id === numId) ||
-    MOCK_ARTICLE_PUBLISHED.find((a) => a.id === numId) ||
-    null
-  )
-}
 
 export function ArticleEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,21 +19,10 @@ export function ArticleEditPage() {
   const [form] = Form.useForm<FormValues>()
   const fromStudio = location.pathname.startsWith('/studio')
 
-  const mock = useMemo(() => findMockArticle(id), [id])
-  const isMock = Boolean(mock)
-
-  const [loading, setLoading] = useState(() => !findMockArticle(id))
-  const [preview, setPreview] = useState(() =>
-    mock ? { title: mock.title, content: mock.content } : { title: '', content: '' },
-  )
-  const [hydratedId, setHydratedId] = useState(id)
-
-  if (id !== hydratedId) {
-    setHydratedId(id)
-    const next = findMockArticle(id)
-    setLoading(!next)
-    setPreview(next ? { title: next.title, content: next.content } : { title: '', content: '' })
-  }
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [publishedLocked, setPublishedLocked] = useState(false)
+  const [preview, setPreview] = useState({ title: '', content: '' })
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -55,12 +31,18 @@ export function ArticleEditPage() {
   }, [navigate])
 
   useEffect(() => {
-    if (!id || mock) return
+    if (!id) return
     let cancelled = false
+    setLoading(true)
+    setLoadError(false)
     fetchArticleForManage(id)
       .then((res) => {
         if (cancelled) return
         const article = res.data.data
+        if (article.published) {
+          setPublishedLocked(true)
+          return
+        }
         form.setFieldsValue({
           title: article.title,
           content: article.content,
@@ -69,7 +51,10 @@ export function ArticleEditPage() {
         setPreview({ title: article.title, content: article.content })
       })
       .catch(() => {
-        if (!cancelled) message.error('加载文章失败')
+        if (!cancelled) {
+          setLoadError(true)
+          message.error('加载文章失败')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -77,15 +62,10 @@ export function ArticleEditPage() {
     return () => {
       cancelled = true
     }
-  }, [id, mock, form, message])
+  }, [id, form, message])
 
   async function onFinish(values: FormValues) {
     if (!id) return
-    if (isMock) {
-      message.success('演示数据已「保存」（本地创作台列表）。')
-      navigate(ROUTES.STUDIO_ARTICLE_DRAFTS)
-      return
-    }
     try {
       const res = await updateArticle(id, values)
       message.success('已保存')
@@ -95,7 +75,7 @@ export function ArticleEditPage() {
         navigate(fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES)
       }
     } catch {
-      message.error('保存失败')
+      message.error('保存失败（已发布内容需先下架）')
     }
   }
 
@@ -107,13 +87,39 @@ export function ArticleEditPage() {
     )
   }
 
-  const initialValues: FormValues | undefined = mock
-    ? {
-        title: mock.title,
-        content: mock.content,
-        published: mock.published,
-      }
-    : undefined
+  if (loadError) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        message="无法加载文章"
+        description="请确认已登录且该文章属于你；不会使用假数据顶替。"
+        action={
+          <Link to={ROUTES.STUDIO_ARTICLE_DRAFTS}>
+            <Button size="small">返回草稿</Button>
+          </Link>
+        }
+      />
+    )
+  }
+
+  if (publishedLocked) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        message="已发布内容不可直接编辑"
+        description="请先在创作台「我的发布」中下架，再回到草稿编辑。"
+        action={
+          <Link to={ROUTES.STUDIO_ARTICLE_PUBLISHED}>
+            <Button size="small" type="primary">
+              去下架
+            </Button>
+          </Link>
+        }
+      />
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -122,22 +128,12 @@ export function ArticleEditPage() {
           <Button type="text">← 返回</Button>
         </Link>
       </Space>
-      {isMock ? (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="正在编辑演示假数据"
-          description="保存不会写入数据库。"
-        />
-      ) : null}
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑文章">
         <Form
           key={id}
           form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={initialValues}
           onValuesChange={(_, all) => setPreview({ title: all.title ?? '', content: all.content ?? '' })}
         >
           <Form.Item name="title" label="标题" rules={[{ required: true }]}>
@@ -167,7 +163,7 @@ export function ArticleEditPage() {
             ]}
           />
           <Form.Item name="published" valuePropName="checked">
-            <Checkbox>发布</Checkbox>
+            <Checkbox>保存时直接发布</Checkbox>
           </Form.Item>
           <Button type="primary" htmlType="submit">
             保存

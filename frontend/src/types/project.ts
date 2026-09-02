@@ -1,14 +1,17 @@
 export interface Project {
-    id: number
-    name: string
-    description: string
-    techStack: string | null
-    repoUrl: string | null
-    demoUrl: string | null
-    published: boolean
-    createdAt: string
-    updatedAt: string
-  }
+  id: number
+  name: string
+  description: string
+  techStack: string | null
+  repoUrl: string | null
+  demoUrl: string | null
+  published: boolean
+  authorId?: number
+  coverUrl?: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt?: string | null
+}
 
   export interface ProjectCreateRequest {
     name: string

@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, Col, Row, Typography, Button, Space, Statistic } from 'antd'
+import { Card, Col, Row, Typography, Button, Space, Statistic, Spin } from 'antd'
 import {
   CrownOutlined,
   EditOutlined,
@@ -13,33 +13,77 @@ import { motion } from 'framer-motion'
 
 import { StudioListPage } from './StudioListPage'
 import {
-  MOCK_ARTICLE_DRAFTS,
-  MOCK_ARTICLE_PUBLISHED,
-  MOCK_PROJECT_DRAFTS,
-  MOCK_PROJECT_PUBLISHED,
-} from '../../mocks/studioMock'
-import { loadStudioStore } from '../../utils/studioStorage'
+  batchDeleteMyArticles,
+  batchPublishMyArticles,
+  batchUnpublishMyArticles,
+  fetchMyArticleDrafts,
+  fetchMyArticlePublished,
+} from '../../api/blog'
+import {
+  batchDeleteMyProjects,
+  batchPublishMyProjects,
+  batchUnpublishMyProjects,
+  fetchMyProjectDrafts,
+  fetchMyProjectPublished,
+} from '../../api/project'
 import { ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 import studioStyles from './Studio.module.css'
 
+type StudioCounts = {
+  articleDrafts: number
+  articlePublished: number
+  projectDrafts: number
+  projectPublished: number
+}
+
+const emptyCounts: StudioCounts = {
+  articleDrafts: 0,
+  articlePublished: 0,
+  projectDrafts: 0,
+  projectPublished: 0,
+}
+
 export function StudioHomePage() {
   const navigate = useNavigate()
-  const store = loadStudioStore()
+  const [counts, setCounts] = useState<StudioCounts>(emptyCounts)
+  const [loadingCounts, setLoadingCounts] = useState(true)
 
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
+      return
+    }
+
+    let cancelled = false
+    setLoadingCounts(true)
+    Promise.all([
+      fetchMyArticleDrafts(),
+      fetchMyArticlePublished(),
+      fetchMyProjectDrafts(),
+      fetchMyProjectPublished(),
+    ])
+      .then(([ad, ap, pd, pp]) => {
+        if (cancelled) return
+        setCounts({
+          articleDrafts: ad.data.data.length,
+          articlePublished: ap.data.data.length,
+          projectDrafts: pd.data.data.length,
+          projectPublished: pp.data.data.length,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setCounts(emptyCounts)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCounts(false)
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [navigate])
-
-  const counts = {
-    articleDrafts: store.articleDrafts.length,
-    articlePublished: store.articlePublished.length,
-    projectDrafts: store.projectDrafts.length,
-    projectPublished: store.projectPublished.length,
-  }
 
   const entries = [
     {
@@ -92,6 +136,7 @@ export function StudioHomePage() {
       count: null as number | null,
     },
   ]
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.pageHead}>
@@ -117,28 +162,30 @@ export function StudioHomePage() {
         </Space>
       </div>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={12} md={6}>
-          <Card className={styles.studioCard} variant="borderless">
-            <Statistic title="文章草稿" value={counts.articleDrafts} />
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card className={styles.studioCard} variant="borderless">
-            <Statistic title="已发文章" value={counts.articlePublished} />
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card className={styles.studioCard} variant="borderless">
-            <Statistic title="项目草稿" value={counts.projectDrafts} />
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card className={styles.studioCard} variant="borderless">
-            <Statistic title="已发项目" value={counts.projectPublished} />
-          </Card>
-        </Col>
-      </Row>
+      <Spin spinning={loadingCounts}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+          <Col xs={12} md={6}>
+            <Card className={styles.studioCard} variant="borderless">
+              <Statistic title="文章草稿" value={counts.articleDrafts} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card className={styles.studioCard} variant="borderless">
+              <Statistic title="已发文章" value={counts.articlePublished} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card className={styles.studioCard} variant="borderless">
+              <Statistic title="项目草稿" value={counts.projectDrafts} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card className={styles.studioCard} variant="borderless">
+              <Statistic title="已发项目" value={counts.projectPublished} />
+            </Card>
+          </Col>
+        </Row>
+      </Spin>
 
       <Row gutter={[16, 16]}>
         {entries.map((item) => (
@@ -178,13 +225,18 @@ export function StudioArticleDraftsPage() {
   return (
     <StudioListPage
       title="文章 · 我的草稿"
-      description="未发布文章可编辑、发布或删除。数据为演示假数据。"
+      description="未发布文章可编辑、发布或删除。数据来自你的账号。"
       mode="draft"
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
       createLabel="写文章"
-      initialItems={MOCK_ARTICLE_DRAFTS}
-      persistBucket="articleDrafts"
+      loadItems={async () => (await fetchMyArticleDrafts()).data.data}
+      onPublish={async (ids) => {
+        await batchPublishMyArticles(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyArticles(ids)
+      }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}
@@ -202,8 +254,13 @@ export function StudioArticlePublishedPage() {
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
       createLabel="写文章"
-      initialItems={MOCK_ARTICLE_PUBLISHED}
-      persistBucket="articlePublished"
+      loadItems={async () => (await fetchMyArticlePublished()).data.data}
+      onUnpublish={async (ids) => {
+        await batchUnpublishMyArticles(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyArticles(ids)
+      }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}
@@ -215,13 +272,18 @@ export function StudioProjectDraftsPage() {
   return (
     <StudioListPage
       title="项目 · 我的草稿"
-      description="未发布项目草稿。数据为演示假数据。"
+      description="未发布项目草稿。数据来自你的账号。"
       mode="draft"
       moduleLabel="项目"
       createPath={ROUTES.STUDIO_PROJECT_NEW}
       createLabel="建项目"
-      initialItems={MOCK_PROJECT_DRAFTS}
-      persistBucket="projectDrafts"
+      loadItems={async () => (await fetchMyProjectDrafts()).data.data}
+      onPublish={async (ids) => {
+        await batchPublishMyProjects(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyProjects(ids)
+      }}
       getTitle={(p) => p.name}
       getSubtitle={(p) => p.description}
       getUpdatedAt={(p) => p.updatedAt}
@@ -239,8 +301,13 @@ export function StudioProjectPublishedPage() {
       moduleLabel="项目"
       createPath={ROUTES.STUDIO_PROJECT_NEW}
       createLabel="建项目"
-      initialItems={MOCK_PROJECT_PUBLISHED}
-      persistBucket="projectPublished"
+      loadItems={async () => (await fetchMyProjectPublished()).data.data}
+      onUnpublish={async (ids) => {
+        await batchUnpublishMyProjects(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyProjects(ids)
+      }}
       getTitle={(p) => p.name}
       getSubtitle={(p) => p.description}
       getUpdatedAt={(p) => p.updatedAt}

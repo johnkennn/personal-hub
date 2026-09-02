@@ -33,3 +33,35 @@ export function deleteProject(id: number | string) {
 export function fetchAllProjects() {
   return request.get<ApiResponse<Project[]>>('/api/projects/manage')
 }
+
+export function fetchMyProjectDrafts() {
+  return request.get<ApiResponse<Project[]>>('/api/me/projects/drafts')
+}
+
+export function fetchMyProjectPublished() {
+  return request.get<ApiResponse<Project[]>>('/api/me/projects/published')
+}
+
+export function batchPublishMyProjects(ids: number[]) {
+  return request.post<ApiResponse<{ affected: number }>>('/api/me/projects/batch-publish', {
+    ids,
+  })
+}
+
+export function batchUnpublishMyProjects(ids: number[]) {
+  return request.post<ApiResponse<{ affected: number }>>('/api/me/projects/batch-unpublish', {
+    ids,
+  })
+}
+
+export function batchDeleteMyProjects(ids: number[]) {
+  return request.post<ApiResponse<{ affected: number }>>('/api/me/projects/batch-delete', {
+    ids,
+  })
+}
+
+export function uploadProjectCover(id: number | string, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return request.post<ApiResponse<Project>>(`/api/me/projects/${id}/cover`, form)
+}
