@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import com.zzh.personal_hub.social.ContentTargetType;
 
 @Data
 @AllArgsConstructor
@@ -16,4 +17,6 @@ public class CommentResponse {
     private Instant updatedAt;
     private Long userId;
     private String username; // 可选：展示用，不要 password
+    private ContentTargetType targetType; // 新增
+    private Long targetId;                // 新增    
 }

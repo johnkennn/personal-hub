@@ -97,6 +97,26 @@ public class CommentService {
         String username = userRepository.findById(c.getUserId())
                 .map(User::getUsername)
                 .orElse("unknown");
-        return new CommentResponse(c.getId(), c.getBody(), c.getCreatedAt(), c.getUpdatedAt(), c.getUserId(), username);
+        return new CommentResponse(c.getId(), c.getBody(), c.getCreatedAt(), c.getUpdatedAt(), c.getUserId(), username, c.getTargetType(), c.getTargetId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CommentResponse> listAllForAdmin() {
+        currentUserService.requireAdmin();
+        return commentRepository.findByDeletedAtIsNullOrderByCreatedAtDesc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteByAdmin(Long id) {
+        currentUserService.requireAdmin();
+        Comment comment = commentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "评论不存在"));
+        if (comment.getDeletedAt() != null) {
+            return; // 幂等：已删当成功
+        }
+        comment.setDeletedAt(Instant.now());
+        commentRepository.save(comment);
     }
 }
