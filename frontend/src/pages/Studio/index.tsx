@@ -13,11 +13,16 @@ import { motion } from 'framer-motion'
 
 import { StudioListPage } from './StudioListPage'
 import {
-  MOCK_ARTICLE_DRAFTS,
-  MOCK_ARTICLE_PUBLISHED,
   MOCK_PROJECT_DRAFTS,
   MOCK_PROJECT_PUBLISHED,
 } from '../../mocks/studioMock'
+import {
+  batchDeleteMyArticles,
+  batchPublishMyArticles,
+  batchUnpublishMyArticles,
+  fetchMyArticleDrafts,
+  fetchMyArticlePublished,
+} from '../../api/blog'
 import { loadStudioStore } from '../../utils/studioStorage'
 import { ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -178,13 +183,18 @@ export function StudioArticleDraftsPage() {
   return (
     <StudioListPage
       title="文章 · 我的草稿"
-      description="未发布文章可编辑、发布或删除。数据为演示假数据。"
+      description="未发布文章可编辑、发布或删除。数据来自你的账号。"
       mode="draft"
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
       createLabel="写文章"
-      initialItems={MOCK_ARTICLE_DRAFTS}
-      persistBucket="articleDrafts"
+      loadItems={async () => (await fetchMyArticleDrafts()).data.data}
+      onPublish={async (ids) => {
+        await batchPublishMyArticles(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyArticles(ids)
+      }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}
@@ -202,8 +212,13 @@ export function StudioArticlePublishedPage() {
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
       createLabel="写文章"
-      initialItems={MOCK_ARTICLE_PUBLISHED}
-      persistBucket="articlePublished"
+      loadItems={async () => (await fetchMyArticlePublished()).data.data}
+      onUnpublish={async (ids) => {
+        await batchUnpublishMyArticles(ids)
+      }}
+      onDelete={async (ids) => {
+        await batchDeleteMyArticles(ids)
+      }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}

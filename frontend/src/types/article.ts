@@ -3,8 +3,11 @@
     title: string
     content: string
     published: boolean
+    authorId?: number
+    coverUrl?: string | null
     createdAt: string
     updatedAt: string
+    deletedAt?: string | null
   }
 
   export interface ArticleCreateRequest {

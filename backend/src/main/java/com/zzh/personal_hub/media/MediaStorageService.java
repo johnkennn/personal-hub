@@ -3,6 +3,9 @@ package com.zzh.personal_hub.media;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.zzh.personal_hub.common.exception.BusinessException;
+import com.zzh.personal_hub.common.ratelimit.InMemoryRateLimiter;
+import com.zzh.personal_hub.common.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.Set;
@@ -18,6 +21,10 @@ public class MediaStorageService {
     private static final Set<String> ALLOWED = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
     private static final long MAX_BYTES = 1024 * 1024 * 5; // 5MB
     private final MediaProperties mediaProperties;
+    private final CurrentUserService currentUserService;
+    private final InMemoryRateLimiter rateLimiter;
+    private static final long UPLOAD_WINDOW_MS = 60_000L;
+    private static final int UPLOAD_LIMIT = 20;
 
     /**
      * @param subDir 相对 root 的子目录，例如 avatars/3
@@ -26,6 +33,11 @@ public class MediaStorageService {
     public String saveImage(MultipartFile file, String subDir) {
         if(file == null || file.isEmpty()) {
             throw new BusinessException(400, "请选择图片");
+        }
+        Long userId = currentUserService.requireUser().getId();
+        String key = "upload:" + userId;
+        if(!rateLimiter.tryAcquire(key, UPLOAD_LIMIT, UPLOAD_WINDOW_MS)) {
+            throw new BusinessException(429, "上传过于频繁，请稍后再试");
         }
         if(file.getSize() > MAX_BYTES) {
             throw new BusinessException(400, "图片大小不能超过 5MB");

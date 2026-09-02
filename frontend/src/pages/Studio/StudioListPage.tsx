@@ -1,4 +1,4 @@
-import { useState, type Key, useMemo, useEffect } from 'react'
+import { useState, type Key, useMemo, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   App,
@@ -9,6 +9,7 @@ import {
   Typography,
   Alert,
   Dropdown,
+  Spin,
 } from 'antd'
 import type { ColumnsType, TableProps } from 'antd/es/table'
 import {
@@ -23,7 +24,6 @@ import {
 import { motion } from 'framer-motion'
 
 import { formatDateTime, excerpt } from '../../utils/format'
-import { pushActivity } from '../../utils/activityStorage'
 import { getStudioBucket, saveStudioBucket } from '../../utils/studioStorage'
 import styles from '../../styles/ui.module.css'
 import studioStyles from './Studio.module.css'
@@ -42,8 +42,14 @@ type StudioListPageProps<T extends { id: number }> = {
   moduleLabel: string
   createPath: string
   createLabel: string
-  initialItems: T[]
+  /** 演示回退数据；remote 模式下仅作初始空列表 */
+  initialItems?: T[]
   persistBucket?: StudioPersistBucket
+  /** 提供则走真 API：加载与发布/下架/删除 */
+  loadItems?: () => Promise<T[]>
+  onPublish?: (ids: number[]) => Promise<void>
+  onUnpublish?: (ids: number[]) => Promise<void>
+  onDelete?: (ids: number[]) => Promise<void>
   getTitle: (item: T) => string
   getSubtitle: (item: T) => string
   getUpdatedAt: (item: T) => string
@@ -57,8 +63,12 @@ export function StudioListPage<T extends { id: number }>({
   moduleLabel,
   createPath,
   createLabel,
-  initialItems,
+  initialItems = [],
   persistBucket,
+  loadItems,
+  onPublish,
+  onUnpublish,
+  onDelete,
   getTitle,
   getSubtitle,
   getUpdatedAt,
@@ -66,17 +76,107 @@ export function StudioListPage<T extends { id: number }>({
 }: StudioListPageProps<T>) {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
-  const [items, setItems] = useState<T[]>(() =>
-    persistBucket ? (getStudioBucket(persistBucket) as unknown as T[]) : initialItems,
-  )
+  const remote = Boolean(loadItems)
+  const [items, setItems] = useState<T[]>(() => {
+    if (remote) return []
+    if (persistBucket) return getStudioBucket(persistBucket) as unknown as T[]
+    return initialItems
+  })
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([])
+  const [loading, setLoading] = useState(remote)
+  const [loadError, setLoadError] = useState(false)
+
+  const refresh = useCallback(async () => {
+    if (!loadItems) return
+    setLoading(true)
+    setLoadError(false)
+    try {
+      const next = await loadItems()
+      setItems(next)
+    } catch {
+      setLoadError(true)
+      message.error('加载失败，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
+  }, [loadItems, message])
 
   useEffect(() => {
-    if (!persistBucket) return
+    if (remote) {
+      void refresh()
+      return
+    }
+  }, [remote, refresh])
+
+  useEffect(() => {
+    if (remote || !persistBucket) return
     saveStudioBucket(persistBucket, items as never)
-  }, [items, persistBucket])
+  }, [items, persistBucket, remote])
 
   const isDraft = mode === 'draft'
+
+  async function runPublish(ids: number[]) {
+    if (onPublish) {
+      try {
+        await onPublish(ids)
+        message.success(ids.length > 1 ? `已批量发布 ${ids.length} 项` : '已发布')
+        setSelectedRowKeys([])
+        await refresh()
+      } catch {
+        message.error('发布失败')
+      }
+      return
+    }
+    setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
+    setSelectedRowKeys([])
+    message.success(
+      ids.length > 1 ? `已批量发布 ${ids.length} 项（演示）` : '已发布（演示）',
+    )
+  }
+
+  async function runUnpublish(ids: number[]) {
+    if (onUnpublish) {
+      try {
+        await onUnpublish(ids)
+        message.success(ids.length > 1 ? `已批量下架 ${ids.length} 项` : '已下架到草稿')
+        setSelectedRowKeys([])
+        await refresh()
+      } catch {
+        message.error('下架失败')
+      }
+      return
+    }
+    setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
+    setSelectedRowKeys([])
+    message.success(
+      ids.length > 1 ? `已批量下架 ${ids.length} 项（演示）` : '已下架到草稿（演示）',
+    )
+  }
+
+  function confirmDelete(ids: number[]) {
+    modal.confirm({
+      title: `确认删除 ${ids.length} 项？`,
+      content: remote ? '删除后进入软删除，列表中不再显示。' : '演示环境为本地移除。',
+      okType: 'danger',
+      okText: '删除',
+      onOk: async () => {
+        if (onDelete) {
+          try {
+            await onDelete(ids)
+            message.success('已删除')
+            setSelectedRowKeys([])
+            await refresh()
+          } catch {
+            message.error('删除失败')
+          }
+          return
+        }
+        setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
+        setSelectedRowKeys([])
+        message.success('已删除')
+      },
+    })
+  }
 
   const columns: ColumnsType<T> = useMemo(
     () => [
@@ -117,13 +217,13 @@ export function StudioListPage<T extends { id: number }>({
                   key: 'publish',
                   icon: <SendOutlined />,
                   label: '发布',
-                  onClick: () => mockPublish([record.id]),
+                  onClick: () => void runPublish([record.id]),
                 }
               : {
                   key: 'unpublish',
                   icon: <StopOutlined />,
                   label: '下架到草稿',
-                  onClick: () => mockUnpublish([record.id]),
+                  onClick: () => void runUnpublish([record.id]),
                 },
             {
               key: 'delete',
@@ -159,47 +259,12 @@ export function StudioListPage<T extends { id: number }>({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, isDraft, editPath],
+    [items, isDraft, editPath, remote],
   )
 
   const rowSelection: TableProps<T>['rowSelection'] = {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
-  }
-
-  function mockPublish(ids: number[]) {
-    setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
-    setSelectedRowKeys([])
-    message.success(
-      ids.length > 1 ? `已批量发布 ${ids.length} 项（演示）` : '已发布（演示）',
-    )
-    pushActivity({
-      title: '创作台：内容已发布',
-      desc: `发布了 ${ids.length} 项（本地演示）`,
-      href: '/studio',
-    })
-  }
-
-  function mockUnpublish(ids: number[]) {
-    setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
-    setSelectedRowKeys([])
-    message.success(
-      ids.length > 1 ? `已批量下架 ${ids.length} 项（演示）` : '已下架到草稿（演示）',
-    )
-  }
-
-  function confirmDelete(ids: number[]) {
-    modal.confirm({
-      title: `确认删除 ${ids.length} 项？`,
-      content: '演示环境为假数据移除；正式版将走软删除。',
-      okType: 'danger',
-      okText: '删除',
-      onOk: () => {
-        setItems((prev) => prev.filter((i) => !ids.includes(i.id)))
-        setSelectedRowKeys([])
-        message.success('已删除')
-      },
-    })
   }
 
   function batchPublish() {
@@ -208,7 +273,7 @@ export function StudioListPage<T extends { id: number }>({
       title: `批量发布 ${ids.length} 项？`,
       content: '发布后将对所有访客可见；已发布内容不可直接编辑。',
       okText: '发布',
-      onOk: () => mockPublish(ids),
+      onOk: () => runPublish(ids),
     })
   }
 
@@ -217,7 +282,7 @@ export function StudioListPage<T extends { id: number }>({
     modal.confirm({
       title: `批量下架 ${ids.length} 项？`,
       content: '下架后进入草稿，才可编辑。',
-      onOk: () => mockUnpublish(ids),
+      onOk: () => runUnpublish(ids),
     })
   }
 
@@ -245,13 +310,30 @@ export function StudioListPage<T extends { id: number }>({
         </Link>
       </div>
 
-      <Alert
-        type="info"
-        showIcon
-        className={studioStyles.banner}
-        message="当前为创作台 UI 演示数据"
-        description="列表读写尚未对接 /api/me/* 接口。交互（编辑限制、发布/下架、批量）已按产品规则实现。"
-      />
+      {remote ? (
+        loadError ? (
+          <Alert
+            type="warning"
+            showIcon
+            className={studioStyles.banner}
+            message="无法加载创作台数据"
+            description="接口请求失败。请检查登录状态与后端服务后重试。"
+            action={
+              <Button size="small" onClick={() => void refresh()}>
+                重试
+              </Button>
+            }
+          />
+        ) : null
+      ) : (
+        <Alert
+          type="info"
+          showIcon
+          className={studioStyles.banner}
+          message="当前为创作台演示数据"
+          description="该列表尚未对接 /api/me/*。失败时不会用假数据冒充真实内容。"
+        />
+      )}
 
       {selectedRowKeys.length > 0 ? (
         <div className={studioStyles.batchBar}>
@@ -278,19 +360,27 @@ export function StudioListPage<T extends { id: number }>({
       ) : null}
 
       <div className={studioStyles.tableWrap}>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={items}
-          rowSelection={rowSelection}
-          pagination={{
-            pageSize: 5,
-            showSizeChanger: true,
-            pageSizeOptions: [5, 10, 20],
-            showTotal: (total) => `共 ${total} 条`,
-          }}
-          locale={{ emptyText: isDraft ? '暂无草稿' : '暂无已发布内容' }}
-        />
+        <Spin spinning={loading}>
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={items}
+            rowSelection={rowSelection}
+            pagination={{
+              pageSize: 5,
+              showSizeChanger: true,
+              pageSizeOptions: [5, 10, 20],
+              showTotal: (total) => `共 ${total} 条`,
+            }}
+            locale={{
+              emptyText: loadError
+                ? '加载失败'
+                : isDraft
+                  ? '暂无草稿，去写一篇吧'
+                  : '暂无已发布内容',
+            }}
+          />
+        </Spin>
       </div>
     </motion.div>
   )

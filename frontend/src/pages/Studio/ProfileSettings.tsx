@@ -10,12 +10,16 @@ import {
   Space,
   Spin,
   Typography,
+  Upload,
 } from 'antd'
+import { UploadOutlined } from '@ant-design/icons'
+import type { UploadProps } from 'antd'
 import { motion } from 'framer-motion'
 
-import { fetchMyProfile, updateMyProfile } from '../../api/profile'
+import { fetchMyProfile, updateMyProfile, uploadAvatar } from '../../api/profile'
 import { ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from '../../styles/ui.module.css'
 
 type ProfileForm = {
@@ -31,6 +35,7 @@ export function ProfileSettingsPage() {
   const [form] = Form.useForm<ProfileForm>()
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
   const avatarWatch = Form.useWatch('avatarUrl', form)
 
   useEffect(() => {
@@ -73,6 +78,39 @@ export function ProfileSettingsPage() {
     }
   }
 
+  const uploadProps: UploadProps = {
+    accept: 'image/jpeg,image/png,image/gif,image/webp',
+    showUploadList: false,
+    maxCount: 1,
+    beforeUpload: (file) => {
+      const okType = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
+      if (!okType) {
+        message.error('仅支持 jpeg、png、gif、webp')
+        return Upload.LIST_IGNORE
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        message.error('图片不能超过 5MB')
+        return Upload.LIST_IGNORE
+      }
+      return true
+    },
+    customRequest: async ({ file, onSuccess, onError }) => {
+      setUploading(true)
+      try {
+        const res = await uploadAvatar(file as File)
+        const profile = res.data.data
+        form.setFieldsValue({ avatarUrl: profile.avatarUrl ?? '' })
+        message.success('头像已更新')
+        onSuccess?.(profile)
+      } catch (e) {
+        message.error('头像上传失败')
+        onError?.(e as Error)
+      } finally {
+        setUploading(false)
+      }
+    },
+  }
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem 0' }}>
@@ -93,7 +131,7 @@ export function ProfileSettingsPage() {
             我的资料
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            完善昵称与简介，让访客更快认识你。头像上传将在下一步接入。
+            完善昵称与简介；头像支持本地上传（jpeg / png / gif / webp，最大 5MB）。
           </Typography.Paragraph>
         </div>
         <Link to={ROUTES.STUDIO}>
@@ -103,14 +141,19 @@ export function ProfileSettingsPage() {
 
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless">
         <Space align="start" size="large" style={{ marginBottom: 24 }} wrap>
-          <Avatar size={72} src={avatarWatch || undefined}>
+          <Avatar size={72} src={resolveMediaUrl(avatarWatch)}>
             {(form.getFieldValue('nickname') || username || '?').slice(0, 1).toUpperCase()}
           </Avatar>
           <div>
             <Typography.Text type="secondary">登录名（不可修改）</Typography.Text>
-            <Typography.Title level={4} style={{ margin: '4px 0 0' }}>
+            <Typography.Title level={4} style={{ margin: '4px 0 8px' }}>
               {username}
             </Typography.Title>
+            <Upload {...uploadProps}>
+              <Button icon={<UploadOutlined />} loading={uploading}>
+                上传头像
+              </Button>
+            </Upload>
           </div>
         </Space>
 
@@ -125,8 +168,8 @@ export function ProfileSettingsPage() {
           <Form.Item name="bio" label="简介" rules={[{ max: 512, message: '最多 512 字' }]}>
             <Input.TextArea rows={4} placeholder="一句话介绍你自己" showCount maxLength={512} />
           </Form.Item>
-          <Form.Item name="avatarUrl" label="头像 URL">
-            <Input placeholder="暂时填写图片链接，稍后支持本地上传" />
+          <Form.Item name="avatarUrl" hidden>
+            <Input />
           </Form.Item>
           <Form.Item
             name="linksJson"
