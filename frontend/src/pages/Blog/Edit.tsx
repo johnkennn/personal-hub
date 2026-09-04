@@ -4,6 +4,7 @@ import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs } fr
 import { motion } from 'framer-motion'
 
 import { MarkdownBody } from '../../components/MarkdownBody'
+import { BackNavButton } from '../../components/BackNavButton'
 import { fetchArticleForManage, updateArticle } from '../../api/blog'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -94,11 +95,7 @@ export function ArticleEditPage() {
         showIcon
         message="无法加载文章"
         description="请确认已登录且该文章属于你；不会使用假数据顶替。"
-        action={
-          <Link to={ROUTES.STUDIO_ARTICLE_DRAFTS}>
-            <Button size="small">返回草稿</Button>
-          </Link>
-        }
+        action={<BackNavButton fallback={ROUTES.STUDIO_ARTICLE_DRAFTS} type="default" size="small" />}
       />
     )
   }
@@ -109,7 +106,7 @@ export function ArticleEditPage() {
         type="info"
         showIcon
         message="已发布内容不可直接编辑"
-        description="请先在创作台「我的发布」中下架，再回到草稿编辑。"
+        description="请先在个人中心「文章已发布」中下架，再回到草稿编辑。"
         action={
           <Link to={ROUTES.STUDIO_ARTICLE_PUBLISHED}>
             <Button size="small" type="primary">
@@ -124,9 +121,9 @@ export function ArticleEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
-        <Link to={fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES}>
-          <Button type="text">← 返回</Button>
-        </Link>
+        <BackNavButton
+          fallback={fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES}
+        />
       </Space>
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑文章">
         <Form

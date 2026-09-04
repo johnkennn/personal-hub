@@ -18,4 +18,6 @@ public class ProfileResponse {
     private long followingCount;
     /** 当前登录用户是否已关注该用户；未登录则为 false */
     private boolean following;
+    private String phone;
+    private String email;
 }

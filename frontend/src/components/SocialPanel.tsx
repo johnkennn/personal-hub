@@ -1,65 +1,89 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { App, Button, Form, Input, List, Space, Typography } from 'antd'
 import { HeartFilled, HeartOutlined, MessageOutlined } from '@ant-design/icons'
 
-import { ROUTES, articleDetailPath, projectDetailPath } from '../router/paths'
-import { isLoggedIn, getUsername, subscribeAuthChange } from '../utils/authStorage'
-import { formatDateTime } from '../utils/format'
 import {
-  addComment,
-  getLikeCount,
-  isLikedByMe,
-  listComments,
-  removeComment,
-  subscribeSocialChange,
-  toggleLike,
-  type ContentKind,
-  type DemoComment,
-} from '../utils/socialStorage'
+  createComment,
+  deleteCommentAsAdmin,
+  deleteMyComment,
+  fetchComments,
+  fetchLikeSummary,
+  likeContent,
+  unlikeContent,
+  type CommentItem,
+} from '../api/social'
+import { ROUTES, articleDetailPath, projectDetailPath } from '../router/paths'
+import {
+  getUserId,
+  getUsername,
+  isAdmin,
+  isLoggedIn,
+  subscribeAuthChange,
+} from '../utils/authStorage'
+import { formatDateTime } from '../utils/format'
 import { pushActivity } from '../utils/activityStorage'
 
 type SocialPanelProps = {
-  kind: ContentKind
+  kind: 'article' | 'project'
   contentId: number
 }
 
+/**
+ * 互动区：赞 / 评接后端 API。
+ * 删除：本人走 /api/comments/{id}；管理员走 /api/admin/comments/{id}（详情页即可治理，无需单独后台页）。
+ */
 export function SocialPanel({ kind, contentId }: SocialPanelProps) {
   const { message } = App.useApp()
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
+  const [admin, setAdmin] = useState(isAdmin)
+  const [meId, setMeId] = useState(getUserId)
+  const [meName, setMeName] = useState(getUsername)
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
-  const [comments, setComments] = useState<DemoComment[]>([])
+  const [comments, setComments] = useState<CommentItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [form] = Form.useForm<{ content: string }>()
 
-  const [me, setMe] = useState(getUsername)
-
-  function refresh() {
-    setLiked(isLikedByMe(kind, contentId))
-    setLikeCount(getLikeCount(kind, contentId))
-    setComments(listComments(kind, contentId))
-  }
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [likeRes, commentRes] = await Promise.all([
+        fetchLikeSummary(kind, contentId),
+        fetchComments(kind, contentId),
+      ])
+      setLiked(Boolean(likeRes.data.data?.liked))
+      setLikeCount(likeRes.data.data?.likeCount ?? 0)
+      setComments(commentRes.data.data ?? [])
+    } catch {
+      message.error('互动数据加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [kind, contentId, message])
 
   useEffect(() => {
-    refresh()
-    const offSocial = subscribeSocialChange(refresh)
-    const offAuth = subscribeAuthChange(() => {
+    void refresh()
+    return subscribeAuthChange(() => {
       setLoggedIn(isLoggedIn())
-      setMe(getUsername())
-      refresh()
+      setAdmin(isAdmin())
+      setMeId(getUserId())
+      setMeName(getUsername())
     })
-    return () => {
-      offSocial()
-      offAuth()
-    }
-  }, [kind, contentId])
+  }, [refresh])
 
-  function onLike() {
+  async function onLike() {
+    if (!loggedIn) {
+      message.info('登录后即可点赞')
+      return
+    }
     try {
-      const res = toggleLike(kind, contentId)
-      setLiked(res.liked)
-      setLikeCount(res.count)
-      if (res.liked) {
+      const res = liked
+        ? await unlikeContent(kind, contentId)
+        : await likeContent(kind, contentId)
+      setLiked(Boolean(res.data.data?.liked))
+      setLikeCount(res.data.data?.likeCount ?? 0)
+      if (!liked) {
         pushActivity({
           title: '你点赞了一篇内容',
           desc: `${kind === 'article' ? '文章' : '项目'} #${contentId}`,
@@ -67,23 +91,47 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
         })
       }
     } catch {
-      message.info('登录后即可点赞')
+      message.error('点赞失败')
     }
   }
 
-  function onComment(values: { content: string }) {
+  async function onComment(values: { content: string }) {
+    if (!loggedIn) {
+      message.info('登录后即可评论')
+      return
+    }
     try {
-      addComment(kind, contentId, values.content)
+      const res = await createComment(kind, contentId, values.content.trim())
       form.resetFields()
-      refresh()
-      message.success('评论已发布（演示本地保存）')
+      setComments((prev) => [res.data.data, ...prev])
+      message.success('评论已发布')
       pushActivity({
         title: '你发表了一条评论',
         desc: values.content.slice(0, 40),
         href: kind === 'article' ? articleDetailPath(contentId) : projectDetailPath(contentId),
       })
     } catch {
-      message.info('登录后即可评论')
+      message.error('评论失败')
+    }
+  }
+
+  function canDelete(item: CommentItem) {
+    if (!loggedIn) return false
+    if (admin) return true
+    return meId != null && item.userId === meId
+  }
+
+  async function onDelete(item: CommentItem) {
+    try {
+      if (admin && item.userId !== meId) {
+        await deleteCommentAsAdmin(item.id)
+      } else {
+        await deleteMyComment(item.id)
+      }
+      setComments((prev) => prev.filter((c) => c.id !== item.id))
+      message.success('已删除')
+    } catch {
+      message.error('删除失败')
     }
   }
 
@@ -93,7 +141,8 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
         <Button
           type={liked ? 'primary' : 'default'}
           icon={liked ? <HeartFilled /> : <HeartOutlined />}
-          onClick={onLike}
+          onClick={() => void onLike()}
+          loading={loading}
         >
           {likeCount > 0 ? likeCount : '点赞'}
         </Button>
@@ -107,7 +156,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
           <Link to={ROUTES.LOGIN}>登录</Link> 后可点赞与评论，让互动被看见。
         </Typography.Paragraph>
       ) : (
-        <Form form={form} onFinish={onComment} style={{ marginBottom: 20 }}>
+        <Form form={form} onFinish={(v) => void onComment(v)} style={{ marginBottom: 20 }}>
           <Form.Item
             name="content"
             rules={[
@@ -124,22 +173,20 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
       )}
 
       <List
+        loading={loading}
         locale={{ emptyText: '还没有评论，来抢沙发' }}
         dataSource={comments}
         renderItem={(item) => (
           <List.Item
             actions={
-              loggedIn && item.author === me
+              canDelete(item)
                 ? [
                     <Button
                       key="del"
                       type="link"
                       danger
                       size="small"
-                      onClick={() => {
-                        removeComment(item.id)
-                        refresh()
-                      }}
+                      onClick={() => void onDelete(item)}
                     >
                       删除
                     </Button>,
@@ -150,7 +197,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
             <List.Item.Meta
               title={
                 <Space>
-                  <Typography.Text strong>{item.author}</Typography.Text>
+                  <Typography.Text strong>{item.username || meName || '用户'}</Typography.Text>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {formatDateTime(item.createdAt)}
                   </Typography.Text>
@@ -158,7 +205,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
               }
               description={
                 <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>
-                  {item.content}
+                  {item.body}
                 </Typography.Paragraph>
               }
             />

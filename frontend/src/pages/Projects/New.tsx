@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { App, Button, Card, Checkbox, Form, Input, Space } from 'antd'
 import { motion } from 'framer-motion'
 
+import { BackNavButton } from '../../components/BackNavButton'
 import { createProject } from '../../api/project'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -50,9 +51,7 @@ export function ProjectNewPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
-        <Link to={fromStudio ? ROUTES.STUDIO : ROUTES.PROJECTS}>
-          <Button type="text">← 返回</Button>
-        </Link>
+        <BackNavButton fallback={fromStudio ? ROUTES.STUDIO : ROUTES.PROJECTS} />
       </Space>
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="建项目">
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ published: false }}>

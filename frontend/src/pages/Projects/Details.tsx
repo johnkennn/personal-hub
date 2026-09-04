@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Alert, Button, Result, Skeleton, Space, Tag, Typography } from 'antd'
-import { ArrowLeftOutlined, LinkOutlined } from '@ant-design/icons'
+import { LinkOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
+import { BackNavButton } from '../../components/BackNavButton'
 import { SocialPanel } from '../../components/SocialPanel'
-import { getDemoCreator, type PublicProject } from '../../mocks/publicDemo'
+import type { PublicProject } from '../../mocks/publicDemo'
 import { ROUTES } from '../../router/paths'
 import { loadPublicProject } from '../../services/publicContent'
 import { formatDateTime } from '../../utils/format'
@@ -51,11 +52,7 @@ export function ProjectDetailPage() {
       <Result
         status="404"
         title="项目不存在"
-        extra={
-          <Link to={ROUTES.PROJECTS}>
-            <Button type="primary">返回列表</Button>
-          </Link>
-        }
+        extra={<BackNavButton fallback={ROUTES.PROJECTS} type="primary" />}
       />
     )
   }
@@ -69,11 +66,7 @@ export function ProjectDetailPage() {
       <Result
         status="404"
         title={error || '项目不存在'}
-        extra={
-          <Link to={ROUTES.PROJECTS}>
-            <Button type="primary">返回列表</Button>
-          </Link>
-        }
+        extra={<BackNavButton fallback={ROUTES.PROJECTS} type="primary" />}
       />
     )
   }
@@ -82,7 +75,6 @@ export function ProjectDetailPage() {
     .split(/[,，/|]/)
     .map((t) => t.trim())
     .filter(Boolean)
-  const creator = getDemoCreator(project.authorId)
 
   return (
     <motion.article
@@ -90,11 +82,7 @@ export function ProjectDetailPage() {
       animate={{ opacity: 1, y: 0 }}
       style={{ maxWidth: 760, margin: '0 auto' }}
     >
-      <Link to={ROUTES.PROJECTS}>
-        <Button type="text" icon={<ArrowLeftOutlined />} style={{ marginBottom: 16 }}>
-          返回列表
-        </Button>
-      </Link>
+      <BackNavButton fallback={ROUTES.PROJECTS} style={{ marginBottom: 16 }} />
 
       {fromDemo ? (
         <Alert type="info" showIcon style={{ marginBottom: 16 }} message="演示内容" />
@@ -107,7 +95,7 @@ export function ProjectDetailPage() {
         <AuthorChip
           authorId={project.authorId || undefined}
           authorName={project.authorName}
-          avatarUrl={creator?.avatarUrl}
+          avatarUrl={project.avatarUrl}
         />
         <Typography.Text type="secondary">{formatDateTime(project.createdAt)}</Typography.Text>
       </Space>

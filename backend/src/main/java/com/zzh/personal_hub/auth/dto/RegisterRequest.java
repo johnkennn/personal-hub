@@ -20,4 +20,7 @@ public class RegisterRequest {
     @NotBlank(message = "密码不能为空")
     @Size(min = 6, max = 72, message = "密码长度需在 6~72 之间")
     private String password;
+
+    @NotBlank @Size(min = 11, max = 20)
+    private String phone;
 }

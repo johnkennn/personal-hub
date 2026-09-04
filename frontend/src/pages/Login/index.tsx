@@ -71,9 +71,12 @@ export function LoginPage() {
           </Form.Item>
         </Form>
 
-        <Space>
-          <Typography.Text type="secondary">还没有账号？</Typography.Text>
-          <Link to={ROUTES.REGISTER}>立即注册</Link>
+        <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+          <Space>
+            <Typography.Text type="secondary">还没有账号？</Typography.Text>
+            <Link to={ROUTES.REGISTER}>立即注册</Link>
+          </Space>
+          <Link to={ROUTES.FORGOT_PASSWORD}>忘记密码</Link>
         </Space>
       </Card>
     </motion.div>

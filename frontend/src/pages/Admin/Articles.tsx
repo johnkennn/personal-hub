@@ -1,40 +1,63 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { App, Button, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { motion } from 'framer-motion'
 
-import { deleteArticle, fetchAllArticles } from '../../api/blog'
-import { ROUTES, blogEditPath, articleDetailPath } from '../../router/paths'
-import { isLoggedIn } from '../../utils/authStorage'
+import { fetchAdminArticles, unpublishAdminArticle } from '../../api/adminArticles'
+import { BackNavButton } from '../../components/BackNavButton'
+import { ROUTES, articleDetailPath } from '../../router/paths'
+import { isAdmin, isLoggedIn } from '../../utils/authStorage'
+import { formatDateTime } from '../../utils/format'
 import type { Article } from '../../types/article'
 import styles from '../../styles/ui.module.css'
 
+/**
+ * 内容治理 · 文章
+ * 只治理已发布内容：查看 / 强制下架。不做删除、编辑、代建。
+ */
 export function AdminArticlesPage() {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
 
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetchAdminArticles()
+      setArticles(res.data.data ?? [])
+    } catch {
+      message.error('加载失败（需 ADMIN）')
+    } finally {
+      setLoading(false)
+    }
+  }, [message])
+
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
       return
     }
-    fetchAllArticles()
-      .then((res) => setArticles(res.data.data ?? []))
-      .catch(() => message.error('加载失败'))
-      .finally(() => setLoading(false))
-  }, [navigate, message])
+    if (!isAdmin()) {
+      navigate(ROUTES.ADMIN, { replace: true })
+      return
+    }
+    void load()
+  }, [navigate, load])
 
-  function handleDelete(id: number) {
+  function handleUnpublish(article: Article) {
     modal.confirm({
-      title: '确认删除？',
-      okType: 'danger',
+      title: `强制下架「${article.title}」？`,
+      content: '下架后对公众不可见，作者可在草稿中继续编辑。',
       onOk: async () => {
-        await deleteArticle(id)
-        setArticles((prev) => prev.filter((item) => item.id !== id))
-        message.success('已删除')
+        try {
+          await unpublishAdminArticle(article.id)
+          setArticles((prev) => prev.filter((a) => a.id !== article.id))
+          message.success('已下架')
+        } catch {
+          message.error('下架失败')
+        }
       },
     })
   }
@@ -42,23 +65,30 @@ export function AdminArticlesPage() {
   const columns: ColumnsType<Article> = [
     { title: '标题', dataIndex: 'title', ellipsis: true },
     {
-      title: '状态',
-      dataIndex: 'published',
+      title: '作者 ID',
+      dataIndex: 'authorId',
       width: 100,
-      render: (published: boolean) =>
-        published ? <Tag color="success">已发布</Tag> : <Tag>草稿</Tag>,
+      render: (id?: number) => id ?? '—',
+    },
+    {
+      title: '状态',
+      width: 100,
+      render: () => <Tag color="success">已发布</Tag>,
+    },
+    {
+      title: '更新',
+      dataIndex: 'updatedAt',
+      width: 140,
+      render: (v: string) => formatDateTime(v),
     },
     {
       title: '操作',
-      width: 220,
+      width: 180,
       render: (_, article) => (
-        <Space>
-          {article.published ? (
-            <Link to={articleDetailPath(article.id)}>查看</Link>
-          ) : null}
-          <Link to={blogEditPath(article.id)}>编辑</Link>
-          <Button type="link" danger onClick={() => handleDelete(article.id)}>
-            删除
+        <Space wrap>
+          <Link to={articleDetailPath(article.id)}>查看</Link>
+          <Button type="link" size="small" onClick={() => handleUnpublish(article)}>
+            强制下架
           </Button>
         </Space>
       ),
@@ -68,22 +98,27 @@ export function AdminArticlesPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.pageHead}>
-        <Typography.Title level={2} className={styles.pageTitle}>
-          文章管理
-        </Typography.Title>
-        <Link to={ROUTES.ARTICLE_NEW}>
-          <Button type="primary">新建文章</Button>
-        </Link>
+        <div>
+          <BackNavButton fallback={ROUTES.ADMIN} className={styles.pageBack} />
+          <Typography.Title level={2} className={styles.pageTitle}>
+            文章管理
+          </Typography.Title>
+          <Typography.Paragraph className={styles.pageDesc}>
+            治理已发布文章：查看、强制下架。删除由作者自行处理；他人草稿不对管理员开放。
+          </Typography.Paragraph>
+        </div>
+        <Button onClick={() => void load()}>刷新</Button>
       </div>
+
       <Table
         rowKey="id"
         loading={loading}
         columns={columns}
         dataSource={articles}
         pagination={{
-          pageSize: 5,
+          pageSize: 10,
           showSizeChanger: true,
-          pageSizeOptions: [5, 10, 20],
+          pageSizeOptions: [10, 20, 50],
           showTotal: (total) => `共 ${total} 条`,
         }}
       />

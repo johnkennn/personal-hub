@@ -16,7 +16,9 @@ export type PublicArticle = {
   updatedAt: string
   authorId: number
   authorName: string
+  avatarUrl?: string
   coverTone?: string
+  coverUrl?: string | null
 }
 
 export type PublicProject = {
@@ -31,6 +33,8 @@ export type PublicProject = {
   updatedAt: string
   authorId: number
   authorName: string
+  avatarUrl?: string
+  coverUrl?: string | null
 }
 
 const now = Date.now()

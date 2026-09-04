@@ -8,6 +8,10 @@ app:
     # 本地开发：项目下的目录；生产再改成 /var/www/personal-hub-media
     root-dir: ${MEDIA_ROOT:./data/media}
     public-prefix: /media
+  ratelimit:
+    login-per-minute: 10
+    register-per-minute: 5
+    upload-per-minute: 20
 spring:
   application:
     name: personal-hub

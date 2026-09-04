@@ -1,17 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, Col, Row, Typography, Button, Space, Statistic, Spin } from 'antd'
+import { Card, Col, Row, Typography, Button, Space, Spin } from 'antd'
 import {
   CrownOutlined,
   EditOutlined,
   FileTextOutlined,
   FolderOutlined,
+  LockOutlined,
   MessageOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { StudioListPage } from './StudioListPage'
+import { BackNavButton } from '../../components/BackNavButton'
+import { fetchMyProfile } from '../../api/profile'
 import {
   batchDeleteMyArticles,
   batchPublishMyArticles,
@@ -26,8 +30,8 @@ import {
   fetchMyProjectDrafts,
   fetchMyProjectPublished,
 } from '../../api/project'
-import { ROUTES } from '../../router/paths'
-import { isLoggedIn } from '../../utils/authStorage'
+import { ROUTES, userFollowersPath, userFollowingPath } from '../../router/paths'
+import { getUserId, isAdmin, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 import studioStyles from './Studio.module.css'
 
@@ -36,6 +40,8 @@ type StudioCounts = {
   articlePublished: number
   projectDrafts: number
   projectPublished: number
+  following: number
+  followers: number
 }
 
 const emptyCounts: StudioCounts = {
@@ -43,12 +49,91 @@ const emptyCounts: StudioCounts = {
   articlePublished: 0,
   projectDrafts: 0,
   projectPublished: 0,
+  following: 0,
+  followers: 0,
 }
 
+type Entry = {
+  title: string
+  desc: string
+  to: string
+  icon: ReactNode
+  count?: number | null
+}
+
+function EntryCard({ item }: { item: Entry }) {
+  return (
+    <Link to={item.to} className={styles.cardLink}>
+      <Card className={styles.studioCard} variant="borderless">
+        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
+          <Space align="start">
+            <Typography.Text style={{ fontSize: 20, color: 'var(--ph-accent)' }}>
+              {item.icon}
+            </Typography.Text>
+            <div>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                {item.title}
+              </Typography.Title>
+              <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 4 }}>
+                {item.desc}
+              </Typography.Paragraph>
+            </div>
+          </Space>
+          {item.count != null ? (
+            <Typography.Text strong style={{ color: 'var(--ph-accent)', fontSize: 18 }}>
+              {item.count}
+            </Typography.Text>
+          ) : null}
+        </Space>
+      </Card>
+    </Link>
+  )
+}
+
+function StudioSection({
+  title,
+  desc,
+  actions,
+  children,
+}: {
+  title: string
+  desc: string
+  actions?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <section className={studioStyles.section}>
+      <div className={studioStyles.sectionHead}>
+        <div>
+          <Typography.Title level={4} className={studioStyles.sectionTitle}>
+            {title}
+          </Typography.Title>
+          <Typography.Paragraph type="secondary" className={studioStyles.sectionDesc}>
+            {desc}
+          </Typography.Paragraph>
+        </div>
+        {actions ? <div className={studioStyles.sectionActions}>{actions}</div> : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+/**
+ * 个人中心 · 两级信息架构
+ * 一级：作品 / 账号 / 治理
+ * 二级：各分类下的具体入口
+ */
 export function StudioHomePage() {
   const navigate = useNavigate()
+  const meId = getUserId()
+  const [admin, setAdmin] = useState(isAdmin)
   const [counts, setCounts] = useState<StudioCounts>(emptyCounts)
   const [loadingCounts, setLoadingCounts] = useState(true)
+
+  useEffect(() => {
+    return subscribeAuthChange(() => setAdmin(isAdmin()))
+  }, [])
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -63,14 +148,18 @@ export function StudioHomePage() {
       fetchMyArticlePublished(),
       fetchMyProjectDrafts(),
       fetchMyProjectPublished(),
+      fetchMyProfile(),
     ])
-      .then(([ad, ap, pd, pp]) => {
+      .then(([ad, ap, pd, pp, profileRes]) => {
         if (cancelled) return
+        const profile = profileRes.data.data
         setCounts({
           articleDrafts: ad.data.data.length,
           articlePublished: ap.data.data.length,
           projectDrafts: pd.data.data.length,
           projectPublished: pp.data.data.length,
+          following: profile.followingCount ?? 0,
+          followers: profile.followerCount ?? 0,
         })
       })
       .catch(() => {
@@ -85,55 +174,78 @@ export function StudioHomePage() {
     }
   }, [navigate])
 
-  const entries = [
+  const workEntries: Entry[] = [
     {
-      title: '文章 · 我的草稿',
-      desc: '未发布内容，可继续编辑后发布。',
+      title: '文章草稿',
+      desc: '未发布，可编辑后发布',
       to: ROUTES.STUDIO_ARTICLE_DRAFTS,
       icon: <FileTextOutlined />,
       count: counts.articleDrafts,
     },
     {
-      title: '文章 · 我的发布',
-      desc: '已公开：可下架回草稿，不可直接编辑。',
+      title: '文章已发布',
+      desc: '下架后才能再编辑',
       to: ROUTES.STUDIO_ARTICLE_PUBLISHED,
       icon: <FileTextOutlined />,
       count: counts.articlePublished,
     },
     {
-      title: '项目 · 我的草稿',
-      desc: '未发布项目草稿。',
+      title: '项目草稿',
+      desc: '未发布的项目',
       to: ROUTES.STUDIO_PROJECT_DRAFTS,
       icon: <FolderOutlined />,
       count: counts.projectDrafts,
     },
     {
-      title: '项目 · 我的发布',
-      desc: '已公开项目作品集。',
+      title: '项目已发布',
+      desc: '公开作品集',
       to: ROUTES.STUDIO_PROJECT_PUBLISHED,
       icon: <FolderOutlined />,
       count: counts.projectPublished,
     },
+  ]
+
+  const accountEntries: Entry[] = [
     {
-      title: '我的资料',
-      desc: '昵称、简介与头像设置。',
+      title: '资料',
+      desc: '昵称、邮箱、手机与头像',
       to: ROUTES.STUDIO_PROFILE,
       icon: <UserOutlined />,
-      count: null as number | null,
     },
     {
-      title: '我的建议',
-      desc: '对平台提想法，可提交多条。',
+      title: '修改密码',
+      desc: '验证旧密码后更换',
+      to: ROUTES.STUDIO_PASSWORD,
+      icon: <LockOutlined />,
+    },
+    {
+      title: '关注',
+      desc: '你关注的创作者',
+      to: meId != null ? userFollowingPath(meId) : ROUTES.LOGIN,
+      icon: <TeamOutlined />,
+      count: counts.following,
+    },
+    {
+      title: '粉丝',
+      desc: '关注你的人',
+      to: meId != null ? userFollowersPath(meId) : ROUTES.LOGIN,
+      icon: <TeamOutlined />,
+      count: counts.followers,
+    },
+    {
+      title: '建议',
+      desc: '向平台提交想法',
       to: ROUTES.STUDIO_SUGGESTIONS,
       icon: <MessageOutlined />,
-      count: null as number | null,
     },
+  ]
+
+  const adminEntries: Entry[] = [
     {
       title: '内容治理',
-      desc: '管理员：全站文章/项目发布与下架。',
+      desc: '用户、下架与建议箱',
       to: ROUTES.ADMIN,
       icon: <CrownOutlined />,
-      count: null as number | null,
     },
   ]
 
@@ -141,82 +253,66 @@ export function StudioHomePage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.pageHead}>
         <div>
+          <BackNavButton fallback={ROUTES.HOME} className={styles.pageBack} />
           <Typography.Title level={2} className={styles.pageTitle}>
-            创作台
+            个人中心
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            写文章、建项目，在草稿箱打磨后再发布。已发布内容需下架后才能编辑。
+            管理作品、账号与社交；已发布内容需下架后才能编辑。
           </Typography.Paragraph>
         </div>
-        <Space wrap className={studioStyles.heroActions}>
-          <Link to={ROUTES.STUDIO_ARTICLE_NEW}>
-            <Button type="primary" size="large" icon={<EditOutlined />}>
-              写文章
-            </Button>
-          </Link>
-          <Link to={ROUTES.STUDIO_PROJECT_NEW}>
-            <Button type="primary" size="large" icon={<FolderOutlined />}>
-              建项目
-            </Button>
-          </Link>
-        </Space>
       </div>
 
       <Spin spinning={loadingCounts}>
-        <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-          <Col xs={12} md={6}>
-            <Card className={styles.studioCard} variant="borderless">
-              <Statistic title="文章草稿" value={counts.articleDrafts} />
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card className={styles.studioCard} variant="borderless">
-              <Statistic title="已发文章" value={counts.articlePublished} />
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card className={styles.studioCard} variant="borderless">
-              <Statistic title="项目草稿" value={counts.projectDrafts} />
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card className={styles.studioCard} variant="borderless">
-              <Statistic title="已发项目" value={counts.projectPublished} />
-            </Card>
-          </Col>
-        </Row>
-      </Spin>
+        <StudioSection
+          title="作品"
+          desc="文章与项目的草稿、已发布内容"
+          actions={
+            <Space wrap className={studioStyles.heroActions}>
+              <Link to={ROUTES.STUDIO_ARTICLE_NEW}>
+                <Button type="primary" icon={<EditOutlined />}>
+                  写文章
+                </Button>
+              </Link>
+              <Link to={ROUTES.STUDIO_PROJECT_NEW}>
+                <Button type="primary" icon={<FolderOutlined />}>
+                  建项目
+                </Button>
+              </Link>
+            </Space>
+          }
+        >
+          <Row gutter={[14, 14]}>
+            {workEntries.map((item) => (
+              <Col xs={24} sm={12} lg={6} key={item.to}>
+                <EntryCard item={item} />
+              </Col>
+            ))}
+          </Row>
+        </StudioSection>
 
-      <Row gutter={[16, 16]}>
-        {entries.map((item) => (
-          <Col xs={24} sm={12} lg={8} key={item.to}>
-            <Link to={item.to} className={styles.cardLink}>
-              <Card className={styles.studioCard} variant="borderless">
-                <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Space align="start">
-                    <Typography.Text style={{ fontSize: 22, color: 'var(--ph-accent)' }}>
-                      {item.icon}
-                    </Typography.Text>
-                    <div>
-                      <Typography.Title level={5} style={{ margin: 0 }}>
-                        {item.title}
-                      </Typography.Title>
-                      <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                        {item.desc}
-                      </Typography.Paragraph>
-                    </div>
-                  </Space>
-                  {item.count !== null ? (
-                    <Typography.Text strong style={{ color: 'var(--ph-accent)', fontSize: 20 }}>
-                      {item.count}
-                    </Typography.Text>
-                  ) : null}
-                </Space>
-              </Card>
-            </Link>
-          </Col>
-        ))}
-      </Row>
+        <StudioSection title="账号" desc="个人资料、关注关系与反馈">
+          <Row gutter={[14, 14]}>
+            {accountEntries.map((item) => (
+              <Col xs={24} sm={12} lg={6} key={item.to}>
+                <EntryCard item={item} />
+              </Col>
+            ))}
+          </Row>
+        </StudioSection>
+
+        {admin ? (
+          <StudioSection title="治理" desc="管理员运营入口">
+            <Row gutter={[14, 14]}>
+              {adminEntries.map((item) => (
+                <Col xs={24} sm={12} lg={6} key={item.to}>
+                  <EntryCard item={item} />
+                </Col>
+              ))}
+            </Row>
+          </StudioSection>
+        ) : null}
+      </Spin>
     </motion.div>
   )
 }
@@ -224,8 +320,8 @@ export function StudioHomePage() {
 export function StudioArticleDraftsPage() {
   return (
     <StudioListPage
-      title="文章 · 我的草稿"
-      description="未发布文章可编辑、发布或删除。数据来自你的账号。"
+      title="文章草稿"
+      description="作品 · 未发布文章可编辑、发布或删除。"
       mode="draft"
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
@@ -248,8 +344,8 @@ export function StudioArticleDraftsPage() {
 export function StudioArticlePublishedPage() {
   return (
     <StudioListPage
-      title="文章 · 我的发布"
-      description="已发布不可直接编辑；可下架回草稿后再改。"
+      title="文章已发布"
+      description="作品 · 已发布不可直接编辑；可下架回草稿后再改。"
       mode="published"
       moduleLabel="文章"
       createPath={ROUTES.STUDIO_ARTICLE_NEW}
@@ -271,8 +367,8 @@ export function StudioArticlePublishedPage() {
 export function StudioProjectDraftsPage() {
   return (
     <StudioListPage
-      title="项目 · 我的草稿"
-      description="未发布项目草稿。数据来自你的账号。"
+      title="项目草稿"
+      description="作品 · 未发布项目草稿。"
       mode="draft"
       moduleLabel="项目"
       createPath={ROUTES.STUDIO_PROJECT_NEW}
@@ -295,8 +391,8 @@ export function StudioProjectDraftsPage() {
 export function StudioProjectPublishedPage() {
   return (
     <StudioListPage
-      title="项目 · 我的发布"
-      description="已发布项目：可下架或删除，不可直接编辑。"
+      title="项目已发布"
+      description="作品 · 已发布项目：可下架或删除，不可直接编辑。"
       mode="published"
       moduleLabel="项目"
       createPath={ROUTES.STUDIO_PROJECT_NEW}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   App,
   Avatar,
@@ -17,7 +17,9 @@ import { UploadOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { fetchMyProfile, updateMyProfile, uploadAvatar } from '../../api/profile'
+import { BackNavButton } from '../../components/BackNavButton'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
+import { setCachedProfileDisplay } from '../../utils/profileDisplay'
 import { ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
@@ -27,6 +29,8 @@ type ProfileForm = {
   bio: string
   avatarUrl: string
   linksJson: string
+  email: string
+  phone: string
 }
 
 export function ProfileSettingsPage() {
@@ -55,6 +59,12 @@ export function ProfileSettingsPage() {
           bio: p.bio ?? '',
           avatarUrl: p.avatarUrl ?? '',
           linksJson: p.linksJson ?? '{}',
+          email: p.email ?? '',
+          phone: p.phone ?? '',
+        })
+        setCachedProfileDisplay({
+          avatarUrl: p.avatarUrl ?? null,
+          nickname: p.nickname ?? null,
         })
       })
       .catch(() => {
@@ -91,6 +101,10 @@ export function ProfileSettingsPage() {
         const res = await uploadAvatar(file as File)
         const profile = res.data.data
         form.setFieldsValue({ avatarUrl: profile.avatarUrl ?? '' })
+        setCachedProfileDisplay({
+          avatarUrl: profile.avatarUrl ?? null,
+          nickname: profile.nickname ?? form.getFieldValue('nickname') ?? null,
+        })
         message.success('头像已更新')
         onSuccess?.(profile)
       } catch (e) {
@@ -104,10 +118,22 @@ export function ProfileSettingsPage() {
 
   async function onFinish(values: ProfileForm) {
     try {
-      await updateMyProfile(values)
+      const res = await updateMyProfile({
+        nickname: values.nickname,
+        bio: values.bio,
+        avatarUrl: values.avatarUrl,
+        linksJson: values.linksJson,
+        email: values.email,
+        phone: values.phone,
+      })
+      const p = res.data.data
+      setCachedProfileDisplay({
+        avatarUrl: p.avatarUrl ?? null,
+        nickname: p.nickname ?? null,
+      })
       message.success('资料已保存')
     } catch {
-      message.error('保存失败，请稍后重试')
+      message.error('保存失败：邮箱或手机号可能已被占用')
     }
   }
 
@@ -127,16 +153,14 @@ export function ProfileSettingsPage() {
     >
       <div className={styles.pageHead}>
         <div>
+          <BackNavButton fallback={ROUTES.STUDIO} className={styles.pageBack} />
           <Typography.Title level={2} className={styles.pageTitle}>
             我的资料
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            完善昵称与简介；头像支持本地上传（jpeg / png / gif / webp，最大 5MB）。
+            账号 · 邮箱对外展示；手机号仅自己与管理员可见
           </Typography.Paragraph>
         </div>
-        <Link to={ROUTES.STUDIO}>
-          <Button type="text">返回创作台</Button>
-        </Link>
       </div>
 
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless">
@@ -165,10 +189,29 @@ export function ProfileSettingsPage() {
           >
             <Input placeholder="展示给访客的名字" />
           </Form.Item>
+          <Form.Item
+            name="email"
+            label="邮箱（对外展示）"
+            rules={[
+              { required: true, message: '请输入邮箱' },
+              { type: 'email', message: '邮箱格式不正确' },
+            ]}
+          >
+            <Input placeholder="name@example.com" autoComplete="email" />
+          </Form.Item>
+          <Form.Item
+            name="phone"
+            label="手机号（不对外展示）"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { pattern: /^1\d{10}$/, message: '请输入 11 位手机号' },
+            ]}
+          >
+            <Input placeholder="11 位手机号" autoComplete="tel" />
+          </Form.Item>
           <Form.Item name="bio" label="简介" rules={[{ max: 512, message: '最多 512 字' }]}>
             <Input.TextArea rows={4} placeholder="一句话介绍你自己" showCount maxLength={512} />
           </Form.Item>
-          {/* 隐藏字段：保存资料时把已上传的 avatarUrl 一并提交 */}
           <Form.Item name="avatarUrl" hidden>
             <Input />
           </Form.Item>
@@ -180,9 +223,12 @@ export function ProfileSettingsPage() {
             <Input.TextArea rows={2} />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit">
-              保存修改
-            </Button>
+            <Space wrap>
+              <Button type="primary" htmlType="submit">
+                保存修改
+              </Button>
+              <Button onClick={() => navigate(ROUTES.STUDIO_PASSWORD)}>修改密码</Button>
+            </Space>
           </Form.Item>
         </Form>
       </Card>

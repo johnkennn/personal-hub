@@ -18,4 +18,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     int markAllRead(@Param("receiverId") Long receiverId, @Param("now") Instant now);
 
     long countByReceiverIdAndReadAtIsNull(Long receiverId);
+
+    List<Notification> findByReceiverIdAndReadAtIsNullOrderByCreatedAtDesc(Long receiverId);
+
+    long countByReceiverIdAndReadAtIsNullAndTypeNot(
+        Long receiverId,
+        com.zzh.personal_hub.notification.NotificationType type
+    );
 }

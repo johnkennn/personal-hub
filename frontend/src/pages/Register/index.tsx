@@ -1,7 +1,7 @@
 import { Card, Form, Input, Button, Typography, App, Space } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
+import { LockOutlined, MailOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 
 import { register } from '../../api/auth'
 import { ROUTES } from '../../router/paths'
@@ -11,7 +11,13 @@ import styles from '../../styles/ui.module.css'
 type RegisterForm = {
   username: string
   email: string
+  phone: string
   password: string
+}
+
+const phoneRule = {
+  pattern: /^1\d{10}$/,
+  message: '请输入 11 位中国大陆手机号',
 }
 
 export function RegisterPage() {
@@ -27,7 +33,7 @@ export function RegisterPage() {
       message.success('注册成功，已自动登录')
       navigate(ROUTES.HOME)
     } catch {
-      message.error('注册失败，用户名或邮箱可能已被占用')
+      message.error('注册失败，用户名 / 邮箱 / 手机号可能已被占用')
     }
   }
 
@@ -43,7 +49,7 @@ export function RegisterPage() {
           创建创作者账号
         </Typography.Title>
         <Typography.Paragraph type="secondary">
-          开放注册。加入后即可维护资料，并在后续里程碑发布文章与项目。
+          需填写用户名、邮箱与手机号；邮箱对外展示，手机号仅自己与管理员可见。
         </Typography.Paragraph>
 
         <Form form={form} layout="vertical" size="large" onFinish={onFinish} requiredMark={false}>
@@ -55,7 +61,7 @@ export function RegisterPage() {
               { min: 3, max: 64, message: '长度 3~64' },
             ]}
           >
-            <Input prefix={<UserOutlined />} placeholder="对外展示的登录名" autoComplete="username" />
+            <Input prefix={<UserOutlined />} placeholder="登录名" autoComplete="username" />
           </Form.Item>
           <Form.Item
             name="email"
@@ -66,6 +72,13 @@ export function RegisterPage() {
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder="name@example.com" autoComplete="email" />
+          </Form.Item>
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[{ required: true, message: '请输入手机号' }, phoneRule]}
+          >
+            <Input prefix={<MobileOutlined />} placeholder="11 位手机号" autoComplete="tel" />
           </Form.Item>
           <Form.Item
             name="password"

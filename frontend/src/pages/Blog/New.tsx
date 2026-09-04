@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { App, Button, Card, Checkbox, Form, Input, Space, Tabs } from 'antd'
 import { motion } from 'framer-motion'
 
+import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { createArticle } from '../../api/blog'
 import { articleDetailPath, ROUTES } from '../../router/paths'
@@ -46,9 +47,7 @@ export function ArticleNewPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
-        <Link to={fromStudio ? ROUTES.STUDIO : ROUTES.ARTICLES}>
-          <Button type="text">← 返回</Button>
-        </Link>
+        <BackNavButton fallback={fromStudio ? ROUTES.STUDIO : ROUTES.ARTICLES} />
       </Space>
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="写文章">
         <Form

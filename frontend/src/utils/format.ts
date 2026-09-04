@@ -10,7 +10,12 @@ export function formatDateTime(value?: string | null) {
 }
 
 export function excerpt(text: string, max = 120) {
-  const normalized = text.replace(/\s+/g, ' ').trim()
+  const normalized = text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[#>*_`~\[\]]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (normalized.length <= max) return normalized
   return `${normalized.slice(0, max)}…`
 }

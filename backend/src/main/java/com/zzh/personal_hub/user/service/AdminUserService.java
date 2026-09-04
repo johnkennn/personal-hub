@@ -63,6 +63,7 @@ public class AdminUserService {
             user.getId(),
             user.getUsername(),
             user.getEmail(),
+            user.getPhone(),
             user.getRole(),
             user.getCreatedAt(),
             user.getStatus()

@@ -51,6 +51,7 @@ public class AdminBootstrapInitializer implements ApplicationRunner {
         User admin = new User();
         admin.setUsername("admin");
         admin.setEmail("admin@local.dev");
+        admin.setPhone("13476270359");
         admin.setPasswordHash(passwordEncoder.encode(bootstrapPassword));
         admin.setRole(UserRole.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);

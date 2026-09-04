@@ -6,26 +6,66 @@ import {
 } from '../mocks/publicDemo'
 import { fetchArticles, fetchArticleById } from '../api/blog'
 import { fetchProjects, fetchProjectById } from '../api/project'
+import { fetchPublicProfile } from '../api/users'
 import type { Article } from '../types/article'
 import type { Project } from '../types/project'
+import { resolveMediaUrl } from '../utils/mediaUrl'
 
-function asPublicArticle(a: Article): PublicArticle {
+type AuthorInfo = { name: string; avatarUrl?: string }
+
+const authorCache = new Map<number, AuthorInfo>()
+
+async function loadAuthor(authorId?: number | null): Promise<AuthorInfo> {
+  if (!authorId) return { name: '未知作者' }
+  const cached = authorCache.get(authorId)
+  if (cached) return cached
+  try {
+    const res = await fetchPublicProfile(authorId)
+    const p = res.data.data
+    const info: AuthorInfo = {
+      name: (p.nickname?.trim() || p.username || `用户${authorId}`).trim(),
+      avatarUrl: resolveMediaUrl(p.avatarUrl) || undefined,
+    }
+    authorCache.set(authorId, info)
+    return info
+  } catch {
+    const fallback = { name: `用户${authorId}` }
+    authorCache.set(authorId, fallback)
+    return fallback
+  }
+}
+
+async function asPublicArticle(a: Article): Promise<PublicArticle> {
+  const authorId = a.authorId ?? 0
+  const author = await loadAuthor(authorId || null)
   return {
     ...a,
-    authorId: 0,
-    authorName: '创作者',
+    authorId,
+    authorName: author.name,
+    avatarUrl: author.avatarUrl,
   }
 }
 
-function asPublicProject(p: Project): PublicProject {
+async function asPublicProject(p: Project): Promise<PublicProject> {
+  const authorId = p.authorId ?? 0
+  const author = await loadAuthor(authorId || null)
   return {
     ...p,
-    authorId: 0,
-    authorName: '创作者',
+    authorId,
+    authorName: author.name,
+    avatarUrl: author.avatarUrl,
   }
 }
 
-/** 优先真 API；失败或空列表时用演示数据，保证现场可演 */
+async function mapArticles(list: Article[]) {
+  return Promise.all(list.map(asPublicArticle))
+}
+
+async function mapProjects(list: Project[]) {
+  return Promise.all(list.map(asPublicProject))
+}
+
+/** 优先真 API；失败或空列表时用演示数据，并显式标记 fromDemo */
 export async function loadPublicArticles(): Promise<{ items: PublicArticle[]; fromDemo: boolean }> {
   try {
     const res = await fetchArticles()
@@ -33,7 +73,7 @@ export async function loadPublicArticles(): Promise<{ items: PublicArticle[]; fr
     if (data.length === 0) {
       return { items: DEMO_ARTICLES, fromDemo: true }
     }
-    return { items: data.map(asPublicArticle), fromDemo: false }
+    return { items: await mapArticles(data), fromDemo: false }
   } catch {
     return { items: DEMO_ARTICLES, fromDemo: true }
   }
@@ -49,7 +89,7 @@ export async function loadPublicArticle(
     if (!data) {
       return { item: demo ?? null, fromDemo: Boolean(demo) }
     }
-    return { item: asPublicArticle(data), fromDemo: false }
+    return { item: await asPublicArticle(data), fromDemo: false }
   } catch {
     return { item: demo ?? null, fromDemo: Boolean(demo) }
   }
@@ -62,7 +102,7 @@ export async function loadPublicProjects(): Promise<{ items: PublicProject[]; fr
     if (data.length === 0) {
       return { items: DEMO_PROJECTS, fromDemo: true }
     }
-    return { items: data.map(asPublicProject), fromDemo: false }
+    return { items: await mapProjects(data), fromDemo: false }
   } catch {
     return { items: DEMO_PROJECTS, fromDemo: true }
   }
@@ -78,7 +118,7 @@ export async function loadPublicProject(
     if (!data) {
       return { item: demo ?? null, fromDemo: Boolean(demo) }
     }
-    return { item: asPublicProject(data), fromDemo: false }
+    return { item: await asPublicProject(data), fromDemo: false }
   } catch {
     return { item: demo ?? null, fromDemo: Boolean(demo) }
   }

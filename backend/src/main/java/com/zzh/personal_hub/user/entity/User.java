@@ -39,4 +39,7 @@ public class User {
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    @Column(nullable = false, unique = true, length = 20)
+    private String phone;
 }

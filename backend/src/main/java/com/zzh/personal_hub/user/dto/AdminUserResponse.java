@@ -16,6 +16,7 @@ public class AdminUserResponse {
     private Long id;
     private String username;
     private String email;
+    private String phone;
     private UserRole role;
     private Instant createdAt;
     private UserStatus status;

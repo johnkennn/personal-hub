@@ -1,38 +1,58 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Alert, Button, Card, Col, Row, Space, Spin, Statistic, Typography } from 'antd'
 import {
-  Alert,
-  App,
-  Button,
-  Space,
-  Table,
-  Tag,
-  Typography,
-  Select,
-} from 'antd'
-import type { ColumnsType } from 'antd/es/table'
-import {
-  DeleteOutlined,
-  SendOutlined,
-  StopOutlined,
   CrownOutlined,
+  FileTextOutlined,
+  FolderOutlined,
+  MessageOutlined,
+  TeamOutlined,
+  UserDeleteOutlined,
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
-import { MOCK_ADMIN_CONTENTS, type AdminContentItem } from '../../mocks/studioMock'
+import { fetchAdminStats, type AdminStats } from '../../api/adminStats'
+import { BackNavButton } from '../../components/BackNavButton'
 import { ROUTES } from '../../router/paths'
-import { isAdmin, isLoggedIn, setDemoRole, subscribeAuthChange } from '../../utils/authStorage'
-import { formatDateTime } from '../../utils/format'
+import { isAdmin, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
-import studioStyles from '../Studio/Studio.module.css'
 
+/**
+ * 治理后台入口
+ *
+ * 数据流：
+ *   JWT role=ADMIN（localStorage，仅门禁）
+ *     → GET /api/admin/stats（真权限在后端 requireAdmin）
+ *     → 顶部仪表数字
+ *     → 下方入口卡片跳转子治理页
+ */
 export function AdminHomePage() {
   const navigate = useNavigate()
-  const { message, modal } = App.useApp()
   const [admin, setAdmin] = useState(isAdmin)
-  const [items, setItems] = useState(MOCK_ADMIN_CONTENTS)
-  const [moduleFilter, setModuleFilter] = useState<'ALL' | 'ARTICLE' | 'PROJECT'>('ALL')
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFT' | 'PUBLISHED'>('ALL')
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState('')
+
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true)
+    setStatsError('')
+    try {
+      const res = await fetchAdminStats()
+      setStats(res.data.data)
+    } catch (err: unknown) {
+      setStats(null)
+      const status = (err as { response?: { status?: number; data?: { code?: number } } })?.response
+        ?.status
+      const code = (err as { response?: { data?: { code?: number } } })?.response?.data?.code
+      if (status === 401 || code === 401) {
+        setStatsError('登录已失效，请重新登录后再查看仪表')
+      } else {
+        setStatsError('请确认后端 /api/admin/stats 可用且当前为 ADMIN')
+      }
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -42,96 +62,10 @@ export function AdminHomePage() {
     return subscribeAuthChange(() => setAdmin(isAdmin()))
   }, [navigate])
 
-  const filtered = useMemo(() => {
-    return items.filter((i) => {
-      if (moduleFilter !== 'ALL' && i.module !== moduleFilter) return false
-      if (statusFilter !== 'ALL' && i.status !== statusFilter) return false
-      return true
-    })
-  }, [items, moduleFilter, statusFilter])
-
-  function enableAdmin() {
-    setDemoRole('ADMIN')
-    setAdmin(true)
-    message.success('已切换为管理员演示身份')
-  }
-
-  function disableAdmin() {
-    setDemoRole('AUTHOR')
-    setAdmin(false)
-    message.info('已恢复为普通创作者')
-  }
-
-  function publish(id: number) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status: 'PUBLISHED', updatedAt: new Date().toISOString() } : i)),
-    )
-    message.success('已发布（演示）')
-  }
-
-  function unpublish(id: number) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status: 'DRAFT', updatedAt: new Date().toISOString() } : i)),
-    )
-    message.success('已下架（演示）')
-  }
-
-  function remove(id: number) {
-    modal.confirm({
-      title: '确认删除该内容？',
-      content: '管理员删除将作用于所有用户内容（演示假数据）。',
-      okType: 'danger',
-      onOk: () => {
-        setItems((prev) => prev.filter((i) => i.id !== id))
-        message.success('已删除')
-      },
-    })
-  }
-
-  const columns: ColumnsType<AdminContentItem> = [
-    {
-      title: '模块',
-      dataIndex: 'module',
-      width: 90,
-      render: (m: AdminContentItem['module']) =>
-        m === 'ARTICLE' ? <Tag color="cyan">文章</Tag> : <Tag color="purple">项目</Tag>,
-    },
-    { title: '标题', dataIndex: 'title', ellipsis: true },
-    { title: '作者', dataIndex: 'author', width: 100 },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (s: AdminContentItem['status']) =>
-        s === 'PUBLISHED' ? <Tag color="success">已发布</Tag> : <Tag>草稿</Tag>,
-    },
-    {
-      title: '更新',
-      dataIndex: 'updatedAt',
-      width: 120,
-      render: (v: string) => formatDateTime(v),
-    },
-    {
-      title: '操作',
-      width: 260,
-      render: (_, row) => (
-        <Space wrap>
-          {row.status === 'DRAFT' ? (
-            <Button type="link" size="small" icon={<SendOutlined />} onClick={() => publish(row.id)}>
-              发布
-            </Button>
-          ) : (
-            <Button type="link" size="small" icon={<StopOutlined />} onClick={() => unpublish(row.id)}>
-              下架
-            </Button>
-          )}
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => remove(row.id)}>
-            删除
-          </Button>
-        </Space>
-      ),
-    },
-  ]
+  useEffect(() => {
+    if (!admin) return
+    void loadStats()
+  }, [admin, loadStats])
 
   if (!admin) {
     return (
@@ -145,78 +79,153 @@ export function AdminHomePage() {
           icon={<CrownOutlined />}
           style={{ marginBottom: 16 }}
           message="当前账号不是管理员"
-          description="后端角色体系接通前，可用演示开关切换。正式环境将由 users.role=ADMIN 控制。"
+          description="请使用 role=ADMIN 的账号登录（例如本地引导账号 admin）。不再支持前端演示切角色。"
         />
-        <Button type="primary" icon={<CrownOutlined />} onClick={enableAdmin}>
-          演示：切换为管理员
-        </Button>
+        <Link to={ROUTES.LOGIN}>
+          <Button type="primary">去登录</Button>
+        </Link>
       </motion.div>
     )
   }
+
+  const metricCards = [
+    {
+      title: '用户总数',
+      value: stats?.userTotal,
+      icon: <TeamOutlined />,
+      to: ROUTES.ADMIN_USERS,
+    },
+    {
+      title: '已禁用',
+      value: stats?.userDisabled,
+      icon: <UserDeleteOutlined />,
+      to: ROUTES.ADMIN_USERS,
+    },
+    {
+      title: '已发文章',
+      value: stats?.articlePublished,
+      icon: <FileTextOutlined />,
+      to: ROUTES.ADMIN_ARTICLES,
+    },
+    {
+      title: '已发项目',
+      value: stats?.projectPublished,
+      icon: <FolderOutlined />,
+      to: ROUTES.ADMIN_PROJECTS,
+    },
+    {
+      title: '建议条数',
+      value: stats?.suggestionTotal,
+      icon: <MessageOutlined />,
+      to: ROUTES.ADMIN_SUGGESTIONS,
+    },
+  ]
+
+  const entries = [
+    {
+      title: '用户管理',
+      desc: '查看用户列表，启用 / 禁用普通账号。',
+      to: ROUTES.ADMIN_USERS,
+      icon: <TeamOutlined />,
+    },
+    {
+      title: '文章管理',
+      desc: '查看已发布文章，强制下架。',
+      to: ROUTES.ADMIN_ARTICLES,
+      icon: <FileTextOutlined />,
+    },
+    {
+      title: '项目管理',
+      desc: '查看已发布项目，强制下架。',
+      to: ROUTES.ADMIN_PROJECTS,
+      icon: <FolderOutlined />,
+    },
+    {
+      title: '建议箱',
+      desc: '查看用户反馈，删除无效建议。',
+      to: ROUTES.ADMIN_SUGGESTIONS,
+      icon: <MessageOutlined />,
+    },
+  ]
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.pageHead}>
         <div>
+          <BackNavButton fallback={ROUTES.STUDIO} className={styles.pageBack} />
           <Typography.Title level={2} className={styles.pageTitle}>
-            内容治理
+            治理后台
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            查看 / 发布 / 下架 / 删除全站文章与项目（演示数据，后端后续接入）。
+            运营总览与治理入口。数字来自 GET /api/admin/stats，点击可进入对应模块。
           </Typography.Paragraph>
         </div>
-        <Space>
-          <Link to={ROUTES.ADMIN_ARTICLES}>
-            <Button type="text">旧版文章表</Button>
-          </Link>
-          <Button onClick={disableAdmin}>退出管理员演示</Button>
-        </Space>
+        <Button onClick={() => void loadStats()} loading={statsLoading}>
+          刷新概览
+        </Button>
       </div>
 
-      <Alert
-        type="info"
-        showIcon
-        className={studioStyles.banner}
-        message="管理员前端原型"
-        description="数据来自 mocks，操作仅影响本页状态。"
-      />
+      {statsError ? (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="仪表数据加载失败"
+          description={statsError}
+          action={
+            <Button size="small" onClick={() => void loadStats()}>
+              重试
+            </Button>
+          }
+        />
+      ) : null}
 
-      <Space wrap style={{ marginBottom: 16 }}>
-        <Select
-          value={moduleFilter}
-          style={{ width: 140 }}
-          onChange={setModuleFilter}
-          options={[
-            { value: 'ALL', label: '全部模块' },
-            { value: 'ARTICLE', label: '文章' },
-            { value: 'PROJECT', label: '项目' },
-          ]}
-        />
-        <Select
-          value={statusFilter}
-          style={{ width: 140 }}
-          onChange={setStatusFilter}
-          options={[
-            { value: 'ALL', label: '全部状态' },
-            { value: 'DRAFT', label: '草稿' },
-            { value: 'PUBLISHED', label: '已发布' },
-          ]}
-        />
-      </Space>
+      <Spin spinning={statsLoading}>
+        <Row gutter={[14, 14]} style={{ marginBottom: 24 }}>
+          {metricCards.map((m) => (
+            <Col xs={12} sm={8} lg={4} xl={4} key={m.title} style={{ flex: '1 1 160px', maxWidth: '100%' }}>
+              <Link to={m.to} className={styles.cardLink}>
+                <Card className={styles.studioCard} variant="borderless">
+                  <Space align="center" size={10} style={{ marginBottom: 8 }}>
+                    <Typography.Text style={{ fontSize: 18, color: 'var(--ph-accent)' }}>
+                      {m.icon}
+                    </Typography.Text>
+                    <Typography.Text type="secondary">{m.title}</Typography.Text>
+                  </Space>
+                  <Statistic value={m.value ?? '—'} valueStyle={{ color: 'var(--ph-text)' }} />
+                </Card>
+              </Link>
+            </Col>
+          ))}
+        </Row>
+      </Spin>
 
-      <div className={studioStyles.tableWrap}>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={filtered}
-          pagination={{
-            pageSize: 5,
-            showSizeChanger: true,
-            pageSizeOptions: [5, 10, 20],
-            showTotal: (t) => `共 ${t} 条`,
-          }}
-        />
-      </div>
+      <Typography.Title level={4} style={{ marginBottom: 12 }}>
+        治理入口
+      </Typography.Title>
+      <Row gutter={[16, 16]}>
+        {entries.map((item) => (
+          <Col xs={24} sm={12} lg={8} key={item.to}>
+            <Link to={item.to} className={styles.cardLink}>
+              <Card className={styles.studioCard} variant="borderless">
+                <Space align="start">
+                  <Typography.Text style={{ fontSize: 22, color: 'var(--ph-accent)' }}>
+                    {item.icon}
+                  </Typography.Text>
+                  <div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      {item.title}
+                    </Typography.Title>
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                      {item.desc}
+                    </Typography.Paragraph>
+                  </div>
+                </Space>
+              </Card>
+            </Link>
+          </Col>
+        ))}
+      </Row>
     </motion.div>
   )
 }

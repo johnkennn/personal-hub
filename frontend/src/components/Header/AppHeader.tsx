@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
+  Avatar,
   Button,
   Drawer,
   Dropdown,
@@ -8,26 +9,29 @@ import {
   Grid,
   Layout,
   Menu,
-  Space,
   theme,
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
-  CrownOutlined,
-  EditOutlined,
   LogoutOutlined,
   MenuOutlined,
-  MessageOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 
+import { fetchMyProfile } from '../../api/profile'
 import {
   clearAuth,
   getUsername,
   isLoggedIn,
   subscribeAuthChange,
 } from '../../utils/authStorage'
+import {
+  getCachedProfileDisplay,
+  setCachedProfileDisplay,
+  subscribeProfileDisplayChange,
+} from '../../utils/profileDisplay'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import { NAV_ITEMS, ROUTES } from '../../router/paths'
 import { GlobalSearch } from '../GlobalSearch'
 import { NotificationBell } from '../NotificationBell'
@@ -43,6 +47,8 @@ export function AppHeader() {
   const { token } = theme.useToken()
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [username, setUsername] = useState(getUsername)
+  const [avatarUrl, setAvatarUrl] = useState(() => getCachedProfileDisplay().avatarUrl)
+  const [nickname, setNickname] = useState(() => getCachedProfileDisplay().nickname)
   const [open, setOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -50,8 +56,39 @@ export function AppHeader() {
     return subscribeAuthChange(() => {
       setLoggedIn(isLoggedIn())
       setUsername(getUsername())
+      const cached = getCachedProfileDisplay()
+      setAvatarUrl(cached.avatarUrl)
+      setNickname(cached.nickname)
     })
   }, [])
+
+  useEffect(() => {
+    return subscribeProfileDisplayChange(() => {
+      const cached = getCachedProfileDisplay()
+      setAvatarUrl(cached.avatarUrl)
+      setNickname(cached.nickname)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!loggedIn) return
+    let cancelled = false
+    fetchMyProfile()
+      .then((res) => {
+        if (cancelled) return
+        const p = res.data.data
+        setCachedProfileDisplay({
+          avatarUrl: p.avatarUrl ?? null,
+          nickname: p.nickname ?? null,
+        })
+      })
+      .catch(() => {
+        /* 顶栏降级：用缓存或用户名 */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [loggedIn])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -78,6 +115,9 @@ export function AppHeader() {
     label: item.label,
   }))
 
+  const displayName = (nickname?.trim() || username || '用户').trim()
+  const avatarSrc = resolveMediaUrl(avatarUrl) || undefined
+
   function handleMenuClick(path: string) {
     setOpen(false)
     navigate(path)
@@ -86,44 +126,18 @@ export function AppHeader() {
   function handleLogout() {
     clearAuth()
     setOpen(false)
-    navigate(ROUTES.HOME, { replace: true })
+    navigate(ROUTES.LOGIN, { replace: true })
   }
 
+  /** 入口页已含资料/治理；菜单只保留总入口 + 退出，避免重复 */
   const userMenu: MenuProps['items'] = [
     {
-      key: 'studio',
-      icon: <EditOutlined />,
-      label: '创作台',
+      key: 'hub',
+      icon: <UserOutlined />,
+      label: '个人中心',
       onClick: () => {
         setOpen(false)
         navigate(ROUTES.STUDIO)
-      },
-    },
-    {
-      key: 'suggestions',
-      icon: <MessageOutlined />,
-      label: '我的建议',
-      onClick: () => {
-        setOpen(false)
-        navigate(ROUTES.STUDIO_SUGGESTIONS)
-      },
-    },
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '我的资料',
-      onClick: () => {
-        setOpen(false)
-        navigate(ROUTES.STUDIO_PROFILE)
-      },
-    },
-    {
-      key: 'admin',
-      icon: <CrownOutlined />,
-      label: '内容治理',
-      onClick: () => {
-        setOpen(false)
-        navigate(ROUTES.ADMIN)
       },
     },
     { type: 'divider' },
@@ -153,17 +167,18 @@ export function AppHeader() {
   )
 
   const authActions = loggedIn ? (
-    <Space>
+    <div className={styles.actions}>
       {searchBtn}
       <NotificationBell />
       <Dropdown menu={{ items: userMenu }} placement="bottomRight">
-        <Button type="text" icon={<UserOutlined />}>
-          {username}
+        <Button type="text" className={styles.userTrigger}>
+          <Avatar size={24} src={avatarSrc} icon={<UserOutlined />} className={styles.userAvatar} />
+          <span className={styles.user}>{displayName}</span>
         </Button>
       </Dropdown>
-    </Space>
+    </div>
   ) : (
-    <Space>
+    <div className={styles.actions}>
       {searchBtn}
       <NotificationBell />
       <Button
@@ -184,7 +199,7 @@ export function AppHeader() {
       >
         注册
       </Button>
-    </Space>
+    </div>
   )
 
   return (

@@ -19,14 +19,14 @@ import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
-import { getDemoCreator, type PublicProject } from '../../mocks/publicDemo'
+import type { PublicProject } from '../../mocks/publicDemo'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicProjects } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
 import styles from '../../styles/ui.module.css'
 
-const PAGE_SIZE = 6
+const PAGE_SIZE = 12
 
 function techTags(techStack: string | null) {
   if (!techStack) return []
@@ -95,33 +95,46 @@ export function ProjectsPage() {
         <Empty description="暂无已发布项目" />
       ) : (
         <>
-          <Row gutter={[16, 16]}>
+          <Row gutter={[14, 14]}>
             {pageItems.map((project) => (
-              <Col xs={24} md={12} lg={8} key={project.id}>
-                <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                  <Link to={projectDetailPath(project.id)} className={styles.cardLink}>
-                    <Card className={styles.contentCard} variant="borderless" styles={{ body: { paddingTop: 16 } }}>
-                      <CoverStrip title={project.name} tone={coverToneFromId(project.id)} />
-                      <Typography.Title level={4} style={{ marginTop: 0 }}>
+              <Col xs={24} sm={12} lg={8} xl={6} key={project.id} style={{ display: 'flex' }}>
+                <motion.div
+                  className={styles.catalogCardMotion}
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link
+                    to={projectDetailPath(project.id)}
+                    className={`${styles.cardLink} ${styles.catalogCardLink}`}
+                  >
+                    <Card
+                      className={`${styles.contentCard} ${styles.catalogCard}`}
+                      variant="borderless"
+                    >
+                      <CoverStrip title={project.name} tone={coverToneFromId(project.id)} compact />
+                      <Typography.Title level={5} className={styles.catalogCardTitle}>
                         {project.name}
                       </Typography.Title>
-                      <Typography.Paragraph type="secondary">
-                        {excerpt(project.description)}
+                      <Typography.Paragraph type="secondary" className={styles.catalogCardExcerpt}>
+                        {excerpt(project.description, 72)}
                       </Typography.Paragraph>
-                      <Space size={[4, 8]} wrap style={{ marginBottom: 12 }}>
+                      <Space size={[4, 4]} wrap className={styles.catalogCardTags}>
                         {techTags(project.techStack).map((tag) => (
                           <Tag key={tag} color="green">
                             {tag}
                           </Tag>
                         ))}
                       </Space>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <div className={styles.catalogCardMeta}>
                         <AuthorChip
                           authorId={project.authorId || undefined}
                           authorName={project.authorName}
-                          avatarUrl={getDemoCreator(project.authorId)?.avatarUrl}
+                          avatarUrl={project.avatarUrl}
+                          size={22}
                         />
-                        <Typography.Text type="secondary">{formatDateTime(project.createdAt)}</Typography.Text>
+                        <Typography.Text type="secondary">
+                          {formatDateTime(project.createdAt)}
+                        </Typography.Text>
                       </div>
                     </Card>
                   </Link>

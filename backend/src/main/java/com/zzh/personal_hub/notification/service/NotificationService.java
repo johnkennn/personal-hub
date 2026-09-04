@@ -28,7 +28,8 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationResponse> listMine() {
         User me = currentUserService.requireUser();
-        return notificationRepository.findByReceiverIdOrderByCreatedAtDesc(me.getId()).stream()
+        return notificationRepository.findByReceiverIdAndReadAtIsNullOrderByCreatedAtDesc(me.getId()).stream()
+        .filter(n -> n.getType() != NotificationType.FOLLOW)
                 .map(this::toResponse)
                 .toList();
     }
@@ -36,7 +37,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long unreadCount() {
         User me = currentUserService.requireUser();
-        return notificationRepository.countByReceiverIdAndReadAtIsNull(me.getId());
+        return notificationRepository.countByReceiverIdAndReadAtIsNullAndTypeNot(me.getId(), NotificationType.FOLLOW);
     }
 
     @Transactional

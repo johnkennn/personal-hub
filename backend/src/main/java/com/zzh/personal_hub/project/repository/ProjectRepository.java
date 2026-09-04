@@ -19,4 +19,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     List<Project> findByNameContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(
         String name);
+
+    long countByPublishedTrueAndDeletedAtIsNull();
 }

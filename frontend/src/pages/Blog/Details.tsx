@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Result, Skeleton, Space, Typography } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { useParams } from 'react-router-dom'
+import { Alert, Result, Skeleton, Space, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
+import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { ReadingProgress } from '../../components/ReadingProgress'
 import { SocialPanel } from '../../components/SocialPanel'
-import { getDemoCreator, type PublicArticle } from '../../mocks/publicDemo'
+import type { PublicArticle } from '../../mocks/publicDemo'
 import { ROUTES } from '../../router/paths'
 import { loadPublicArticle } from '../../services/publicContent'
 import { formatDateTime } from '../../utils/format'
@@ -53,11 +53,7 @@ export function BlogDetailPage() {
       <Result
         status="404"
         title="文章不存在"
-        extra={
-          <Link to={ROUTES.ARTICLES}>
-            <Button type="primary">返回列表</Button>
-          </Link>
-        }
+        extra={<BackNavButton fallback={ROUTES.ARTICLES} type="primary" />}
       />
     )
   }
@@ -71,16 +67,10 @@ export function BlogDetailPage() {
       <Result
         status="404"
         title={error || '文章不存在'}
-        extra={
-          <Link to={ROUTES.ARTICLES}>
-            <Button type="primary">返回列表</Button>
-          </Link>
-        }
+        extra={<BackNavButton fallback={ROUTES.ARTICLES} type="primary" />}
       />
     )
   }
-
-  const creator = getDemoCreator(article.authorId)
 
   return (
     <>
@@ -91,11 +81,7 @@ export function BlogDetailPage() {
         style={{ maxWidth: 760, margin: '0 auto' }}
       >
         <Space style={{ marginBottom: 16 }}>
-          <Link to={ROUTES.ARTICLES}>
-            <Button type="text" icon={<ArrowLeftOutlined />}>
-              返回列表
-            </Button>
-          </Link>
+          <BackNavButton fallback={ROUTES.ARTICLES} />
         </Space>
 
         {fromDemo ? (
@@ -109,7 +95,7 @@ export function BlogDetailPage() {
           <AuthorChip
             authorId={article.authorId || undefined}
             authorName={article.authorName}
-            avatarUrl={creator?.avatarUrl}
+            avatarUrl={article.avatarUrl}
           />
           <Typography.Text type="secondary">{formatDateTime(article.createdAt)}</Typography.Text>
         </Space>

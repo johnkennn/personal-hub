@@ -1,7 +1,7 @@
-import { Result, Button, Card } from 'antd'
-import { Link } from 'react-router-dom'
+import { Result, Card } from 'antd'
 import { motion } from 'framer-motion'
 
+import { BackNavButton } from '../../components/BackNavButton'
 import { ROUTES } from '../../router/paths'
 import styles from '../../styles/ui.module.css'
 
@@ -18,11 +18,7 @@ export function ComingSoonPage({ title, subtitle }: ComingSoonPageProps) {
           status="info"
           title={title}
           subTitle={subtitle ?? '该能力将在后续里程碑交付，创作台入口已预留。'}
-          extra={
-            <Link to={ROUTES.STUDIO}>
-              <Button type="primary">返回创作台</Button>
-            </Link>
-          }
+          extra={<BackNavButton fallback={ROUTES.STUDIO} type="primary" />}
         />
       </Card>
     </motion.div>

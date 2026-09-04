@@ -2,7 +2,6 @@ package com.zzh.personal_hub.user.service;
 
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.response.PageResult;
-import com.zzh.personal_hub.notification.service.NotificationService;
 import com.zzh.personal_hub.user.dto.UserSummaryDto;
 import com.zzh.personal_hub.user.entity.Follow;
 import com.zzh.personal_hub.user.entity.User;
@@ -29,7 +28,6 @@ public class FollowService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final CurrentUserService currentUserService;
-    private final NotificationService notificationService;
     /** 当前登录用户关注 followeeId（幂等） */
     @Transactional
     public void follow(Long followeeId) {
@@ -45,7 +43,6 @@ public class FollowService {
         follow.setFollowerId(me.getId());
         follow.setFolloweeId(followeeId);
         followRepository.save(follow);
-        notificationService.notifyFollow(me.getId(), followeeId);
     }
 
     /** 取消关注（幂等） */

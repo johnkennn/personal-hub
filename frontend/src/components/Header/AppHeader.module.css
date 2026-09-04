@@ -49,9 +49,49 @@
   line-height: 62px;
 }
 
+/* 右侧操作区：与顶栏垂直居中，不受 header line-height 影响 */
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 64px;
+  line-height: 1;
+}
+
+.actions :global(.ant-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  line-height: 1;
+}
+
+.actions :global(.ant-badge) {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.userTrigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem;
+  height: 32px !important;
+  max-width: 12rem;
+  padding-inline: 0.4rem !important;
+  line-height: 1 !important;
+}
+
+.userAvatar {
+  flex-shrink: 0;
+  background: rgba(124, 184, 154, 0.25) !important;
+}
+
 .user {
-  max-width: 9rem;
+  max-width: 8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1;
+  font-size: 0.925rem;
 }

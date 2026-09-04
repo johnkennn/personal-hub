@@ -17,11 +17,17 @@ export const ROUTES = {
   STUDIO_PROJECT_NEW: '/studio/projects/new',
   STUDIO_PROJECT_EDIT: '/studio/projects/:id/edit',
   STUDIO_PROFILE: '/studio/profile',
+  STUDIO_PASSWORD: '/studio/password',
   STUDIO_SUGGESTIONS: '/studio/suggestions',
+  FORGOT_PASSWORD: '/forgot-password',
   USER_PROFILE: '/u/:userId',
+  USER_FOLLOWERS: '/u/:userId/followers',
+  USER_FOLLOWING: '/u/:userId/following',
   ADMIN: '/admin',
+  ADMIN_USERS: '/admin/users',
   ADMIN_ARTICLES: '/admin/articles',
   ADMIN_PROJECTS: '/admin/projects',
+  ADMIN_SUGGESTIONS: '/admin/suggestions',
   /** @deprecated 兼容旧链接，路由层重定向到 ARTICLES */
   BLOG: '/blog',
   ARTICLE_NEW: '/blog/new',
@@ -63,4 +69,12 @@ export function projectEditPath(id: number | string) {
 
 export function userProfilePath(userId: number | string) {
   return `/u/${userId}`
+}
+
+export function userFollowersPath(userId: number | string) {
+  return `/u/${userId}/followers`
+}
+
+export function userFollowingPath(userId: number | string) {
+  return `/u/${userId}/following`
 }

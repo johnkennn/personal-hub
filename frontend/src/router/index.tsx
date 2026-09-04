@@ -15,6 +15,8 @@ import { ArticleEditPage } from '../pages/Blog/Edit'
 import { ProjectEditPage } from '../pages/Projects/Edit'
 import { AdminArticlesPage } from '../pages/Admin/Articles'
 import { AdminProjectsPage } from '../pages/Admin/Projects'
+import { AdminUsersPage } from '../pages/Admin/Users'
+import { AdminSuggestionsPage } from '../pages/Admin/Suggestions'
 import { AdminHomePage } from '../pages/Admin'
 import {
   StudioArticleDraftsPage,
@@ -24,8 +26,11 @@ import {
   StudioProjectPublishedPage,
 } from '../pages/Studio'
 import { UserProfilePage } from '../pages/UserProfile'
+import { UserFollowersPage, UserFollowingPage } from '../pages/UserProfile/FollowList'
 import { ProfileSettingsPage } from '../pages/Studio/ProfileSettings'
+import { ChangePasswordPage } from '../pages/Studio/ChangePassword'
 import { SuggestionsPage } from '../pages/Studio/Suggestions'
+import { ForgotPasswordPage } from '../pages/ForgotPassword'
 
 export const router = createBrowserRouter([
   {
@@ -50,7 +55,10 @@ export const router = createBrowserRouter([
       { path: 'blog/:id', element: <BlogDetailPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'u/:userId', element: <UserProfilePage /> },
+      { path: 'u/:userId/followers', element: <UserFollowersPage /> },
+      { path: 'u/:userId/following', element: <UserFollowingPage /> },
 
       { path: 'studio', element: <StudioHomePage /> },
       { path: 'studio/articles/drafts', element: <StudioArticleDraftsPage /> },
@@ -62,10 +70,13 @@ export const router = createBrowserRouter([
       { path: 'studio/projects/new', element: <ProjectNewPage /> },
       { path: 'studio/projects/:id/edit', element: <ProjectEditPage /> },
       { path: 'studio/profile', element: <ProfileSettingsPage /> },
+      { path: 'studio/password', element: <ChangePasswordPage /> },
       { path: 'studio/suggestions', element: <SuggestionsPage /> },
       { path: 'admin', element: <AdminHomePage /> },
+      { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/articles', element: <AdminArticlesPage /> },
       { path: 'admin/projects', element: <AdminProjectsPage /> },
+      { path: 'admin/suggestions', element: <AdminSuggestionsPage /> },
     ],
   },
 ])

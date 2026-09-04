@@ -34,7 +34,7 @@ export function AboutPage() {
         </div>
         {loggedIn ? (
           <Link to={ROUTES.STUDIO}>
-            <Button type="primary">进入创作台</Button>
+            <Button type="primary">进入个人中心</Button>
           </Link>
         ) : (
           <Link to={ROUTES.REGISTER}>
@@ -50,15 +50,21 @@ export function AboutPage() {
         </Typography.Paragraph>
       </Card>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        {skills.map((s) => (
+      <Row gutter={[14, 14]} style={{ marginBottom: 16 }}>
+        {skills.map((s, i) => (
           <Col xs={24} md={8} key={s.title}>
-            <Card className={styles.contentCard} variant="borderless">
-              <Typography.Text type="secondary">{s.title}</Typography.Text>
-              <Typography.Title level={5} style={{ margin: '8px 0 0' }}>
-                {s.items}
-              </Typography.Title>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 * i }}
+            >
+              <Card className={styles.contentCard} variant="borderless">
+                <Typography.Text type="secondary">{s.title}</Typography.Text>
+                <Typography.Title level={5} style={{ margin: '8px 0 0' }}>
+                  {s.items}
+                </Typography.Title>
+              </Card>
+            </motion.div>
           </Col>
         ))}
       </Row>

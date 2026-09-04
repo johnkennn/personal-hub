@@ -3,6 +3,8 @@ package com.zzh.personal_hub.auth.service;
 import com.zzh.personal_hub.auth.dto.LoginRequest;
 import com.zzh.personal_hub.auth.dto.RegisterRequest;
 import com.zzh.personal_hub.auth.dto.LoginResponse;
+import com.zzh.personal_hub.auth.dto.ForgotPasswordRequest;
+import com.zzh.personal_hub.auth.dto.ChangePasswordRequest;
 import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.entity.UserProfile;
 import com.zzh.personal_hub.user.entity.UserStatus;
@@ -10,6 +12,7 @@ import com.zzh.personal_hub.user.repository.UserProfileRepository;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import com.zzh.personal_hub.auth.jwt.JwtService;
 import com.zzh.personal_hub.common.exception.BusinessException;
+import com.zzh.personal_hub.common.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +26,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserProfileRepository userProfileRepository;
     private final JwtService jwtService;
+    private final CurrentUserService currentUserService;
 
     public LoginResponse login(LoginRequest request) {
         // 1) 从 users 表按用户名查找
@@ -53,10 +57,14 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(400, "邮箱已被注册");
         }
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new BusinessException(400, "手机号已被注册");
+        }
     
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         // role / status 用实体默认值 AUTHOR + ACTIVE 即可
         userRepository.save(user);
@@ -72,5 +80,23 @@ public class AuthService {
         // 注册成功后直接发 JWT，前端少调一次登录（体验更好）
         String token = jwtService.generateToken(user.getUsername());
         return new LoginResponse(user.getUsername(), token, user.getId(), user.getRole().name());
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmailAndPhone(request.getEmail(), request.getPhone())
+            .orElseThrow(() -> new BusinessException(400, "邮箱或手机号不匹配"));
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = currentUserService.requireUser();
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new BusinessException(401, "旧密码错误");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

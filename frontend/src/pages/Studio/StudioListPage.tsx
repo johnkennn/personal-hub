@@ -13,7 +13,6 @@ import {
 } from 'antd'
 import type { ColumnsType, TableProps } from 'antd/es/table'
 import {
-  ArrowLeftOutlined,
   DeleteOutlined,
   EditOutlined,
   MoreOutlined,
@@ -24,6 +23,8 @@ import {
 import { motion } from 'framer-motion'
 
 import { formatDateTime, excerpt } from '../../utils/format'
+import { BackNavButton } from '../../components/BackNavButton'
+import { ROUTES } from '../../router/paths'
 import styles from '../../styles/ui.module.css'
 import studioStyles from './Studio.module.css'
 
@@ -231,14 +232,7 @@ export function StudioListPage<T extends { id: number }>({
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.pageHead}>
         <div>
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/studio')}
-            style={{ marginLeft: -8, marginBottom: 4 }}
-          >
-            创作台
-          </Button>
+          <BackNavButton fallback={ROUTES.STUDIO} className={styles.pageBack} />
           <Typography.Title level={2} className={styles.pageTitle}>
             {title}
           </Typography.Title>
@@ -256,7 +250,7 @@ export function StudioListPage<T extends { id: number }>({
           type="warning"
           showIcon
           className={studioStyles.banner}
-          message="无法加载创作台数据"
+          message="无法加载个人中心数据"
           description="接口请求失败。请检查登录状态与后端服务后重试（不会用假数据顶替）。"
           action={
             <Button size="small" onClick={() => void refresh()}>

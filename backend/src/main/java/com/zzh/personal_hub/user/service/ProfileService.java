@@ -28,7 +28,7 @@ public class ProfileService {
     public ProfileResponse getMyProfile() {
         User user = currentUserService.requireUser();
         UserProfile profile = requireProfile(user.getId());
-        return toResponse(user, profile);
+        return toResponse(user, profile, true);
     }
 
     @Transactional
@@ -38,7 +38,7 @@ public class ProfileService {
         String url = mediaStorageService.saveImage(file, "avatars/" + user.getId());
         profile.setAvatarUrl(url);
         userProfileRepository.save(profile);
-        return toResponse(user, profile);
+        return toResponse(user, profile, true);
     }
 
     @Transactional
@@ -57,8 +57,21 @@ public class ProfileService {
         if (request.getLinksJson() != null) {
             profile.setLinksJson(request.getLinksJson());
         }
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BusinessException(400, "邮箱已被占用");
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.existsByPhone(request.getPhone())) {
+                throw new BusinessException(400, "手机号已被占用");
+            }
+            user.setPhone(request.getPhone());
+        }
         userProfileRepository.save(profile);
-        return toResponse(user, profile);
+        userRepository.save(user);
+        return toResponse(user, profile, true);
     }
 
     @Transactional(readOnly = true)
@@ -67,10 +80,10 @@ public class ProfileService {
                 .findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         UserProfile profile = requireProfile(userId);
-        return toResponse(user, profile);
+        return toResponse(user, profile, false);
     }
 
-    private ProfileResponse toResponse(User user, UserProfile profile) {
+    private ProfileResponse toResponse(User user, UserProfile profile, boolean includePhone) {
         long followerCount = followService.getFollowerCount(user.getId());
         long followingCount = followService.getFollowingCount(user.getId());
         boolean following = followService.isFollowedByCurrentUser(user.getId());
@@ -83,7 +96,9 @@ public class ProfileService {
                 profile.getLinksJson(),
                 followerCount,
                 followingCount,
-                following);
+                following,
+                includePhone ? user.getPhone() : null,
+                user.getEmail());
     }
 
     private UserProfile requireProfile(Long userId) {

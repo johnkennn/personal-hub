@@ -2,6 +2,7 @@ package com.zzh.personal_hub.user.repository;
 
 import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.entity.UserRole;
+import com.zzh.personal_hub.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -20,4 +21,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByRole(UserRole role);
 
     List<User> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(UserStatus status);
+
+    boolean existsByPhone(String phone);
+    
+    Optional<User> findByEmailAndPhone(String email, String phone);
 }

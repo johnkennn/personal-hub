@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin } from 'antd'
 import { motion } from 'framer-motion'
 
+import { BackNavButton } from '../../components/BackNavButton'
 import { fetchProjectForManage, updateProject } from '../../api/project'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -108,11 +109,7 @@ export function ProjectEditPage() {
         showIcon
         message="无法加载项目"
         description="请确认已登录且该项目属于你；不会使用假数据顶替。"
-        action={
-          <Link to={ROUTES.STUDIO_PROJECT_DRAFTS}>
-            <Button size="small">返回草稿</Button>
-          </Link>
-        }
+        action={<BackNavButton fallback={ROUTES.STUDIO_PROJECT_DRAFTS} type="default" size="small" />}
       />
     )
   }
@@ -123,7 +120,7 @@ export function ProjectEditPage() {
         type="info"
         showIcon
         message="已发布项目不可直接编辑"
-        description="请先在创作台「我的发布」中下架，再回到草稿编辑。"
+        description="请先在个人中心「项目已发布」中下架，再回到草稿编辑。"
         action={
           <Link to={ROUTES.STUDIO_PROJECT_PUBLISHED}>
             <Button size="small" type="primary">
@@ -138,9 +135,9 @@ export function ProjectEditPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Space style={{ marginBottom: 16 }}>
-        <Link to={fromStudio ? ROUTES.STUDIO_PROJECT_DRAFTS : ROUTES.PROJECTS}>
-          <Button type="text">← 返回</Button>
-        </Link>
+        <BackNavButton
+          fallback={fromStudio ? ROUTES.STUDIO_PROJECT_DRAFTS : ROUTES.PROJECTS}
+        />
       </Space>
       <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑项目">
         <Form key={id} form={form} layout="vertical" onFinish={onFinish}>

@@ -10,4 +10,6 @@ public class ProfileRequest {
     private String bio;
     private String avatarUrl;
     private String linksJson;
+    private String phone;
+    private String email;
 }

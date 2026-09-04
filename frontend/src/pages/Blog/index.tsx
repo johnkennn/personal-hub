@@ -19,7 +19,7 @@ import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
-import { getDemoCreator, type PublicArticle } from '../../mocks/publicDemo'
+import type { PublicArticle } from '../../mocks/publicDemo'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -27,7 +27,7 @@ import { excerpt, formatDateTime } from '../../utils/format'
 import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
-const PAGE_SIZE = 6
+const PAGE_SIZE = 12
 
 export function BlogPage() {
   const { message } = App.useApp()
@@ -115,27 +115,39 @@ export function BlogPage() {
         <Empty description="暂无已发布文章" />
       ) : (
         <>
-          <Row gutter={[16, 16]}>
+          <Row gutter={[14, 14]}>
             {pageItems.map((article) => (
-              <Col xs={24} md={12} lg={8} key={article.id}>
-                <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                  <Link to={articleDetailPath(article.id)} className={styles.cardLink}>
-                    <Card className={styles.contentCard} variant="borderless" styles={{ body: { paddingTop: 16 } }}>
+              <Col xs={24} sm={12} lg={8} xl={6} key={article.id} style={{ display: 'flex' }}>
+                <motion.div
+                  className={styles.catalogCardMotion}
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link
+                    to={articleDetailPath(article.id)}
+                    className={`${styles.cardLink} ${styles.catalogCardLink}`}
+                  >
+                    <Card
+                      className={`${styles.contentCard} ${styles.catalogCard}`}
+                      variant="borderless"
+                    >
                       <CoverStrip
                         title={article.title}
                         tone={article.coverTone ?? coverToneFromId(article.id)}
+                        compact
                       />
-                      <Typography.Title level={4} style={{ marginTop: 0 }}>
+                      <Typography.Title level={5} className={styles.catalogCardTitle}>
                         {article.title}
                       </Typography.Title>
-                      <Typography.Paragraph type="secondary">
-                        {excerpt(article.content)}
+                      <Typography.Paragraph type="secondary" className={styles.catalogCardExcerpt}>
+                        {excerpt(article.content, 72)}
                       </Typography.Paragraph>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <div className={styles.catalogCardMeta}>
                         <AuthorChip
                           authorId={article.authorId || undefined}
                           authorName={article.authorName}
-                          avatarUrl={getDemoCreator(article.authorId)?.avatarUrl}
+                          avatarUrl={article.avatarUrl}
+                          size={22}
                         />
                         <Typography.Text type="secondary" className={styles.muted}>
                           {sort === 'hot'

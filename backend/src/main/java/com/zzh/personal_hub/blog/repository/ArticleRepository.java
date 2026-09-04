@@ -21,4 +21,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findByTitleContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(
         String title);
+
+    long countByPublishedTrueAndDeletedAtIsNull();
 }

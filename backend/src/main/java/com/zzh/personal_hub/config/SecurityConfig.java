@@ -71,6 +71,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/users/*/follow").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/users/*/follow").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
                     .requestMatchers("/api/me/**").authenticated()
                     .requestMatchers("/api/admin/**").authenticated()
                     .requestMatchers(HttpMethod.GET, "/media/**").permitAll()

@@ -35,6 +35,12 @@
   margin-bottom: 1.5rem;
 }
 
+/* 内页「返回上一页」统一：标题块左侧上方，右侧留给操作按钮 */
+.pageBack {
+  margin-left: -8px;
+  margin-bottom: 4px;
+}
+
 .pageTitle {
   margin: 0 !important;
   font-family: var(--ph-font-display) !important;
@@ -67,6 +73,75 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
 }
 
+/** 文章 / 项目列表：统一高度的紧凑卡片 */
+.catalogCardMotion {
+  width: 100%;
+  height: 100%;
+}
+
+.catalogCardLink {
+  display: block;
+  height: 100%;
+}
+
+.catalogCard {
+  height: 100%;
+}
+
+.catalogCard :global(.ant-card-body) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px !important;
+  box-sizing: border-box;
+}
+
+.catalogCardTitle {
+  margin: 0 0 6px !important;
+  font-size: 0.98rem !important;
+  line-height: 1.35 !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.35em * 2);
+}
+
+.catalogCardExcerpt {
+  margin: 0 0 8px !important;
+  flex: 1 1 auto;
+  font-size: 0.84rem !important;
+  line-height: 1.45 !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.45em * 2);
+}
+
+.catalogCardTags {
+  margin-bottom: 8px !important;
+  min-height: 24px;
+  max-height: 52px;
+  overflow: hidden;
+}
+
+.catalogCardMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  flex-wrap: nowrap;
+  min-height: 28px;
+}
+
+.catalogCardMeta :global(.ant-typography) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .cardLink {
   color: inherit !important;
   text-decoration: none;
@@ -90,7 +165,7 @@
 }
 
 .section {
-  margin-top: 3rem;
+  margin-top: 1.5rem;
 }
 
 .studioCard {
