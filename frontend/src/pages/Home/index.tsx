@@ -217,15 +217,10 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!loggedIn) {
-      setFollowingIds([])
-      return
-    }
+    if (!loggedIn) return
     const me = getUserId()
-    if (me == null) {
-      setFollowingIds([])
-      return
-    }
+    if (me == null) return
+
     let cancelled = false
     fetchFollowing(me, 0, 100)
       .then((res) => {
@@ -238,7 +233,7 @@ export function HomePage() {
     return () => {
       cancelled = true
     }
-  }, [loggedIn, activeTab])
+  }, [loggedIn])
 
   const latestMix = useMemo(() => {
     const rows: FeedRow[] = [
@@ -282,16 +277,17 @@ export function HomePage() {
   }, [articles, projects])
 
   const followingFeed = useMemo(() => {
+    const ids = loggedIn ? followingIds : []
     const rows: FeedRow[] = [
       ...articles
-        .filter((a) => followingIds.includes(a.authorId))
+        .filter((a) => ids.includes(a.authorId))
         .map((item) => ({ type: 'article' as const, item, at: item.updatedAt })),
       ...projects
-        .filter((p) => followingIds.includes(p.authorId))
+        .filter((p) => ids.includes(p.authorId))
         .map((item) => ({ type: 'project' as const, item, at: item.updatedAt })),
     ]
     return rows.sort((x, y) => y.at.localeCompare(x.at))
-  }, [articles, projects, followingIds])
+  }, [articles, projects, followingIds, loggedIn])
 
   return (
     <div>
