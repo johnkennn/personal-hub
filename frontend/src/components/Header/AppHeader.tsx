@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
@@ -11,7 +11,7 @@ import {
   Menu,
   theme,
 } from 'antd'
-import type { MenuProps } from 'antd'
+import type { InputRef, MenuProps } from 'antd'
 import {
   LogoutOutlined,
   MenuOutlined,
@@ -34,6 +34,7 @@ import {
 import { resolveMediaUrl } from '../../utils/mediaUrl'
 import { NAV_ITEMS, ROUTES } from '../../router/paths'
 import { GlobalSearch } from '../GlobalSearch'
+import { HeaderSearch } from '../HeaderSearch'
 import { NotificationBell } from '../NotificationBell'
 import styles from './AppHeader.module.css'
 
@@ -45,6 +46,7 @@ export function AppHeader() {
   const location = useLocation()
   const screens = useBreakpoint()
   const { token } = theme.useToken()
+  const searchInputRef = useRef<InputRef>(null)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [username, setUsername] = useState(getUsername)
   const [avatarUrl, setAvatarUrl] = useState(() => getCachedProfileDisplay().avatarUrl)
@@ -90,16 +92,22 @@ export function AppHeader() {
     }
   }, [loggedIn])
 
+  const isMobile = !screens.md
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setSearchOpen(true)
+        if (isMobile) {
+          setSearchOpen(true)
+        } else {
+          searchInputRef.current?.focus()
+        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [isMobile])
 
   const selectedKeys = useMemo(() => {
     const match = NAV_ITEMS.find((item) =>
@@ -129,7 +137,6 @@ export function AppHeader() {
     navigate(ROUTES.LOGIN, { replace: true })
   }
 
-  /** 入口页已含资料/治理；菜单只保留总入口 + 退出，避免重复 */
   const userMenu: MenuProps['items'] = [
     {
       key: 'hub',
@@ -150,9 +157,7 @@ export function AppHeader() {
     },
   ]
 
-  const isMobile = !screens.md
-
-  const searchBtn = (
+  const mobileSearchBtn = (
     <Button
       type="text"
       icon={<SearchOutlined />}
@@ -161,14 +166,12 @@ export function AppHeader() {
         setOpen(false)
         setSearchOpen(true)
       }}
-    >
-      {!isMobile ? '搜索' : null}
-    </Button>
+    />
   )
 
   const authActions = loggedIn ? (
     <div className={styles.actions}>
-      {searchBtn}
+      {!isMobile ? <HeaderSearch inputRef={searchInputRef} /> : mobileSearchBtn}
       <NotificationBell />
       <Dropdown menu={{ items: userMenu }} placement="bottomRight">
         <Button type="text" className={styles.userTrigger}>
@@ -179,7 +182,7 @@ export function AppHeader() {
     </div>
   ) : (
     <div className={styles.actions}>
-      {searchBtn}
+      {!isMobile ? <HeaderSearch inputRef={searchInputRef} /> : mobileSearchBtn}
       <NotificationBell />
       <Button
         type="text"

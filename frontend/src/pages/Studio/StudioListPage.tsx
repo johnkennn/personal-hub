@@ -17,8 +17,8 @@ import {
   EditOutlined,
   MoreOutlined,
   PlusOutlined,
+  RollbackOutlined,
   SendOutlined,
-  StopOutlined,
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
@@ -182,7 +182,7 @@ export function StudioListPage<T extends { id: number }>({
                 }
               : {
                   key: 'unpublish',
-                  icon: <StopOutlined />,
+                  icon: <RollbackOutlined />,
                   label: '下架到草稿',
                   onClick: () => void runUnpublish([record.id]),
                 },
@@ -282,7 +282,7 @@ export function StudioListPage<T extends { id: number }>({
               </Button>
             ) : (
               <Button
-                icon={<StopOutlined />}
+                icon={<RollbackOutlined />}
                 onClick={() => {
                   const ids = selectedRowKeys.map(Number)
                   modal.confirm({

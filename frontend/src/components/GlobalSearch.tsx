@@ -1,25 +1,66 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Empty, Input, List, Modal, Tag, Typography } from 'antd'
+import { useEffect, useState } from 'react'
+import { Input, Modal, Typography } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 
-import { searchDemoContent } from '../services/publicContent'
-import { articleDetailPath, projectDetailPath } from '../router/paths'
+import { SearchResultsPanel } from './SearchResultsPanel'
+import {
+  searchGlobal,
+  type GlobalSearchResult,
+} from '../services/globalSearch'
+import styles from './GlobalSearch.module.css'
 
 type GlobalSearchProps = {
   open: boolean
   onClose: () => void
 }
 
+const EMPTY: GlobalSearchResult = { authors: [], articles: [], projects: [] }
+
+/** 移动端 / ⌘K：弹层搜索作者、文章、项目 */
 export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [q, setQ] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<GlobalSearchResult>(EMPTY)
 
-  const results = useMemo(() => searchDemoContent(q), [q])
-  const total = results.articles.length + results.projects.length
+  useEffect(() => {
+    if (!open) {
+      setQ('')
+      setResults(EMPTY)
+      setLoading(false)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const keyword = q.trim()
+    if (!keyword) {
+      setResults(EMPTY)
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    const timer = window.setTimeout(() => {
+      void searchGlobal(keyword).then((res) => {
+        if (!cancelled) {
+          setResults(res)
+          setLoading(false)
+        }
+      })
+    }, 220)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [q, open])
+
+  const showPanel = Boolean(q.trim())
 
   return (
     <Modal
-      title="搜索内容"
+      title="搜索"
       open={open}
       onCancel={onClose}
       footer={null}
@@ -30,47 +71,20 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         allowClear
         size="large"
         prefix={<SearchOutlined />}
-        placeholder="搜索文章标题或项目名称…"
+        placeholder="搜索作者、文章或项目…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         autoFocus
       />
-      <div style={{ marginTop: 16, maxHeight: 420, overflow: 'auto' }}>
-        {!q.trim() ? (
-          <Typography.Text type="secondary">输入关键词开始搜索（演示数据）</Typography.Text>
-        ) : total === 0 ? (
-          <Empty description="没有匹配结果" />
+      <div className={styles.modalBody}>
+        {!showPanel ? (
+          <Typography.Text type="secondary">输入关键词，按类型查看匹配结果</Typography.Text>
         ) : (
-          <>
-            {results.articles.length > 0 ? (
-              <List
-                header={<Typography.Text type="secondary">文章</Typography.Text>}
-                dataSource={results.articles}
-                renderItem={(a) => (
-                  <List.Item>
-                    <Link to={articleDetailPath(a.id)} onClick={onClose}>
-                      {a.title}
-                    </Link>
-                    <Tag style={{ marginLeft: 8 }}>{a.authorName}</Tag>
-                  </List.Item>
-                )}
-              />
-            ) : null}
-            {results.projects.length > 0 ? (
-              <List
-                header={<Typography.Text type="secondary">项目</Typography.Text>}
-                dataSource={results.projects}
-                renderItem={(p) => (
-                  <List.Item>
-                    <Link to={projectDetailPath(p.id)} onClick={onClose}>
-                      {p.name}
-                    </Link>
-                    <Tag style={{ marginLeft: 8 }}>{p.authorName}</Tag>
-                  </List.Item>
-                )}
-              />
-            ) : null}
-          </>
+          <SearchResultsPanel
+            results={results}
+            loading={loading}
+            onNavigate={onClose}
+          />
         )}
       </div>
     </Modal>

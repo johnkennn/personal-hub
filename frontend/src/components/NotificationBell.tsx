@@ -11,7 +11,10 @@ import {
 } from '../api/notifications'
 import {
   articleDetailPath,
+  blogEditPath,
   projectDetailPath,
+  projectEditPath,
+  ROUTES,
   userProfilePath,
 } from '../router/paths'
 import { isLoggedIn, subscribeAuthChange } from '../utils/authStorage'
@@ -22,7 +25,15 @@ function notificationHref(item: NotificationItem): string {
   if (item.type === 'FOLLOW' && item.actorId) {
     return userProfilePath(item.actorId)
   }
+  if (item.type === 'SUGGESTION') {
+    return ROUTES.ADMIN_SUGGESTIONS
+  }
   const targetType = (item.targetType || '').toUpperCase()
+  if (item.type === 'UNPUBLISH' && item.targetId != null) {
+    // 已下架 → 草稿可编辑
+    if (targetType === 'ARTICLE') return blogEditPath(item.targetId)
+    if (targetType === 'PROJECT') return projectEditPath(item.targetId)
+  }
   if (item.targetId != null) {
     if (targetType === 'ARTICLE') return articleDetailPath(item.targetId)
     if (targetType === 'PROJECT') return projectDetailPath(item.targetId)
@@ -32,17 +43,22 @@ function notificationHref(item: NotificationItem): string {
 
 function notificationTitle(item: NotificationItem): string {
   const who = item.actorUsername || '有人'
-  if (item.type === 'LIKE') return `${who} 赞了你的内容`
-  if (item.type === 'COMMENT') return `${who} 评论了你的内容`
+  const kind =
+    (item.targetType || '').toUpperCase() === 'PROJECT'
+      ? '项目'
+      : (item.targetType || '').toUpperCase() === 'ARTICLE'
+        ? '文章'
+        : '内容'
+
+  if (item.type === 'LIKE') return `${who} 赞了你的${kind}`
+  if (item.type === 'COMMENT') return `${who} 评论了你的${kind}`
   if (item.type === 'FOLLOW') return `${who} 关注了你`
+  if (item.type === 'UNPUBLISH') return `管理员下架了你的${kind}，已回到草稿`
+  if (item.type === 'SUGGESTION') return `${who} 提交了一条建议`
   return '新通知'
 }
 
-/**
- * 动态通知铃铛：对接 /api/me/notifications。
- * - 只展示未读（已读点过后从列表消失）
- * - 关注类通知不展示（产品：关注他人不产生铃铛提醒）
- */
+/** 动态通知铃铛：对接 /api/me/notifications（仅未读） */
 export function NotificationBell() {
   const navigate = useNavigate()
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
@@ -67,15 +83,8 @@ export function NotificationBell() {
         fetchMyNotifications(),
         fetchUnreadNotificationCount(),
       ])
-      const unreadOnly = (listRes.data.data ?? []).filter(
-        (n) => !n.read && n.type !== 'FOLLOW',
-      )
-      setList(unreadOnly)
-      // 角标：未读里再排除关注类（后端停写关注通知后两者一致）
-      const followUnread = (listRes.data.data ?? []).filter(
-        (n) => !n.read && n.type === 'FOLLOW',
-      ).length
-      setUnread(Math.max(0, (countRes.data.data ?? 0) - followUnread))
+      setList((listRes.data.data ?? []).filter((n) => !n.read))
+      setUnread(countRes.data.data ?? 0)
     } catch {
       setList([])
       setUnread(0)

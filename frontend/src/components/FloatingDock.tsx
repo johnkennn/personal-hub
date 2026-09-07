@@ -69,7 +69,7 @@ export function FloatingDock() {
           <Typography.Text code>?</Typography.Text> 打开本帮助
         </Typography.Paragraph>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          建议演示路径：发现 → 文章详情赞评 → 作者主页关注 → 创作台批量发布 → 内容治理。
+          建议演示路径：发现 → 最新/最热/我的关注 → 顶栏搜索作者/文章/项目 → 详情赞评 → 作者主页关注 → 个人中心批量发布 → 内容治理。
         </Typography.Paragraph>
       </Modal>
     </>

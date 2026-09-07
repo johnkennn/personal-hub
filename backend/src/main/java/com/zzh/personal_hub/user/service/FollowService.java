@@ -9,7 +9,7 @@ import com.zzh.personal_hub.user.entity.UserProfile;
 import com.zzh.personal_hub.user.repository.FollowRepository;
 import com.zzh.personal_hub.user.repository.UserProfileRepository;
 import com.zzh.personal_hub.user.repository.UserRepository;
-
+import com.zzh.personal_hub.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +28,7 @@ public class FollowService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final CurrentUserService currentUserService;
+    private final NotificationService notificationService;
     /** 当前登录用户关注 followeeId（幂等） */
     @Transactional
     public void follow(Long followeeId) {
@@ -43,6 +44,7 @@ public class FollowService {
         follow.setFollowerId(me.getId());
         follow.setFolloweeId(followeeId);
         followRepository.save(follow);
+        notificationService.notifyFollow(me.getId(), followeeId);
     }
 
     /** 取消关注（幂等） */

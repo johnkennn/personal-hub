@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { App, Button, Space, Table, Tag, Typography } from 'antd'
+import { App, Button, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { motion } from 'framer-motion'
 
 import { fetchAdminArticles, unpublishAdminArticle } from '../../api/adminArticles'
+import { fetchAdminUsers } from '../../api/adminUsers'
+import { AdminListShell, AdminPager, ADMIN_PAGE_SIZE, sliceAdminPage } from '../../components/AdminListShell'
 import { BackNavButton } from '../../components/BackNavButton'
-import { ROUTES, articleDetailPath } from '../../router/paths'
+import { ROUTES, articleDetailPath, userProfilePath } from '../../router/paths'
 import { isAdmin, isLoggedIn } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
 import type { Article } from '../../types/article'
@@ -20,13 +22,25 @@ export function AdminArticlesPage() {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
   const [articles, setArticles] = useState<Article[]>([])
+  const [authorNames, setAuthorNames] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ADMIN_PAGE_SIZE)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetchAdminArticles()
-      setArticles(res.data.data ?? [])
+      const [articlesRes, usersRes] = await Promise.all([
+        fetchAdminArticles(),
+        fetchAdminUsers(),
+      ])
+      setArticles(articlesRes.data.data ?? [])
+      const names: Record<number, string> = {}
+      for (const u of usersRes.data.data ?? []) {
+        names[u.id] = u.username
+      }
+      setAuthorNames(names)
     } catch {
       message.error('加载失败（需 ADMIN）')
     } finally {
@@ -46,6 +60,31 @@ export function AdminArticlesPage() {
     void load()
   }, [navigate, load])
 
+  const filtered = useMemo(() => {
+    const q = keyword.trim().toLowerCase()
+    if (!q) return articles
+    return articles.filter((a) => a.title.toLowerCase().includes(q))
+  }, [articles, keyword])
+
+  const pageItems = useMemo(
+    () => sliceAdminPage(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
+
+  function onKeywordChange(value: string) {
+    setKeyword(value)
+    setPage(1)
+  }
+
+  function onPageChange(nextPage: number, nextSize: number) {
+    if (nextSize !== pageSize) {
+      setPageSize(nextSize)
+      setPage(1)
+    } else {
+      setPage(nextPage)
+    }
+  }
+
   function handleUnpublish(article: Article) {
     modal.confirm({
       title: `强制下架「${article.title}」？`,
@@ -63,12 +102,22 @@ export function AdminArticlesPage() {
   }
 
   const columns: ColumnsType<Article> = [
-    { title: '标题', dataIndex: 'title', ellipsis: true },
     {
-      title: '作者 ID',
+      title: '标题',
+      dataIndex: 'title',
+      ellipsis: true,
+      render: (title: string, row) => <Link to={articleDetailPath(row.id)}>{title}</Link>,
+    },
+    {
+      title: '作者',
       dataIndex: 'authorId',
-      width: 100,
-      render: (id?: number) => id ?? '—',
+      width: 140,
+      ellipsis: true,
+      render: (id?: number) => {
+        if (id == null) return '—'
+        const name = authorNames[id]
+        return name ? <Link to={userProfilePath(id)}>{name}</Link> : `用户 #${id}`
+      },
     },
     {
       title: '状态',
@@ -83,14 +132,11 @@ export function AdminArticlesPage() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 120,
       render: (_, article) => (
-        <Space wrap>
-          <Link to={articleDetailPath(article.id)}>查看</Link>
-          <Button type="link" size="small" onClick={() => handleUnpublish(article)}>
-            强制下架
-          </Button>
-        </Space>
+        <Button type="link" size="small" onClick={() => handleUnpublish(article)}>
+          强制下架
+        </Button>
       ),
     },
   ]
@@ -110,18 +156,28 @@ export function AdminArticlesPage() {
         <Button onClick={() => void load()}>刷新</Button>
       </div>
 
-      <Table
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={articles}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
-          showTotal: (total) => `共 ${total} 条`,
-        }}
-      />
+      <AdminListShell
+        searchPlaceholder="按文章标题模糊搜索"
+        keyword={keyword}
+        onKeywordChange={onKeywordChange}
+        pageSize={pageSize}
+        pager={
+          <AdminPager
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            onChange={onPageChange}
+          />
+        }
+      >
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={pageItems}
+          pagination={false}
+        />
+      </AdminListShell>
     </motion.div>
   )
 }

@@ -8,7 +8,7 @@ import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.user.entity.User;
-
+import com.zzh.personal_hub.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final CurrentUserService currentUserService;
     private final MediaStorageService mediaStorageService;
-
+    private final NotificationService notificationService;
     public List<Project> listPublished() {
         return projectRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -192,11 +192,14 @@ public class ProjectService {
 
     @Transactional
     public Project unpublishByAdmin(Long id) {
-        currentUserService.requireAdmin();
+        User admin = currentUserService.requireAdmin();
         Project project = getPublishedForAdmin(id);
         project.setPublished(false);
         project.setUpdatedAt(Instant.now());
-        return projectRepository.save(project);
+        project = projectRepository.save(project);
+        notificationService.notifyUnpublishByAdmin(
+                admin.getId(), project.getAuthorId(), "PROJECT", project.getId());
+        return project;
     }
 
     @Transactional

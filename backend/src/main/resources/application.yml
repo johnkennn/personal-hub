@@ -12,6 +12,10 @@ app:
     login-per-minute: 10
     register-per-minute: 5
     upload-per-minute: 20
+  soft-delete:
+    retain-days: 30
+    purge-enabled: true
+    purge-cron: "0 0 3 * * *"
 spring:
   application:
     name: personal-hub

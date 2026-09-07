@@ -6,7 +6,6 @@ import {
   Card,
   Col,
   Empty,
-  Pagination,
   Row,
   Space,
   Tabs,
@@ -16,19 +15,24 @@ import {
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
+import {
+  CatalogListLayout,
+  CatalogPager,
+} from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
+import { fetchLikeSummary } from '../../api/social'
 import { getDemoCreator, type PublicArticle, type PublicProject } from '../../mocks/publicDemo'
 import { fetchFollowing } from '../../api/users'
+import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { articleDetailPath, projectDetailPath, ROUTES, userProfilePath } from '../../router/paths'
 import { loadPublicArticles, loadPublicProjects } from '../../services/publicContent'
 import { getUserId, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
+import { getLikeCount } from '../../utils/socialStorage'
 import styles from './Home.module.css'
 import ui from '../../styles/ui.module.css'
 
 const { Title, Paragraph } = Typography
-
-const PAGE_SIZE = 12
 
 type FeedRow =
   | { type: 'article'; item: PublicArticle; at: string }
@@ -40,26 +44,46 @@ type AuthorChipItem = {
   avatarUrl?: string
 }
 
+function likeKey(type: 'article' | 'project', id: number) {
+  return `${type}:${id}`
+}
+
 function FeedGrid({
   rows,
   page,
+  pageSize,
   onPageChange,
+  metaMode = 'date',
+  likeCounts,
 }: {
   rows: FeedRow[]
   page: number
-  onPageChange: (p: number) => void
+  pageSize: number
+  onPageChange: (page: number, pageSize: number) => void
+  metaMode?: 'date' | 'likes'
+  likeCounts?: Record<string, number>
 }) {
   const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return rows.slice(start, start + PAGE_SIZE)
-  }, [rows, page])
+    const start = (page - 1) * pageSize
+    return rows.slice(start, start + pageSize)
+  }, [rows, page, pageSize])
 
   if (rows.length === 0) {
     return <Empty description="暂无公开作品" />
   }
 
   return (
-    <>
+    <CatalogListLayout
+      pageSize={pageSize}
+      pager={
+        <CatalogPager
+          current={page}
+          pageSize={pageSize}
+          total={rows.length}
+          onChange={onPageChange}
+        />
+      }
+    >
       <Row gutter={[14, 14]}>
         {pageItems.map((row) => {
           const isArticle = row.type === 'article'
@@ -70,6 +94,7 @@ function FeedGrid({
           const tone = isArticle
             ? (row.item.coverTone ?? coverToneFromId(id))
             : coverToneFromId(id)
+          const likes = likeCounts?.[likeKey(row.type, id)] ?? 0
 
           return (
             <Col xs={24} sm={12} lg={8} xl={6} key={`${row.type}-${id}`} style={{ display: 'flex' }}>
@@ -101,7 +126,7 @@ function FeedGrid({
                         size={22}
                       />
                       <Typography.Text type="secondary" className={ui.muted}>
-                        {formatDateTime(row.item.createdAt)}
+                        {metaMode === 'likes' ? `${likes} 赞` : formatDateTime(row.item.createdAt)}
                       </Typography.Text>
                     </div>
                   </Card>
@@ -111,29 +136,37 @@ function FeedGrid({
           )
         })}
       </Row>
-      <div className={styles.pager}>
-        <Pagination
-          current={page}
-          pageSize={PAGE_SIZE}
-          total={rows.length}
-          onChange={onPageChange}
-          showTotal={(total) => `共 ${total} 条`}
-          hideOnSinglePage={false}
-        />
-      </div>
-    </>
+    </CatalogListLayout>
   )
 }
 
 export function HomePage() {
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [projects, setProjects] = useState<PublicProject[]>([])
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [fromDemo, setFromDemo] = useState(false)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [followingIds, setFollowingIds] = useState<number[]>([])
   const [latestPage, setLatestPage] = useState(1)
+  const [hotPage, setHotPage] = useState(1)
   const [followingPage, setFollowingPage] = useState(1)
+  const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
   const [activeTab, setActiveTab] = useState('latest')
+
+  function onCatalogPageChange(
+    setTabPage: (p: number) => void,
+    nextPage: number,
+    nextPageSize: number,
+  ) {
+    if (nextPageSize !== pageSize) {
+      setPageSize(nextPageSize)
+      setLatestPage(1)
+      setHotPage(1)
+      setFollowingPage(1)
+    } else {
+      setTabPage(nextPage)
+    }
+  }
 
   useEffect(() => {
     return subscribeAuthChange(() => {
@@ -142,11 +175,45 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([loadPublicArticles(), loadPublicProjects()]).then(([a, p]) => {
+    let cancelled = false
+    Promise.all([loadPublicArticles(), loadPublicProjects()]).then(async ([a, p]) => {
+      if (cancelled) return
       setArticles(a.items)
       setProjects(p.items)
-      setFromDemo(a.fromDemo || p.fromDemo)
+      const demo = a.fromDemo || p.fromDemo
+      setFromDemo(demo)
+
+      if (demo) {
+        const counts: Record<string, number> = {}
+        for (const item of a.items) counts[likeKey('article', item.id)] = getLikeCount('article', item.id)
+        for (const item of p.items) counts[likeKey('project', item.id)] = getLikeCount('project', item.id)
+        setLikeCounts(counts)
+        return
+      }
+
+      const entries = await Promise.all([
+        ...a.items.map(async (item) => {
+          try {
+            const r = await fetchLikeSummary('article', item.id)
+            return [likeKey('article', item.id), r.data.data.likeCount] as const
+          } catch {
+            return [likeKey('article', item.id), 0] as const
+          }
+        }),
+        ...p.items.map(async (item) => {
+          try {
+            const r = await fetchLikeSummary('project', item.id)
+            return [likeKey('project', item.id), r.data.data.likeCount] as const
+          } catch {
+            return [likeKey('project', item.id), 0] as const
+          }
+        }),
+      ])
+      if (!cancelled) setLikeCounts(Object.fromEntries(entries))
     })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -180,6 +247,18 @@ export function HomePage() {
     ]
     return rows.sort((x, y) => y.at.localeCompare(x.at))
   }, [articles, projects])
+
+  const hotMix = useMemo(() => {
+    const rows: FeedRow[] = [
+      ...articles.map((item) => ({ type: 'article' as const, item, at: item.updatedAt })),
+      ...projects.map((item) => ({ type: 'project' as const, item, at: item.updatedAt })),
+    ]
+    return rows.sort(
+      (x, y) =>
+        (likeCounts[likeKey(y.type, y.item.id)] ?? 0) -
+        (likeCounts[likeKey(x.type, x.item.id)] ?? 0),
+    )
+  }, [articles, projects, likeCounts])
 
   const authors = useMemo(() => {
     const map = new Map<number, AuthorChipItem>()
@@ -289,7 +368,7 @@ export function HomePage() {
               发现
             </Typography.Title>
             <Typography.Paragraph className={ui.pageDesc}>
-              最新作品流；卡片样式与文章 / 项目列表一致，可上下翻页浏览。
+              全部公开内容：最新 / 最热 / 我的关注；默认每页 8 条，可改条数并翻页。
             </Typography.Paragraph>
           </div>
           <Space wrap className={styles.creatorTags}>
@@ -306,6 +385,7 @@ export function HomePage() {
           onChange={(key) => {
             setActiveTab(key)
             if (key === 'latest') setLatestPage(1)
+            if (key === 'hot') setHotPage(1)
             if (key === 'following') setFollowingPage(1)
           }}
           items={[
@@ -313,12 +393,31 @@ export function HomePage() {
               key: 'latest',
               label: '最新',
               children: (
-                <FeedGrid rows={latestMix} page={latestPage} onPageChange={setLatestPage} />
+                <FeedGrid
+                  rows={latestMix}
+                  page={latestPage}
+                  pageSize={pageSize}
+                  onPageChange={(p, ps) => onCatalogPageChange(setLatestPage, p, ps)}
+                />
+              ),
+            },
+            {
+              key: 'hot',
+              label: '最热',
+              children: (
+                <FeedGrid
+                  rows={hotMix}
+                  page={hotPage}
+                  pageSize={pageSize}
+                  onPageChange={(p, ps) => onCatalogPageChange(setHotPage, p, ps)}
+                  metaMode="likes"
+                  likeCounts={likeCounts}
+                />
               ),
             },
             {
               key: 'following',
-              label: '关注动态',
+              label: '我的关注',
               children: !loggedIn ? (
                 <Empty
                   description={
@@ -332,7 +431,7 @@ export function HomePage() {
                   description={
                     authors.length > 0 ? (
                       <span>
-                        还没有关注动态。去看看{' '}
+                        还没有关注内容。去看看{' '}
                         {authors.slice(0, 3).map((c, i) => (
                           <span key={c.id}>
                             {i > 0 ? ' / ' : null}
@@ -341,7 +440,7 @@ export function HomePage() {
                         ))}
                       </span>
                     ) : (
-                      '还没有关注动态'
+                      '还没有关注内容'
                     )
                   }
                 />
@@ -349,7 +448,8 @@ export function HomePage() {
                 <FeedGrid
                   rows={followingFeed}
                   page={followingPage}
-                  onPageChange={setFollowingPage}
+                  pageSize={pageSize}
+                  onPageChange={(p, ps) => onCatalogPageChange(setFollowingPage, p, ps)}
                 />
               ),
             },

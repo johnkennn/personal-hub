@@ -180,3 +180,78 @@
   transform: translateY(-2px);
   border-color: rgba(124, 184, 154, 0.5) !important;
 }
+
+/** 内容卡片列表：预留满页高度，分页器贴底 */
+.catalogShell {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalogBody {
+  flex: 1 1 auto;
+  /* 单列卡片约高；断点与 Col xs/sm/lg/xl 列数一致 */
+  min-height: calc(var(--catalog-rows-xs, 8) * 262px);
+}
+
+@media (min-width: 576px) {
+  .catalogBody {
+    min-height: calc(var(--catalog-rows-sm, 4) * 262px);
+  }
+}
+
+@media (min-width: 992px) {
+  .catalogBody {
+    min-height: calc(var(--catalog-rows-lg, 3) * 262px);
+  }
+}
+
+@media (min-width: 1200px) {
+  .catalogBody {
+    min-height: calc(var(--catalog-rows-xl, 2) * 262px);
+  }
+}
+
+.catalogPager {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+/** 治理后台表格列表 */
+.adminListShell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adminListToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminTableShell {
+  display: flex;
+  flex-direction: column;
+  /* 表体按当前每页条数预留高度，分页器始终在壳层底部 */
+  min-height: calc(var(--admin-rows, 10) * 55px + 56px + 64px);
+}
+
+.adminTableBody {
+  flex: 1 1 auto;
+  min-height: calc(var(--admin-rows, 10) * 55px + 56px);
+}
+
+.adminPager {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 16px;
+}

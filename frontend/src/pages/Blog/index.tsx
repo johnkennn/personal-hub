@@ -6,7 +6,6 @@ import {
   Card,
   Col,
   Empty,
-  Pagination,
   Row,
   Segmented,
   Skeleton,
@@ -18,8 +17,14 @@ import { FireOutlined, PlusOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
+import {
+  applyCatalogPageChange,
+  CatalogListLayout,
+  CatalogPager,
+} from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
 import type { PublicArticle } from '../../mocks/publicDemo'
+import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -27,14 +32,13 @@ import { excerpt, formatDateTime } from '../../utils/format'
 import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
-const PAGE_SIZE = 12
-
 export function BlogPage() {
   const { message } = App.useApp()
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [fromDemo, setFromDemo] = useState(false)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
   const [sort, setSort] = useState<'latest' | 'hot'>('latest')
 
   useEffect(() => {
@@ -58,9 +62,9 @@ export function BlogPage() {
   }, [articles, sort])
 
   const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return sorted.slice(start, start + PAGE_SIZE)
-  }, [sorted, page])
+    const start = (page - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, page, pageSize])
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -82,11 +86,14 @@ export function BlogPage() {
             }}
             options={[
               { label: '最新', value: 'latest' },
-              { label: (
-                <span>
-                  <FireOutlined /> 最热
-                </span>
-              ), value: 'hot' },
+              {
+                label: (
+                  <span>
+                    <FireOutlined /> 最热
+                  </span>
+                ),
+                value: 'hot',
+              },
             ]}
           />
           {isLoggedIn() ? (
@@ -114,7 +121,17 @@ export function BlogPage() {
       ) : articles.length === 0 ? (
         <Empty description="暂无已发布文章" />
       ) : (
-        <>
+        <CatalogListLayout
+          pageSize={pageSize}
+          pager={
+            <CatalogPager
+              current={page}
+              pageSize={pageSize}
+              total={sorted.length}
+              onChange={(p, ps) => applyCatalogPageChange(setPage, setPageSize, pageSize, p, ps)}
+            />
+          }
+        >
           <Row gutter={[14, 14]}>
             {pageItems.map((article) => (
               <Col xs={24} sm={12} lg={8} xl={6} key={article.id} style={{ display: 'flex' }}>
@@ -161,17 +178,7 @@ export function BlogPage() {
               </Col>
             ))}
           </Row>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
-            <Pagination
-              current={page}
-              pageSize={PAGE_SIZE}
-              total={sorted.length}
-              onChange={setPage}
-              showTotal={(total) => `共 ${total} 条`}
-              hideOnSinglePage={false}
-            />
-          </div>
-        </>
+        </CatalogListLayout>
       )}
     </motion.div>
   )

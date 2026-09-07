@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
-import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs } from 'antd'
+import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { MarkdownBody } from '../../components/MarkdownBody'
@@ -160,7 +160,12 @@ export function ArticleEditPage() {
             ]}
           />
           <Form.Item name="published" valuePropName="checked">
-            <Checkbox>保存时直接发布</Checkbox>
+            <Space align="center" wrap size={8}>
+              <Checkbox>保存时直接发布</Checkbox>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                若不勾选，则只会保存到草稿中，对其他用户不可见
+              </Typography.Text>
+            </Space>
           </Form.Item>
           <Button type="primary" htmlType="submit">
             保存

@@ -72,6 +72,16 @@
   line-height: 1;
 }
 
+.actions :global(.ant-input-affix-wrapper) {
+  background: rgba(22, 32, 28, 0.85) !important;
+  border-color: rgba(124, 184, 154, 0.28) !important;
+}
+
+.actions :global(.ant-input-affix-wrapper-focused) {
+  border-color: rgba(124, 184, 154, 0.55) !important;
+  box-shadow: 0 0 0 2px rgba(124, 184, 154, 0.12) !important;
+}
+
 .userTrigger {
   display: inline-flex !important;
   align-items: center !important;

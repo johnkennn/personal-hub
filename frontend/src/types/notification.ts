@@ -1,4 +1,9 @@
-export type NotificationType = 'LIKE' | 'COMMENT' | 'FOLLOW'
+export type NotificationType =
+  | 'LIKE'
+  | 'COMMENT'
+  | 'FOLLOW'
+  | 'UNPUBLISH'
+  | 'SUGGESTION'
 
 export interface NotificationItem {
   id: number

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { App, Button, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -9,6 +9,7 @@ import {
   enableAdminUser,
   fetchAdminUsers,
 } from '../../api/adminUsers'
+import { AdminListShell, AdminPager, ADMIN_PAGE_SIZE, sliceAdminPage } from '../../components/AdminListShell'
 import { BackNavButton } from '../../components/BackNavButton'
 import { ROUTES, userProfilePath } from '../../router/paths'
 import { getUserId, isAdmin, isLoggedIn } from '../../utils/authStorage'
@@ -25,6 +26,9 @@ export function AdminUsersPage() {
   const { message, modal } = App.useApp()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ADMIN_PAGE_SIZE)
   const myId = getUserId()
 
   const load = useCallback(async () => {
@@ -50,6 +54,31 @@ export function AdminUsersPage() {
     }
     void load()
   }, [navigate, load])
+
+  const filtered = useMemo(() => {
+    const q = keyword.trim().toLowerCase()
+    if (!q) return users
+    return users.filter((u) => u.username.toLowerCase().includes(q))
+  }, [users, keyword])
+
+  const pageItems = useMemo(
+    () => sliceAdminPage(filtered, page, pageSize),
+    [filtered, page, pageSize],
+  )
+
+  function onKeywordChange(value: string) {
+    setKeyword(value)
+    setPage(1)
+  }
+
+  function onPageChange(nextPage: number, nextSize: number) {
+    if (nextSize !== pageSize) {
+      setPageSize(nextSize)
+      setPage(1)
+    } else {
+      setPage(nextPage)
+    }
+  }
 
   function handleDisable(user: AdminUser) {
     if (user.id === myId) {
@@ -170,19 +199,30 @@ export function AdminUsersPage() {
         <Button onClick={() => void load()}>刷新</Button>
       </div>
 
-      <Table
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={users}
-        scroll={{ x: 960 }}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
-          showTotal: (t) => `共 ${t} 人`,
-        }}
-      />
+      <AdminListShell
+        searchPlaceholder="按用户名模糊搜索"
+        keyword={keyword}
+        onKeywordChange={onKeywordChange}
+        pageSize={pageSize}
+        pager={
+          <AdminPager
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            onChange={onPageChange}
+            unit="人"
+          />
+        }
+      >
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={pageItems}
+          scroll={{ x: 960 }}
+          pagination={false}
+        />
+      </AdminListShell>
     </motion.div>
   )
 }

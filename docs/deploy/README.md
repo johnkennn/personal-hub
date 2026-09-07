@@ -393,7 +393,7 @@ scp target/personal-hub-0.0.1-SNAPSHOT.jar root@YOUR_PUBLIC_IP:/opt/personal-hub
 ssh root@YOUR_PUBLIC_IP 'systemctl restart personal-hub'
 ```
 
-表结构已存在后，**不要**再使用 `ddl-auto=update` 作为常规手段；结构变更应走迁移方案（后续可引入 Flyway 等）。
+表结构已存在后，**不要**再使用 `ddl-auto=update` 作为常规手段；结构变更一律走 **Flyway**（见第 14 节）。
 
 ---
 
@@ -420,10 +420,12 @@ ssh root@YOUR_PUBLIC_IP 'systemctl restart personal-hub'
 - [x] SSH 密钥登录
 - [x] Nginx 站点 + `/api` 反代
 - [x] 上传前端 `dist` 与后端 jar
-- [x] `personal-hub.env` + 首次 `update` 建表
+- [x] `personal-hub.env` + 首次建表（现推荐靠 Flyway，见第 14 节）
 - [x] systemd 托管并开机自启
+- [x] Flyway 迁移随 jar 发布
 - [ ] 域名解析 + HTTPS（443）
-- [ ] 数据库迁移工具（Flyway 等）
+- [ ] `MEDIA_ROOT` 独立目录且可写
+- [ ] 确认凌晨软删清理任务日志曾成功跑过
 
 ---
 
@@ -433,8 +435,128 @@ ssh root@YOUR_PUBLIC_IP 'systemctl restart personal-hub'
 2. 配 Nginx（注意关掉默认 `listen 80`）  
 3. 上传 `dist` → `/var/www/personal-hub`  
 4. 上传 jar；写好带引号的 `personal-hub.env`  
-5. 首次 `java ... ddl-auto=update` 建表  
+5. 启动 jar：空库由 **Flyway** 自动建表（见第 14 节）；老文档里的 `ddl-auto=update` 仅作历史兼容  
 6. 启用 `personal-hub.service`  
 7. `curl` 本机 8080 与经 80 的 `/api`；浏览器验收  
 
 完成后站点形如：`http://YOUR_PUBLIC_IP`。
+
+---
+
+## 14. Flyway 与表结构变更（当前已启用）
+
+一句话：**改数据库结构不要手改生产库，也不要用 Hibernate `update`，把 SQL 放进 migration 文件，跟着 jar 一起发布。**
+
+| 项 | 说明 |
+|----|------|
+| 脚本目录 | `backend/src/main/resources/db/migration/` |
+| 命名 | `V{版本}__描述.sql`，例如 `V3__users_phone.sql` |
+| 生产 `ddl-auto` | 保持 `validate`（只校验，不改表） |
+| 首次空库 | 直接启动 jar，Flyway 按 V1 → V2 → V3… 执行 |
+
+**禁止**修改已经在服务器上跑过的 migration 文件。本地若改过导致 checksum 报错（例如曾经提交过空的 V3）：
+
+```sql
+-- 仅开发库、且确认该版本实际没正确生效时：
+DELETE FROM flyway_schema_history WHERE version = 'N';
+```
+
+或结构已正确、只是校验和不一致时：
+
+```bash
+cd backend
+./mvnw flyway:repair
+```
+
+发布带新 migration 的 jar 后：
+
+```bash
+systemctl restart personal-hub
+journalctl -u personal-hub -n 80 --no-pager | grep -i flyway
+```
+
+应看到 `Successfully applied ... migration` 或 `Schema ... is up to date`。
+
+---
+
+## 15. 健康检查 / JWT / CORS / 限流
+
+这些是「上线后怎么确认服务活着、登录安全、跨域与防刷」的配置对照。
+
+| 能力 | 你怎么用 |
+|------|----------|
+| Health | 本机执行 `curl -s http://127.0.0.1:8080/actuator/health`，期望 `{"status":"UP"}` |
+| JWT | 环境变量 `JWT_SECRET`（至少 32 位随机串） |
+| CORS | `CORS_ALLOWED_ORIGINS`，例如 `https://你的域名`；前端若同源反代可收紧 |
+| 限流 | 配置在 `app.ratelimit.*`（登录/注册/上传/忘记密码） |
+
+`/opt/personal-hub/personal-hub.env` 建议字段：
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+DB_URL='jdbc:mysql://127.0.0.1:3306/personal_hub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai'
+DB_USERNAME=hub
+DB_PASSWORD=YOUR_HUB_PASSWORD
+JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
+CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN
+ADMIN_BOOTSTRAP_PASSWORD=
+MEDIA_ROOT=/var/www/personal-hub-media
+```
+
+头像等上传目录要可写：
+
+```bash
+mkdir -p /var/www/personal-hub-media
+```
+
+---
+
+## 16. HTTPS（443）最短路径
+
+当域名已经解析到服务器 IP 后：
+
+```bash
+dnf install -y certbot python3-certbot-nginx
+certbot --nginx -d YOUR_DOMAIN
+systemctl reload nginx
+```
+
+然后：
+
+1. `CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN`，重启 `personal-hub`
+2. 云安全组放行 **443**
+3. 用 HTTPS 测登录、上传头像、创作台
+
+---
+
+## 17. 软删除物理清理（运维说明）
+
+用户在前台「删除」文章/项目时，库里是打标 `deleted_at`（软删），不是立刻抹掉。  
+定时任务会在 **软删超过 30 天后**，把数据及关联点赞/评论/通知真正删掉。
+
+| 配置项 | 含义 |
+|--------|------|
+| `app.soft-delete.retain-days` | 保留天数，默认 30 |
+| `app.soft-delete.purge-enabled` | 是否开定时任务 |
+| `app.soft-delete.purge-cron` | 默认每天凌晨 3 点：`0 0 3 * * *` |
+
+看有没有跑过：
+
+```bash
+journalctl -u personal-hub --since "yesterday" | grep -i 软删
+```
+
+成功时日志类似：`软删物理清理完成 cutoff=... articles=...`
+
+临时关掉：设 `app.soft-delete.purge-enabled=false` 后重启服务。
+
+---
+
+## 18. 这一节在干什么？（给自己看的摘要）
+
+| 章节 | 人话 |
+|------|------|
+| 14 Flyway | 改表靠 SQL 脚本版本化，跟着发版，别手改库 |
+| 15 Health/JWT/CORS | 探活、登录密钥、跨域、防刷 |
+| 16 HTTPS | 域名装证书，走 https |
+| 17 软删清理 | 删了的内容 30 天后才真正从库里清掉 |

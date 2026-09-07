@@ -7,6 +7,7 @@ import com.zzh.personal_hub.blog.repository.ArticleRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.media.MediaStorageService;
+import com.zzh.personal_hub.notification.service.NotificationService;
 import com.zzh.personal_hub.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final CurrentUserService currentUserService;
     private final MediaStorageService mediaStorageService;
-
+    private final NotificationService notificationService;
     public List<Article> listPublished() {
         return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -101,16 +102,6 @@ public class ArticleService {
     public List<Article> listAllForAdmin() {
         currentUserService.requireAdmin();
         return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
-    }
-
-    @Transactional
-    public Article unpublishByAdmin(Long id) {
-        currentUserService.requireAdmin();
-        Article article = getActiveForAdmin(id);
-        article.setPublished(false);
-        article.setUpdatedAt(Instant.now());
-        article = articleRepository.save(article);
-        return article;
     }
 
     @Transactional
@@ -211,5 +202,17 @@ public class ArticleService {
     public List<Article> listPublishedByAuthor(Long authorId) {
         return articleRepository
                 .findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(authorId);
+    }
+
+    @Transactional
+    public Article unpublishByAdmin(Long id) {
+        User admin = currentUserService.requireAdmin();
+        Article article = getActiveForAdmin(id);
+        article.setPublished(false);
+        article.setUpdatedAt(Instant.now());
+        article = articleRepository.save(article);
+        notificationService.notifyUnpublishByAdmin(
+                admin.getId(), article.getAuthorId(), "ARTICLE", article.getId());
+        return article;
     }
 }

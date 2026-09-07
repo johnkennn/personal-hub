@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   App,
@@ -19,6 +19,10 @@ import { UserAddOutlined, UserDeleteOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
+import {
+  CatalogListLayout,
+  CatalogPager,
+} from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
 import {
   fetchPublicProfile,
@@ -27,6 +31,7 @@ import {
   followUser,
   unfollowUser,
 } from '../../api/users'
+import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import {
   articleDetailPath,
   projectDetailPath,
@@ -60,6 +65,9 @@ export function UserProfilePage() {
   const [following, setFollowing] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [articlesPage, setArticlesPage] = useState(1)
+  const [projectsPage, setProjectsPage] = useState(1)
+  const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
 
   useEffect(() => {
     return subscribeAuthChange(() => {
@@ -73,6 +81,8 @@ export function UserProfilePage() {
     let cancelled = false
     setLoading(true)
     setNotFound(false)
+    setArticlesPage(1)
+    setProjectsPage(1)
 
     Promise.all([
       fetchPublicProfile(userId),
@@ -103,6 +113,16 @@ export function UserProfilePage() {
       cancelled = true
     }
   }, [userId])
+
+  const pagedArticles = useMemo(() => {
+    const start = (articlesPage - 1) * pageSize
+    return articles.slice(start, start + pageSize)
+  }, [articles, articlesPage, pageSize])
+
+  const pagedProjects = useMemo(() => {
+    const start = (projectsPage - 1) * pageSize
+    return projects.slice(start, start + pageSize)
+  }, [projects, projectsPage, pageSize])
 
   if (!userId) {
     return <Result status="404" title="创作者不存在" />
@@ -212,47 +232,67 @@ export function UserProfilePage() {
               articles.length === 0 ? (
                 <Empty description="暂无已发布文章" />
               ) : (
-                <Row gutter={[14, 14]}>
-                  {articles.map((a) => (
-                    <Col xs={24} sm={12} lg={8} xl={6} key={a.id} style={{ display: 'flex' }}>
-                      <motion.div
-                        className={styles.catalogCardMotion}
-                        whileHover={{ y: -3 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Link
-                          to={articleDetailPath(a.id)}
-                          className={`${styles.cardLink} ${styles.catalogCardLink}`}
+                <CatalogListLayout
+                  pageSize={pageSize}
+                  pager={
+                    <CatalogPager
+                      current={articlesPage}
+                      pageSize={pageSize}
+                      total={articles.length}
+                      onChange={(p, ps) => {
+                        if (ps !== pageSize) {
+                          setPageSize(ps)
+                          setArticlesPage(1)
+                          setProjectsPage(1)
+                        } else {
+                          setArticlesPage(p)
+                        }
+                      }}
+                    />
+                  }
+                >
+                  <Row gutter={[14, 14]}>
+                    {pagedArticles.map((a) => (
+                      <Col xs={24} sm={12} lg={8} xl={6} key={a.id} style={{ display: 'flex' }}>
+                        <motion.div
+                          className={styles.catalogCardMotion}
+                          whileHover={{ y: -3 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          <Card
-                            className={`${styles.contentCard} ${styles.catalogCard}`}
-                            variant="borderless"
+                          <Link
+                            to={articleDetailPath(a.id)}
+                            className={`${styles.cardLink} ${styles.catalogCardLink}`}
                           >
-                            <CoverStrip
-                              title={a.title}
-                              tone={coverToneFromId(a.id)}
-                              compact
-                            />
-                            <Typography.Title level={5} className={styles.catalogCardTitle}>
-                              {a.title}
-                            </Typography.Title>
-                            <Typography.Paragraph
-                              type="secondary"
-                              className={styles.catalogCardExcerpt}
+                            <Card
+                              className={`${styles.contentCard} ${styles.catalogCard}`}
+                              variant="borderless"
                             >
-                              {excerpt(a.content, 72)}
-                            </Typography.Paragraph>
-                            <div className={styles.catalogCardMeta}>
-                              <Typography.Text type="secondary" className={styles.muted}>
-                                {formatDateTime(a.createdAt)}
-                              </Typography.Text>
-                            </div>
-                          </Card>
-                        </Link>
-                      </motion.div>
-                    </Col>
-                  ))}
-                </Row>
+                              <CoverStrip
+                                title={a.title}
+                                tone={coverToneFromId(a.id)}
+                                compact
+                              />
+                              <Typography.Title level={5} className={styles.catalogCardTitle}>
+                                {a.title}
+                              </Typography.Title>
+                              <Typography.Paragraph
+                                type="secondary"
+                                className={styles.catalogCardExcerpt}
+                              >
+                                {excerpt(a.content, 72)}
+                              </Typography.Paragraph>
+                              <div className={styles.catalogCardMeta}>
+                                <Typography.Text type="secondary" className={styles.muted}>
+                                  {formatDateTime(a.createdAt)}
+                                </Typography.Text>
+                              </div>
+                            </Card>
+                          </Link>
+                        </motion.div>
+                      </Col>
+                    ))}
+                  </Row>
+                </CatalogListLayout>
               ),
           },
           {
@@ -262,47 +302,67 @@ export function UserProfilePage() {
               projects.length === 0 ? (
                 <Empty description="暂无已发布项目" />
               ) : (
-                <Row gutter={[14, 14]}>
-                  {projects.map((p) => (
-                    <Col xs={24} sm={12} lg={8} xl={6} key={p.id} style={{ display: 'flex' }}>
-                      <motion.div
-                        className={styles.catalogCardMotion}
-                        whileHover={{ y: -3 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Link
-                          to={projectDetailPath(p.id)}
-                          className={`${styles.cardLink} ${styles.catalogCardLink}`}
+                <CatalogListLayout
+                  pageSize={pageSize}
+                  pager={
+                    <CatalogPager
+                      current={projectsPage}
+                      pageSize={pageSize}
+                      total={projects.length}
+                      onChange={(p, ps) => {
+                        if (ps !== pageSize) {
+                          setPageSize(ps)
+                          setArticlesPage(1)
+                          setProjectsPage(1)
+                        } else {
+                          setProjectsPage(p)
+                        }
+                      }}
+                    />
+                  }
+                >
+                  <Row gutter={[14, 14]}>
+                    {pagedProjects.map((p) => (
+                      <Col xs={24} sm={12} lg={8} xl={6} key={p.id} style={{ display: 'flex' }}>
+                        <motion.div
+                          className={styles.catalogCardMotion}
+                          whileHover={{ y: -3 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          <Card
-                            className={`${styles.contentCard} ${styles.catalogCard}`}
-                            variant="borderless"
+                          <Link
+                            to={projectDetailPath(p.id)}
+                            className={`${styles.cardLink} ${styles.catalogCardLink}`}
                           >
-                            <CoverStrip
-                              title={p.name}
-                              tone={coverToneFromId(p.id)}
-                              compact
-                            />
-                            <Typography.Title level={5} className={styles.catalogCardTitle}>
-                              {p.name}
-                            </Typography.Title>
-                            <Typography.Paragraph
-                              type="secondary"
-                              className={styles.catalogCardExcerpt}
+                            <Card
+                              className={`${styles.contentCard} ${styles.catalogCard}`}
+                              variant="borderless"
                             >
-                              {excerpt(p.description, 72)}
-                            </Typography.Paragraph>
-                            <div className={styles.catalogCardMeta}>
-                              <Typography.Text type="secondary" className={styles.muted}>
-                                {formatDateTime(p.createdAt)}
-                              </Typography.Text>
-                            </div>
-                          </Card>
-                        </Link>
-                      </motion.div>
-                    </Col>
-                  ))}
-                </Row>
+                              <CoverStrip
+                                title={p.name}
+                                tone={coverToneFromId(p.id)}
+                                compact
+                              />
+                              <Typography.Title level={5} className={styles.catalogCardTitle}>
+                                {p.name}
+                              </Typography.Title>
+                              <Typography.Paragraph
+                                type="secondary"
+                                className={styles.catalogCardExcerpt}
+                              >
+                                {excerpt(p.description, 72)}
+                              </Typography.Paragraph>
+                              <div className={styles.catalogCardMeta}>
+                                <Typography.Text type="secondary" className={styles.muted}>
+                                  {formatDateTime(p.createdAt)}
+                                </Typography.Text>
+                              </div>
+                            </Card>
+                          </Link>
+                        </motion.div>
+                      </Col>
+                    ))}
+                  </Row>
+                </CatalogListLayout>
               ),
           },
         ]}

@@ -25,4 +25,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         Long receiverId,
         com.zzh.personal_hub.notification.NotificationType type
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from Notification n where n.targetType = :targetType and n.targetId = :targetId")
+    int deleteByTargetTypeAndTargetId(
+        @Param("targetType") String targetType, @Param("targetId") Long targetId);
 }

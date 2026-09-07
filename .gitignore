@@ -51,3 +51,8 @@ target/
 # Local secrets (do not commit)
 # =========================
 **/application-local.yml
+
+# =========================
+# Local uploads / runtime data
+# =========================
+backend/data/

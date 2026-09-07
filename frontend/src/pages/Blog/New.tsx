@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { App, Button, Card, Checkbox, Form, Input, Space, Tabs } from 'antd'
+import { App, Button, Card, Checkbox, Form, Input, Space, Tabs, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
@@ -91,7 +91,12 @@ export function ArticleNewPage() {
             ]}
           />
           <Form.Item name="published" valuePropName="checked">
-            <Checkbox>直接发布</Checkbox>
+            <Space align="center" wrap size={8}>
+              <Checkbox>直接发布</Checkbox>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                若不勾选，则只会保存到草稿中，对其他用户不可见
+              </Typography.Text>
+            </Space>
           </Form.Item>
           <Button type="primary" htmlType="submit" size="large">
             提交

@@ -9,6 +9,7 @@ import com.zzh.personal_hub.suggestion.dto.AdminSuggestionResponse;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import org.springframework.stereotype.Service;
 import com.zzh.personal_hub.user.repository.UserRepository;
+import com.zzh.personal_hub.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -24,7 +25,7 @@ public class SuggestionService {
     private final SuggestionRepository suggestionRepository;
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
-
+    private final NotificationService notificationService;
     public List<SuggestionResponse> listMine() {
         User me = currentUserService.requireUser();
         return suggestionRepository.findByUserIdOrderByCreatedAtDesc(me.getId()).stream()
@@ -34,11 +35,13 @@ public class SuggestionService {
 
     @Transactional
     public SuggestionResponse create(String content) {
+        User me = currentUserService.requireUser();
         Suggestion row = new Suggestion();
-        row.setUserId(currentUserService.requireUser().getId());
+        row.setUserId(me.getId());
         row.setContent(content.trim());
         row.setCreatedAt(Instant.now());
         suggestionRepository.save(row);
+        notificationService.notifySuggestionToAdmins(me.getId(), row.getId());
         return toResponse(row);
     }
 

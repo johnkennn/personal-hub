@@ -93,12 +93,6 @@
   background: rgba(124, 184, 154, 0.22) !important;
 }
 
-.pager {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-}
-
 @media (max-width: 575px) {
   .hero {
     padding-top: 0.25rem;

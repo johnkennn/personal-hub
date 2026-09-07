@@ -11,6 +11,7 @@ import com.zzh.personal_hub.notification.dto.NotificationResponse;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.user.entity.User;
+import com.zzh.personal_hub.user.entity.UserRole;
 import com.zzh.personal_hub.common.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,8 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationResponse> listMine() {
         User me = currentUserService.requireUser();
-        return notificationRepository.findByReceiverIdAndReadAtIsNullOrderByCreatedAtDesc(me.getId()).stream()
-        .filter(n -> n.getType() != NotificationType.FOLLOW)
+        return notificationRepository.findByReceiverIdAndReadAtIsNullOrderByCreatedAtDesc(me.getId())
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -37,7 +38,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long unreadCount() {
         User me = currentUserService.requireUser();
-        return notificationRepository.countByReceiverIdAndReadAtIsNullAndTypeNot(me.getId(), NotificationType.FOLLOW);
+        return notificationRepository.countByReceiverIdAndReadAtIsNull(me.getId());
     }
 
     @Transactional
@@ -112,5 +113,35 @@ public class NotificationService {
         n.setTargetId(targetId);
         n.setCreatedAt(Instant.now());
         notificationRepository.save(n);
+    }
+
+    @Transactional
+    public void notifyUnpublishByAdmin(Long adminId, Long authorId, String targetType, Long targetId) {
+        if (Objects.equals(adminId, authorId)) return;
+        Notification n = new Notification();
+        n.setActorId(adminId);
+        n.setReceiverId(authorId);
+        n.setType(NotificationType.UNPUBLISH);
+        n.setTargetType(targetType); // "ARTICLE" 或 "PROJECT"
+        n.setTargetId(targetId);
+        n.setCreatedAt(Instant.now());
+        notificationRepository.save(n);
+    }
+
+    @Transactional
+    public void notifySuggestionToAdmins(Long actorId, Long suggestionId) {
+        List<User> admins = userRepository.findByRole(UserRole.ADMIN);
+        Instant now = Instant.now();
+        for (User admin : admins) {
+            if (Objects.equals(admin.getId(), actorId)) continue; // 不通知自己
+            Notification n = new Notification();
+            n.setActorId(actorId);
+            n.setReceiverId(admin.getId());
+            n.setType(NotificationType.SUGGESTION);
+            n.setTargetType("SUGGESTION");
+            n.setTargetId(suggestionId);
+            n.setCreatedAt(now);
+            notificationRepository.save(n);
+        }
     }
 }
