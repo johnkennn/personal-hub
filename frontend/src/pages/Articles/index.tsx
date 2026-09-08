@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -35,7 +34,6 @@ import styles from '../../styles/ui.module.css'
 export function ArticlesPage() {
   const { message } = App.useApp()
   const [articles, setArticles] = useState<PublicArticle[]>([])
-  const [fromDemo, setFromDemo] = useState(false)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
@@ -45,7 +43,6 @@ export function ArticlesPage() {
     loadPublicArticles()
       .then((res) => {
         setArticles(res.items)
-        setFromDemo(res.fromDemo)
       })
       .catch(() => message.error('文章列表加载失败'))
       .finally(() => setLoading(false))
@@ -105,16 +102,6 @@ export function ArticlesPage() {
           ) : null}
         </Space>
       </div>
-
-      {fromDemo ? (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="当前展示演示文章"
-          description="点赞会影响「最热」排序；后端接入后自动切换真数据。"
-        />
-      ) : null}
 
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, Result, Skeleton, Tag, Typography } from 'antd'
+import { Button, Image, Result, Skeleton, Tag, Typography } from 'antd'
 import { LinkOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
@@ -12,6 +12,8 @@ import { SocialPanel } from '../../components/SocialPanel'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle, PublicProject } from '../../mocks/publicDemo'
 import { articleDetailPath, ROUTES } from '../../router/paths'
+import { fetchProjectMedia } from '../../api/project'
+import type { ProjectMedia } from '../../types/projectMedia'
 import {
   loadPublicProject,
   loadRelatedArticlesForProject,
@@ -35,6 +37,7 @@ export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [project, setProject] = useState<PublicProject | null>(null)
   const [related, setRelated] = useState<PublicArticle[]>([])
+  const [gallery, setGallery] = useState<ProjectMedia[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadedId, setLoadedId] = useState<string | undefined>(undefined)
@@ -44,17 +47,25 @@ export function ProjectDetailPage() {
     setLoading(true)
     setProject(null)
     setRelated([])
+    setGallery([])
     setError('')
   }
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    Promise.all([loadPublicProject(id), loadRelatedArticlesForProject(id)])
-      .then(([projectRes, relatedRes]) => {
+    Promise.all([
+      loadPublicProject(id),
+      loadRelatedArticlesForProject(id),
+      fetchProjectMedia(id)
+        .then((r) => r.data.data ?? [])
+        .catch(() => [] as ProjectMedia[]),
+    ])
+      .then(([projectRes, relatedRes, mediaItems]) => {
         if (cancelled) return
         setProject(projectRes.item)
         setRelated(relatedRes.items)
+        setGallery(mediaItems)
         setError(projectRes.item ? '' : '项目不存在或加载失败')
       })
       .finally(() => {
@@ -259,6 +270,41 @@ export function ProjectDetailPage() {
             </div>
           </motion.section>
         )}
+
+        {gallery.length > 0 ? (
+          <motion.section
+            className={styles.section}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.4 }}
+          >
+            <Typography.Title level={2} className={styles.sectionTitle}>
+              画廊
+            </Typography.Title>
+            <Typography.Paragraph className={styles.sectionDesc}>
+              作品界面与现场截图，点击可放大预览。
+            </Typography.Paragraph>
+            <Image.PreviewGroup>
+              <div className={styles.galleryGrid}>
+                {gallery.map((m) => {
+                  const src = resolveMediaUrl(m.url)
+                  if (!src) return null
+                  return (
+                    <motion.div
+                      key={m.id}
+                      className={styles.galleryItem}
+                      whileHover={{ y: -3 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Image src={src} alt="" className={styles.galleryImg} />
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </Image.PreviewGroup>
+          </motion.section>
+        ) : null}
 
         {related.length > 0 ? (
           <motion.section

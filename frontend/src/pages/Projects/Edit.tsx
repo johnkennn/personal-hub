@@ -4,6 +4,7 @@ import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Typograph
 import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
+import { ProjectGalleryEditor } from '../../components/ProjectGalleryEditor'
 import { fetchProjectForManage, updateProject } from '../../api/project'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -156,6 +157,7 @@ export function ProjectEditPage() {
           <Form.Item name="demoUrl" label="Demo 地址">
             <Input />
           </Form.Item>
+          {id ? <ProjectGalleryEditor projectId={id} /> : null}
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
               <Checkbox>保存时直接发布</Checkbox>

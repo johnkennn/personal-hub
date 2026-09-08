@@ -207,6 +207,26 @@
   font-size: 0.9rem !important;
 }
 
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.galleryItem {
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--ph-border);
+  background: #121c18;
+  aspect-ratio: 4 / 3;
+}
+
+.galleryImg {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
 .socialWrap {
   margin-top: 0.5rem;
   padding-top: 1.5rem;

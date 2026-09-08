@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.zzh.personal_hub.project.service.ProjectService;
 import com.zzh.personal_hub.project.entity.Project;
+import com.zzh.personal_hub.project.entity.ProjectMedia;
 import com.zzh.personal_hub.common.response.ApiResponse;
 import com.zzh.personal_hub.article.dto.BatchIdsRequest;
 
@@ -42,6 +44,11 @@ public class MeProjectController {
         return ApiResponse.success(projectService.getMyProject(id));
     }
 
+    @GetMapping("/{id}/media")
+    public ApiResponse<List<ProjectMedia>> media(@PathVariable Long id) {
+        return ApiResponse.success(projectService.listMyMedia(id));
+    }
+
     @PostMapping("/batch-publish")
     public ApiResponse<Map<String, Integer>> batchPublish(@Valid @RequestBody BatchIdsRequest req) {
         return ApiResponse.success(Map.of("affected", projectService.batchPublish(req.getIds())));
@@ -62,5 +69,18 @@ public class MeProjectController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         return ApiResponse.success(projectService.uploadCover(id, file));
+    }
+
+    @PostMapping("/{id}/media")
+    public ApiResponse<ProjectMedia> uploadMedia(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.success(projectService.addMedia(id, file));
+    }
+
+    @DeleteMapping("/{id}/media/{mediaId}")
+    public ApiResponse<Void> deleteMedia(@PathVariable Long id, @PathVariable Long mediaId) {
+        projectService.deleteMedia(id, mediaId);
+        return ApiResponse.success(null);
     }
 }

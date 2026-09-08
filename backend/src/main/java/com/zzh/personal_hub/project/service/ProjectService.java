@@ -5,6 +5,8 @@ import com.zzh.personal_hub.project.dto.ProjectUpdateRequest;
 import com.zzh.personal_hub.media.MediaStorageService;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.project.entity.Project;
+import com.zzh.personal_hub.project.entity.ProjectMedia;
+import com.zzh.personal_hub.project.repository.ProjectMediaRepository;
 import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.user.entity.User;
@@ -26,6 +28,10 @@ public class ProjectService {
     private final CurrentUserService currentUserService;
     private final MediaStorageService mediaStorageService;
     private final NotificationService notificationService;
+    private final ProjectMediaRepository projectMediaRepository;
+
+    private static final int MAX_GALLERY = 12;
+
     public List<Project> listPublished() {
         return projectRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -218,5 +224,45 @@ public class ProjectService {
             throw new BusinessException(404, "项目不存在");
         }
         return project;
+    }
+
+    public List<ProjectMedia> listMedia(Long projectId) {
+        getPublishedById(projectId); // 仅已发布项目可公开读画廊
+        return projectMediaRepository.findByProjectIdOrderBySortOrderAscIdAsc(projectId);
+    }
+
+    /** 作者管理时也要能读草稿画廊 */
+    public List<ProjectMedia> listMyMedia(Long projectId) {
+        getMyProject(projectId);
+        return projectMediaRepository.findByProjectIdOrderBySortOrderAscIdAsc(projectId);
+    }
+
+    @Transactional
+    public ProjectMedia addMedia(Long projectId, MultipartFile file) {
+        Project project = getMyProject(projectId);
+        if (Boolean.TRUE.equals(project.getPublished())) {
+            throw new BusinessException(400, "已发布内容不可编辑，请先下架");
+        }
+        if (projectMediaRepository.countByProjectId(projectId) >= MAX_GALLERY) {
+            throw new BusinessException(400, "画廊最多 12 张");
+        }
+        String url = mediaStorageService.saveImage(file, "gallery/projects/" + projectId);
+        ProjectMedia media = new ProjectMedia();
+        media.setProjectId(projectId);
+        media.setUrl(url);
+        media.setSortOrder((int) projectMediaRepository.countByProjectId(projectId));
+        media.setCreatedAt(Instant.now());
+        return projectMediaRepository.save(media);
+    }
+
+    @Transactional
+    public void deleteMedia(Long projectId, Long mediaId) {
+        Project project = getMyProject(projectId);
+        if (Boolean.TRUE.equals(project.getPublished())) {
+            throw new BusinessException(400, "已发布内容不可编辑，请先下架");
+        }
+        ProjectMedia media = projectMediaRepository.findByIdAndProjectId(mediaId, projectId)
+                .orElseThrow(() -> new BusinessException(404, "图片不存在"));
+        projectMediaRepository.delete(media);
     }
 }

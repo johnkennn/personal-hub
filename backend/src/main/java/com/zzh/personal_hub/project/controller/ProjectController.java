@@ -13,6 +13,7 @@ import com.zzh.personal_hub.social.dto.CommentResponse;
 import com.zzh.personal_hub.social.service.CommentService;
 import com.zzh.personal_hub.article.service.ArticleService;
 import com.zzh.personal_hub.article.entity.Article;
+import com.zzh.personal_hub.project.entity.ProjectMedia;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -94,6 +95,7 @@ public class ProjectController {
     public ApiResponse<List<CommentResponse>> listComments(@PathVariable Long id) {
         return ApiResponse.success(commentService.list(ContentTargetType.PROJECT, id));
     }
+
     @PostMapping("/{id}/comments")
     public ApiResponse<CommentResponse> createComment(
             @PathVariable Long id,
@@ -101,9 +103,15 @@ public class ProjectController {
         return ApiResponse.success(
                 commentService.create(ContentTargetType.PROJECT, id, request.getBody()));
     }
+
     @GetMapping("/{id}/articles")
     public ApiResponse<List<Article>> relatedArticles(@PathVariable Long id) {
         projectService.getPublishedById(id);
         return ApiResponse.success(articleService.listPublishedByRelatedProject(id));
+    }
+
+    @GetMapping("/{id}/media")
+    public ApiResponse<List<ProjectMedia>> media(@PathVariable Long id) {
+        return ApiResponse.success(projectService.listMedia(id));
     }
 }

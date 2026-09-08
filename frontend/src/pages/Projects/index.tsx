@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -24,14 +23,13 @@ import {
   CatalogPager,
 } from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
-import { fetchLikeSummary } from '../../api/social'
+import { fetchFeedHot } from '../../api/feed'
 import type { PublicProject } from '../../mocks/publicDemo'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicProjects } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
-import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
 function techTags(techStack: string | null) {
@@ -47,7 +45,7 @@ export function ProjectsPage() {
   const { message } = App.useApp()
   const [projects, setProjects] = useState<PublicProject[]>([])
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({})
-  const [fromDemo, setFromDemo] = useState(false)
+  const [hotReady, setHotReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
@@ -57,31 +55,8 @@ export function ProjectsPage() {
     let cancelled = false
     setLoading(true)
     loadPublicProjects()
-      .then(async (res) => {
-        if (cancelled) return
-        setProjects(res.items)
-        setFromDemo(res.fromDemo)
-
-        if (res.fromDemo) {
-          const demoCounts: Record<number, number> = {}
-          for (const p of res.items) {
-            demoCounts[p.id] = getLikeCount('project', p.id)
-          }
-          setLikeCounts(demoCounts)
-          return
-        }
-
-        const entries = await Promise.all(
-          res.items.map(async (p) => {
-            try {
-              const r = await fetchLikeSummary('project', p.id)
-              return [p.id, r.data.data.likeCount] as const
-            } catch {
-              return [p.id, 0] as const
-            }
-          }),
-        )
-        if (!cancelled) setLikeCounts(Object.fromEntries(entries))
+      .then((res) => {
+        if (!cancelled) setProjects(res.items)
       })
       .catch(() => {
         if (!cancelled) message.error('项目列表加载失败')
@@ -94,6 +69,31 @@ export function ProjectsPage() {
       cancelled = true
     }
   }, [message])
+
+  // 切到「最热」再拉一次 feed/hot，避免首屏 N+1 点赞请求
+  useEffect(() => {
+    if (sort !== 'hot' || hotReady) return
+    let cancelled = false
+    fetchFeedHot(100)
+      .then((res) => {
+        if (cancelled) return
+        const counts: Record<number, number> = {}
+        for (const item of res.data.data ?? []) {
+          if (item.type === 'PROJECT') counts[item.id] = item.likeCount ?? 0
+        }
+        setLikeCounts(counts)
+        setHotReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLikeCounts({})
+          setHotReady(true)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sort, hotReady])
 
   const sorted = useMemo(() => {
     const list = [...projects]
@@ -149,16 +149,6 @@ export function ProjectsPage() {
           ) : null}
         </Space>
       </div>
-
-      {fromDemo ? (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="当前展示演示项目"
-          description="点赞会影响「最热」排序；后端接入后自动切换。"
-        />
-      ) : null}
 
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />

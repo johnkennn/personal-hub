@@ -5,6 +5,7 @@ import type {
   ProjectCreateRequest,
   ProjectUpdateRequest,
 } from '../types/project'
+import type { ProjectMedia } from '../types/projectMedia'
 
 export function fetchProjects() {
   return request.get<ApiResponse<Project[]>>('/api/projects')
@@ -64,4 +65,23 @@ export function uploadProjectCover(id: number | string, file: File) {
   const form = new FormData()
   form.append('file', file)
   return request.post<ApiResponse<Project>>(`/api/me/projects/${id}/cover`, form)
+}
+
+export function fetchProjectMedia(projectId: number | string) {
+  return request.get<ApiResponse<ProjectMedia[]>>(`/api/projects/${projectId}/media`)
+}
+
+/** 草稿编辑：作者可读自己的画廊（含未发布） */
+export function fetchMyProjectMedia(projectId: number | string) {
+  return request.get<ApiResponse<ProjectMedia[]>>(`/api/me/projects/${projectId}/media`)
+}
+
+export function uploadProjectMedia(projectId: number | string, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return request.post<ApiResponse<ProjectMedia>>(`/api/me/projects/${projectId}/media`, form)
+}
+
+export function deleteProjectMedia(projectId: number | string, mediaId: number | string) {
+  return request.delete<ApiResponse<null>>(`/api/me/projects/${projectId}/media/${mediaId}`)
 }

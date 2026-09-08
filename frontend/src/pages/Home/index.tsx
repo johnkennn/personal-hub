@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -21,15 +20,13 @@ import {
 } from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
 import { WeeklyScreenings } from '../../components/WeeklyScreenings'
-import { fetchLikeSummary } from '../../api/social'
+import { fetchFeedHot, fetchFollowingFeed, type FeedItem } from '../../api/feed'
 import { getDemoCreator, type PublicArticle, type PublicProject } from '../../mocks/publicDemo'
-import { fetchFollowing } from '../../api/users'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { articleDetailPath, projectDetailPath, ROUTES, userProfilePath } from '../../router/paths'
-import { loadPublicArticles, loadPublicProjects } from '../../services/publicContent'
-import { getUserId, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
+import { loadDiscoverCatalog } from '../../services/publicContent'
+import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
-import { getLikeCount } from '../../utils/socialStorage'
 import styles from './Home.module.css'
 import ui from '../../styles/ui.module.css'
 
@@ -47,6 +44,49 @@ type AuthorChipItem = {
 
 function likeKey(type: 'article' | 'project', id: number) {
   return `${type}:${id}`
+}
+
+function mapFeedToRows(
+  items: FeedItem[],
+  articleMap: Map<number, PublicArticle>,
+  projectMap: Map<number, PublicProject>,
+): FeedRow[] {
+  const rows: FeedRow[] = []
+  for (const f of items) {
+    if (f.type === 'ARTICLE') {
+      const item =
+        articleMap.get(f.id) ??
+        ({
+          id: f.id,
+          title: f.titleOrName,
+          content: '',
+          published: true,
+          authorId: f.authorId,
+          authorName: f.authorUsername,
+          createdAt: f.createdAt,
+          updatedAt: f.createdAt,
+        } satisfies PublicArticle)
+      rows.push({ type: 'article', item, at: item.updatedAt || f.createdAt })
+    } else {
+      const item =
+        projectMap.get(f.id) ??
+        ({
+          id: f.id,
+          name: f.titleOrName,
+          description: '',
+          techStack: null,
+          repoUrl: null,
+          demoUrl: null,
+          published: true,
+          authorId: f.authorId,
+          authorName: f.authorUsername,
+          createdAt: f.createdAt,
+          updatedAt: f.createdAt,
+        } satisfies PublicProject)
+      rows.push({ type: 'project', item, at: item.updatedAt || f.createdAt })
+    }
+  }
+  return rows.sort((x, y) => y.at.localeCompare(x.at))
 }
 
 function FeedGrid({
@@ -145,9 +185,9 @@ export function HomePage() {
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [projects, setProjects] = useState<PublicProject[]>([])
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
-  const [fromDemo, setFromDemo] = useState(false)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
-  const [followingIds, setFollowingIds] = useState<number[]>([])
+  const [followingFeedItems, setFollowingFeedItems] = useState<FeedItem[] | null>(null)
+  const [hotReady, setHotReady] = useState(false)
   const [latestPage, setLatestPage] = useState(1)
   const [hotPage, setHotPage] = useState(1)
   const [followingPage, setFollowingPage] = useState(1)
@@ -172,69 +212,64 @@ export function HomePage() {
   useEffect(() => {
     return subscribeAuthChange(() => {
       setLoggedIn(isLoggedIn())
+      setFollowingFeedItems(null)
     })
   }, [])
 
+  // 首屏：只要文章 + 项目列表（本周上映 / 最新），不再逐条拉点赞
   useEffect(() => {
     let cancelled = false
-    Promise.all([loadPublicArticles(), loadPublicProjects()]).then(async ([a, p]) => {
+    loadDiscoverCatalog().then((data) => {
       if (cancelled) return
-      setArticles(a.items)
-      setProjects(p.items)
-      const demo = a.fromDemo || p.fromDemo
-      setFromDemo(demo)
-
-      if (demo) {
-        const counts: Record<string, number> = {}
-        for (const item of a.items) counts[likeKey('article', item.id)] = getLikeCount('article', item.id)
-        for (const item of p.items) counts[likeKey('project', item.id)] = getLikeCount('project', item.id)
-        setLikeCounts(counts)
-        return
-      }
-
-      const entries = await Promise.all([
-        ...a.items.map(async (item) => {
-          try {
-            const r = await fetchLikeSummary('article', item.id)
-            return [likeKey('article', item.id), r.data.data.likeCount] as const
-          } catch {
-            return [likeKey('article', item.id), 0] as const
-          }
-        }),
-        ...p.items.map(async (item) => {
-          try {
-            const r = await fetchLikeSummary('project', item.id)
-            return [likeKey('project', item.id), r.data.data.likeCount] as const
-          } catch {
-            return [likeKey('project', item.id), 0] as const
-          }
-        }),
-      ])
-      if (!cancelled) setLikeCounts(Object.fromEntries(entries))
+      setArticles(data.articles)
+      setProjects(data.projects)
     })
     return () => {
       cancelled = true
     }
   }, [])
 
+  // 「最热」：一次 /api/feed/hot，服务端已批量算赞
   useEffect(() => {
-    if (!loggedIn) return
-    const me = getUserId()
-    if (me == null) return
-
+    if (activeTab !== 'hot' || hotReady) return
     let cancelled = false
-    fetchFollowing(me, 0, 100)
+    fetchFeedHot(100)
       .then((res) => {
         if (cancelled) return
-        setFollowingIds((res.data.data.items ?? []).map((u) => u.userId))
+        const counts: Record<string, number> = {}
+        for (const item of res.data.data ?? []) {
+          const kind = item.type === 'ARTICLE' ? 'article' : 'project'
+          counts[likeKey(kind, item.id)] = item.likeCount ?? 0
+        }
+        setLikeCounts(counts)
+        setHotReady(true)
       })
       .catch(() => {
-        if (!cancelled) setFollowingIds([])
+        if (!cancelled) {
+          setLikeCounts({})
+          setHotReady(true)
+        }
       })
     return () => {
       cancelled = true
     }
-  }, [loggedIn])
+  }, [activeTab, hotReady])
+
+  // 「我的关注」：切到该 Tab 再请求，一次 following feed
+  useEffect(() => {
+    if (activeTab !== 'following' || !loggedIn || followingFeedItems != null) return
+    let cancelled = false
+    fetchFollowingFeed()
+      .then((res) => {
+        if (!cancelled) setFollowingFeedItems(res.data.data ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setFollowingFeedItems([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, loggedIn, followingFeedItems])
 
   const latestMix = useMemo(() => {
     const rows: FeedRow[] = [
@@ -256,6 +291,13 @@ export function HomePage() {
     )
   }, [articles, projects, likeCounts])
 
+  const followingRows = useMemo(() => {
+    if (followingFeedItems == null) return null
+    const articleMap = new Map(articles.map((a) => [a.id, a]))
+    const projectMap = new Map(projects.map((p) => [p.id, p]))
+    return mapFeedToRows(followingFeedItems, articleMap, projectMap)
+  }, [followingFeedItems, articles, projects])
+
   const authors = useMemo(() => {
     const map = new Map<number, AuthorChipItem>()
     for (const a of articles) {
@@ -276,19 +318,6 @@ export function HomePage() {
     }
     return [...map.values()].slice(0, 8)
   }, [articles, projects])
-
-  const followingFeed = useMemo(() => {
-    const ids = loggedIn ? followingIds : []
-    const rows: FeedRow[] = [
-      ...articles
-        .filter((a) => ids.includes(a.authorId))
-        .map((item) => ({ type: 'article' as const, item, at: item.updatedAt })),
-      ...projects
-        .filter((p) => ids.includes(p.authorId))
-        .map((item) => ({ type: 'project' as const, item, at: item.updatedAt })),
-    ]
-    return rows.sort((x, y) => y.at.localeCompare(x.at))
-  }, [articles, projects, followingIds, loggedIn])
 
   return (
     <div>
@@ -349,16 +378,6 @@ export function HomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.12 }}
       >
-        {fromDemo ? (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            message="演示数据模式"
-            description="后端无数据或不可用时，已加载示例内容（显式降级，非静默假数据）。"
-          />
-        ) : null}
-
         <WeeklyScreenings projects={projects} />
 
         <div className={ui.pageHead} style={{ marginBottom: 12 }}>
@@ -403,7 +422,9 @@ export function HomePage() {
             {
               key: 'hot',
               label: '最热',
-              children: (
+              children: !hotReady ? (
+                <Empty description="加载最热内容…" />
+              ) : (
                 <FeedGrid
                   rows={hotMix}
                   page={hotPage}
@@ -425,7 +446,9 @@ export function HomePage() {
                     </span>
                   }
                 />
-              ) : followingFeed.length === 0 ? (
+              ) : followingRows == null ? (
+                <Empty description="加载关注动态…" />
+              ) : followingRows.length === 0 ? (
                 <Empty
                   description={
                     authors.length > 0 ? (
@@ -445,7 +468,7 @@ export function HomePage() {
                 />
               ) : (
                 <FeedGrid
-                  rows={followingFeed}
+                  rows={followingRows}
                   page={followingPage}
                   pageSize={pageSize}
                   onPageChange={(p, ps) => onCatalogPageChange(setFollowingPage, p, ps)}

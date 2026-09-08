@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Result, Skeleton, Space, Typography } from 'antd'
+import { Result, Skeleton, Space, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
@@ -28,7 +28,6 @@ const ARTICLE_TONES: Record<string, string> = {
 export function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [article, setArticle] = useState<PublicArticle | null>(null)
-  const [fromDemo, setFromDemo] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadedId, setLoadedId] = useState<string | undefined>(undefined)
@@ -37,7 +36,6 @@ export function ArticleDetailPage() {
     setLoadedId(id)
     setLoading(true)
     setArticle(null)
-    setFromDemo(false)
     setError('')
   }
 
@@ -48,7 +46,6 @@ export function ArticleDetailPage() {
       .then((res) => {
         if (cancelled) return
         setArticle(res.item)
-        setFromDemo(res.fromDemo)
         setError(res.item ? '' : '文章不存在或加载失败')
       })
       .finally(() => {
@@ -107,10 +104,6 @@ export function ArticleDetailPage() {
         <Space style={{ marginBottom: 16 }}>
           <BackNavButton fallback={ROUTES.ARTICLES} />
         </Space>
-
-        {fromDemo ? (
-          <Alert type="info" showIcon style={{ marginBottom: 16 }} message="演示内容（支持 Markdown 渲染）" />
-        ) : null}
 
         <Typography.Title level={1} style={{ fontFamily: 'var(--ph-font-display)', marginBottom: 8 }}>
           {article.title}
