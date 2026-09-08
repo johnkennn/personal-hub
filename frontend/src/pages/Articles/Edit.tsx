@@ -5,12 +5,18 @@ import { motion } from 'framer-motion'
 
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { BackNavButton } from '../../components/BackNavButton'
-import { fetchArticleForManage, updateArticle } from '../../api/blog'
+import { RelatedProjectField } from '../../components/RelatedProjectField'
+import { fetchArticleForManage, updateArticle } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
-type FormValues = { title: string; content: string; published: boolean }
+type FormValues = {
+  title: string
+  content: string
+  published: boolean
+  relatedProjectId?: number | null
+}
 
 export function ArticleEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,6 +54,7 @@ export function ArticleEditPage() {
           title: article.title,
           content: article.content,
           published: article.published,
+          relatedProjectId: article.relatedProjectId ?? undefined,
         })
         setPreview({ title: article.title, content: article.content })
       })
@@ -159,6 +166,7 @@ export function ArticleEditPage() {
               },
             ]}
           />
+          <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
               <Checkbox>保存时直接发布</Checkbox>

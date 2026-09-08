@@ -1,4 +1,4 @@
-package com.zzh.personal_hub.blog.entity;
+package com.zzh.personal_hub.article.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,4 +46,8 @@ public class Article {
 
     @Column(name = "cover_url", length = 512)
     private String coverUrl;
+
+    /** 可选：关联项目 id，用于展映页「制作特辑」 */
+    @Column(name = "related_project_id")
+    private Long relatedProjectId;
 }

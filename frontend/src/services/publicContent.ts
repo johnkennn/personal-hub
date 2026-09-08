@@ -4,7 +4,7 @@ import {
   type PublicArticle,
   type PublicProject,
 } from '../mocks/publicDemo'
-import { fetchArticles, fetchArticleById } from '../api/blog'
+import { fetchArticles, fetchArticleById, fetchProjectRelatedArticles } from '../api/article'
 import { fetchProjects, fetchProjectById } from '../api/project'
 import { fetchPublicProfile } from '../api/users'
 import type { Article } from '../types/article'
@@ -14,6 +14,9 @@ import { resolveMediaUrl } from '../utils/mediaUrl'
 type AuthorInfo = { name: string; avatarUrl?: string }
 
 const authorCache = new Map<number, AuthorInfo>()
+
+/** 仅本地开发：接口失败时允许显式演示降级；生产空库/失败一律真空态 */
+const allowDemoFallback = import.meta.env.DEV
 
 async function loadAuthor(authorId?: number | null): Promise<AuthorInfo> {
   if (!authorId) return { name: '未知作者' }
@@ -65,17 +68,15 @@ async function mapProjects(list: Project[]) {
   return Promise.all(list.map(asPublicProject))
 }
 
-/** 优先真 API；失败或空列表时用演示数据，并显式标记 fromDemo */
+/** 优先真 API；空列表返回空（不灌演示）。仅 DEV 且接口失败时显式降级演示数据。 */
 export async function loadPublicArticles(): Promise<{ items: PublicArticle[]; fromDemo: boolean }> {
   try {
     const res = await fetchArticles()
     const data = res.data.data ?? []
-    if (data.length === 0) {
-      return { items: DEMO_ARTICLES, fromDemo: true }
-    }
     return { items: await mapArticles(data), fromDemo: false }
   } catch {
-    return { items: DEMO_ARTICLES, fromDemo: true }
+    if (allowDemoFallback) return { items: DEMO_ARTICLES, fromDemo: true }
+    return { items: [], fromDemo: false }
   }
 }
 
@@ -87,11 +88,12 @@ export async function loadPublicArticle(
     const res = await fetchArticleById(id)
     const data = res.data.data
     if (!data) {
-      return { item: demo ?? null, fromDemo: Boolean(demo) }
+      return { item: null, fromDemo: false }
     }
     return { item: await asPublicArticle(data), fromDemo: false }
   } catch {
-    return { item: demo ?? null, fromDemo: Boolean(demo) }
+    if (allowDemoFallback && demo) return { item: demo, fromDemo: true }
+    return { item: null, fromDemo: false }
   }
 }
 
@@ -99,12 +101,10 @@ export async function loadPublicProjects(): Promise<{ items: PublicProject[]; fr
   try {
     const res = await fetchProjects()
     const data = res.data.data ?? []
-    if (data.length === 0) {
-      return { items: DEMO_PROJECTS, fromDemo: true }
-    }
     return { items: await mapProjects(data), fromDemo: false }
   } catch {
-    return { items: DEMO_PROJECTS, fromDemo: true }
+    if (allowDemoFallback) return { items: DEMO_PROJECTS, fromDemo: true }
+    return { items: [], fromDemo: false }
   }
 }
 
@@ -116,11 +116,29 @@ export async function loadPublicProject(
     const res = await fetchProjectById(id)
     const data = res.data.data
     if (!data) {
-      return { item: demo ?? null, fromDemo: Boolean(demo) }
+      return { item: null, fromDemo: false }
     }
     return { item: await asPublicProject(data), fromDemo: false }
   } catch {
-    return { item: demo ?? null, fromDemo: Boolean(demo) }
+    if (allowDemoFallback && demo) return { item: demo, fromDemo: true }
+    return { item: null, fromDemo: false }
+  }
+}
+
+/** 项目展映「制作特辑」：已发布且 relatedProjectId = 该项目的文章 */
+export async function loadRelatedArticlesForProject(
+  projectId: string | number,
+): Promise<{ items: PublicArticle[]; fromDemo: boolean }> {
+  try {
+    const res = await fetchProjectRelatedArticles(projectId)
+    const data = res.data.data ?? []
+    return { items: await mapArticles(data), fromDemo: false }
+  } catch {
+    if (!allowDemoFallback) return { items: [], fromDemo: false }
+    const items = DEMO_ARTICLES.filter(
+      (a) => a.relatedProjectId != null && String(a.relatedProjectId) === String(projectId),
+    )
+    return { items, fromDemo: items.length > 0 }
   }
 }
 

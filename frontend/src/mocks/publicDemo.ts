@@ -19,6 +19,7 @@ export type PublicArticle = {
   avatarUrl?: string
   coverTone?: string
   coverUrl?: string | null
+  relatedProjectId?: number | null
 }
 
 export type PublicProject = {
@@ -92,6 +93,7 @@ Personal Hub 的目标不是又一个博客模板，而是让创作者把**文�
     authorId: 1,
     authorName: 'Alice Chen',
     coverTone: 'moss',
+    relatedProjectId: 201,
   },
   {
     id: 102,
@@ -103,6 +105,7 @@ Personal Hub 的目标不是又一个博客模板，而是让创作者把**文�
     updatedAt: daysAgo(4),
     authorId: 2,
     authorName: 'Bob Lin',
+    relatedProjectId: 201,
   },
   {
     id: 103,

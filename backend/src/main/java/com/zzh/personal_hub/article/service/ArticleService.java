@@ -1,9 +1,10 @@
-package com.zzh.personal_hub.blog.service;
+package com.zzh.personal_hub.article.service;
 
-import com.zzh.personal_hub.blog.dto.ArticleCreateRequest;
-import com.zzh.personal_hub.blog.dto.ArticleUpdateRequest;
-import com.zzh.personal_hub.blog.entity.Article;
-import com.zzh.personal_hub.blog.repository.ArticleRepository;
+import com.zzh.personal_hub.article.dto.ArticleCreateRequest;
+import com.zzh.personal_hub.article.dto.ArticleUpdateRequest;
+import com.zzh.personal_hub.article.entity.Article;
+import com.zzh.personal_hub.article.repository.ArticleRepository;
+import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.media.MediaStorageService;
@@ -25,6 +26,8 @@ public class ArticleService {
     private final CurrentUserService currentUserService;
     private final MediaStorageService mediaStorageService;
     private final NotificationService notificationService;
+    private final ProjectRepository projectRepository;
+    
     public List<Article> listPublished() {
         return articleRepository.findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
     }
@@ -45,6 +48,7 @@ public class ArticleService {
         article.setPublished(Boolean.TRUE.equals(request.getPublished()));
         article.setCreatedAt(Instant.now());
         article.setUpdatedAt(Instant.now());
+        applyRelatedProject(article, request.getRelatedProjectId());
         return articleRepository.save(article);
     }
 
@@ -63,12 +67,14 @@ public class ArticleService {
             }
             article.setPublished(false);
             article.setUpdatedAt(Instant.now());
+            // 已发布仅允许下架，不改标题/正文/关联项目
             return articleRepository.save(article);
         }
         article.setTitle(request.getTitle());
         article.setContent(request.getContent());
         article.setPublished(request.getPublished());
         article.setUpdatedAt(Instant.now());
+        applyRelatedProject(article, request.getRelatedProjectId());
         return articleRepository.save(article);
     }
 
@@ -214,5 +220,26 @@ public class ArticleService {
         notificationService.notifyUnpublishByAdmin(
                 admin.getId(), article.getAuthorId(), "ARTICLE", article.getId());
         return article;
+    }
+
+    private void applyRelatedProject(Article article, Long relatedProjectId) {
+        if (relatedProjectId == null) {
+            article.setRelatedProjectId(null);
+            return;
+        }
+        var project = projectRepository.findById(relatedProjectId)
+                .orElseThrow(() -> new BusinessException(400, "关联项目不存在"));
+        if (project.getDeletedAt() != null) {
+            throw new BusinessException(400, "关联项目不存在");
+        }
+        if (!java.util.Objects.equals(project.getAuthorId(), article.getAuthorId())) {
+            throw new BusinessException(400, "只能关联自己的项目");
+        }
+        article.setRelatedProjectId(relatedProjectId);
+    }
+
+    public List<Article> listPublishedByRelatedProject(Long projectId) {
+        return articleRepository
+                .findByRelatedProjectIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(projectId);
     }
 }

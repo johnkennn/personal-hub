@@ -6,7 +6,7 @@ import com.zzh.personal_hub.social.repository.CommentRepository;
 
 import org.springframework.stereotype.Service;
 
-import com.zzh.personal_hub.blog.repository.ArticleRepository;
+import com.zzh.personal_hub.article.repository.ArticleRepository;
 import com.zzh.personal_hub.suggestion.repository.SuggestionRepository;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import com.zzh.personal_hub.user.entity.UserStatus;

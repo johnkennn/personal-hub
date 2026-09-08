@@ -1,0 +1,227 @@
+.page {
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+}
+
+.hero {
+  position: relative;
+  min-height: min(72vh, 640px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.25rem clamp(1.25rem, 4vw, 3rem) 2.5rem;
+  overflow: hidden;
+  border-bottom: 1px solid var(--ph-border);
+}
+
+.heroMedia {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.02);
+}
+
+.heroShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 14, 12, 0.25) 0%,
+    rgba(8, 14, 12, 0.55) 45%,
+    rgba(8, 14, 12, 0.92) 100%
+  );
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: var(--ph-max);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.back {
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(124, 184, 154, 0.9);
+}
+
+.title {
+  margin: 0 0 0.75rem !important;
+  max-width: 16em;
+  font-family: var(--ph-font-display) !important;
+  font-size: clamp(2rem, 5vw, 3.25rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.12 !important;
+  color: #f4faf7 !important;
+}
+
+.lead {
+  margin: 0 0 1.25rem !important;
+  max-width: 36em;
+  font-size: 1.05rem !important;
+  line-height: 1.65 !important;
+  color: rgba(230, 240, 235, 0.82) !important;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.ctaPrimary {
+  min-width: 8rem;
+  height: 42px !important;
+  background: rgba(124, 184, 154, 0.92) !important;
+  border-color: transparent !important;
+  color: #0c1612 !important;
+  font-weight: 600;
+}
+
+.ctaPrimary:hover {
+  background: #9fd4bc !important;
+  color: #0c1612 !important;
+}
+
+.ctaGhost {
+  min-width: 8rem;
+  height: 42px !important;
+  background: rgba(15, 23, 20, 0.35) !important;
+  border: 1px solid rgba(124, 184, 154, 0.45) !important;
+  color: #e8f5ef !important;
+}
+
+.body {
+  max-width: var(--ph-max);
+  margin: 0 auto;
+  padding: 2.5rem clamp(1.25rem, 4vw, 3rem) 3.5rem;
+}
+
+.section {
+  margin-bottom: 2.75rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.65rem !important;
+  font-family: var(--ph-font-display) !important;
+  font-size: 1.35rem !important;
+  color: var(--ph-text) !important;
+}
+
+.sectionDesc {
+  margin: 0 0 1rem !important;
+  max-width: 40em;
+  color: var(--ph-muted) !important;
+}
+
+.story {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 1.08rem;
+  line-height: 1.85;
+  color: var(--ph-text);
+}
+
+.techList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.techChip {
+  margin: 0 !important;
+  padding: 0.35rem 0.75rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(124, 184, 154, 0.35) !important;
+  background: rgba(124, 184, 154, 0.1) !important;
+  color: #d7eee3 !important;
+  font-size: 0.9rem !important;
+}
+
+.linkCard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.featureList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.featureLink {
+  display: block;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--ph-border);
+  background: rgba(22, 32, 28, 0.65);
+  text-decoration: none;
+  color: inherit !important;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.featureLink:hover {
+  border-color: rgba(124, 184, 154, 0.4);
+  background: rgba(22, 32, 28, 0.95);
+}
+
+.featureTitle {
+  display: block;
+  font-family: var(--ph-font-display);
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
+.featureMeta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ph-muted);
+  margin-bottom: 0.35rem;
+}
+
+.featureExcerpt {
+  margin: 0 !important;
+  color: var(--ph-muted) !important;
+  font-size: 0.9rem !important;
+}
+
+.socialWrap {
+  margin-top: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ph-border);
+}
+
+@media (max-width: 575px) {
+  .hero {
+    min-height: 68vh;
+    padding-bottom: 1.75rem;
+  }
+
+  .ctaPrimary,
+  .ctaGhost {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

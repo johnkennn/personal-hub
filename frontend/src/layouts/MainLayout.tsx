@@ -18,7 +18,7 @@ export function MainLayout() {
         </div>
       </Content>
       <Footer />
-      <FloatingDock />
+      {import.meta.env.DEV ? <FloatingDock /> : null}
     </Layout>
   )
 }

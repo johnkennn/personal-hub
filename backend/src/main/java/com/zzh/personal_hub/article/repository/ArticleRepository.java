@@ -1,6 +1,6 @@
-package com.zzh.personal_hub.blog.repository;
+package com.zzh.personal_hub.article.repository;
 
-import com.zzh.personal_hub.blog.entity.Article;
+import com.zzh.personal_hub.article.entity.Article;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
@@ -26,4 +26,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     long countByPublishedTrueAndDeletedAtIsNull();
 
     List<Article> findByDeletedAtNotNullAndDeletedAtBefore(Instant cutoff);
+
+    List<Article> findByRelatedProjectIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(Long relatedProjectId);
 }

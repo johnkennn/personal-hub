@@ -1,17 +1,17 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useParams } from 'react-router-dom'
 
 import { MainLayout } from '../layouts/MainLayout'
 import { AboutPage } from '../pages/About'
-import { BlogPage } from '../pages/Blog'
-import { BlogDetailPage } from '../pages/Blog/Details'
+import { ArticlesPage } from '../pages/Articles'
+import { ArticleDetailPage } from '../pages/Articles/Details'
 import { HomePage } from '../pages/Home'
 import { ProjectsPage } from '../pages/Projects'
 import { LoginPage } from '../pages/Login'
 import { RegisterPage } from '../pages/Register'
-import { ArticleNewPage } from '../pages/Blog/New'
+import { ArticleNewPage } from '../pages/Articles/New'
 import { ProjectDetailPage } from '../pages/Projects/Details'
 import { ProjectNewPage } from '../pages/Projects/New'
-import { ArticleEditPage } from '../pages/Blog/Edit'
+import { ArticleEditPage } from '../pages/Articles/Edit'
 import { ProjectEditPage } from '../pages/Projects/Edit'
 import { AdminArticlesPage } from '../pages/Admin/Articles'
 import { AdminProjectsPage } from '../pages/Admin/Projects'
@@ -32,6 +32,17 @@ import { ChangePasswordPage } from '../pages/Studio/ChangePassword'
 import { SuggestionsPage } from '../pages/Studio/Suggestions'
 import { ForgotPasswordPage } from '../pages/ForgotPassword'
 
+/** 旧 /blog/:id → /articles/:id */
+function LegacyBlogDetailRedirect() {
+  const { id } = useParams()
+  return <Navigate to={id ? `/articles/${id}` : '/articles'} replace />
+}
+
+function LegacyBlogEditRedirect() {
+  const { id } = useParams()
+  return <Navigate to={id ? `/articles/${id}/edit` : '/articles'} replace />
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -40,19 +51,21 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'about', element: <AboutPage /> },
 
-      // V1.0.0 公开内容
-      { path: 'articles', element: <BlogPage /> },
-      { path: 'articles/:id', element: <BlogDetailPage /> },
+      { path: 'articles', element: <ArticlesPage /> },
+      { path: 'articles/new', element: <ArticleNewPage /> },
+      { path: 'articles/:id/edit', element: <ArticleEditPage /> },
+      { path: 'articles/:id', element: <ArticleDetailPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/new', element: <ProjectNewPage /> },
       { path: 'projects/:id/edit', element: <ProjectEditPage /> },
       { path: 'projects/:id', element: <ProjectDetailPage /> },
 
-      // 兼容旧 blog 路径
+      // 兼容旧 /blog 路径
       { path: 'blog', element: <Navigate to="/articles" replace /> },
-      { path: 'blog/new', element: <ArticleNewPage /> },
-      { path: 'blog/:id/edit', element: <ArticleEditPage /> },
-      { path: 'blog/:id', element: <BlogDetailPage /> },
+      { path: 'blog/new', element: <Navigate to="/articles/new" replace /> },
+      { path: 'blog/:id/edit', element: <LegacyBlogEditRedirect /> },
+      { path: 'blog/:id', element: <LegacyBlogDetailRedirect /> },
+
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },

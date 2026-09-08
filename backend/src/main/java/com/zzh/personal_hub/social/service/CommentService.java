@@ -11,7 +11,7 @@ import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.user.repository.UserRepository;
 import com.zzh.personal_hub.notification.service.NotificationService;
 import com.zzh.personal_hub.common.exception.BusinessException;
-import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.article.service.ArticleService;
 import com.zzh.personal_hub.project.service.ProjectService;
 
 import java.util.List;

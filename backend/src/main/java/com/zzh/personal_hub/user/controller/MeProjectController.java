@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.zzh.personal_hub.project.service.ProjectService;
 import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.common.response.ApiResponse;
-import com.zzh.personal_hub.blog.dto.BatchIdsRequest;
+import com.zzh.personal_hub.article.dto.BatchIdsRequest;
 
 import java.util.List;
 import java.util.Map;

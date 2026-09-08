@@ -34,48 +34,68 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    // More specific matchers must come before wildcards (first match wins)
-                    .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                    /*
+                     * 规则顺序：先写「更具体 / 需鉴权」的路径，再写同前缀的公开通配。
+                     * Spring Security 按声明顺序首次匹配即生效。
+                     */
+                    // —— Auth ——
+                    .requestMatchers(HttpMethod.POST,
+                            "/api/auth/login",
+                            "/api/auth/register",
+                            "/api/auth/forgot-password").permitAll()
+
+                    // —— 探活 / 静态媒体 / Feed / 搜索 ——
+                    .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/feed/latest", "/api/feed/hot").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/search").permitAll()
+
+                    // —— Articles（具体 → 通配）——
+                    .requestMatchers(HttpMethod.GET, "/api/articles/manage").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/articles/*/manage").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/articles/*/like").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/articles/*/like").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/articles/*/like").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/articles/manage").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/articles/*/manage").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/articles/*/comments").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/articles/*/comments").authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/articles").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/articles/*").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/articles/*").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/articles/*/comments").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/articles/*/comments").authenticated()
-                    .requestMatchers(HttpMethod.PUT, "/api/comments/*").authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/feed/latest", "/api/feed/hot").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/articles", "/api/articles/*").permitAll()
+
+                    // —— Projects（具体 → 通配）——
+                    .requestMatchers(HttpMethod.GET, "/api/projects/manage").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/projects/*/manage").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/projects/*/like").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/projects/*/like").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/projects/*/like").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/projects/manage").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/search").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/projects/*/manage").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/projects/*/comments").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/projects/*/comments").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/projects/*/articles").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/projects").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/projects/*").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/projects/*").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/projects/*/comments").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/projects/*/comments").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/*").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users/*/profile").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users/*/articles").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users/*/projects").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
+
+                    // —— Comments（独立资源）——
+                    .requestMatchers(HttpMethod.PUT, "/api/comments/*").authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
+
+                    // —— Users 公开主页 / 关注 ——
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/users/*/profile",
+                            "/api/users/*/articles",
+                            "/api/users/*/projects",
+                            "/api/users/*/followers",
+                            "/api/users/*/following").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/users/*/follow").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/users/*/follow").authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
+
+                    // —— Me / Admin ——
                     .requestMatchers("/api/me/**").authenticated()
                     .requestMatchers("/api/admin/**").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
-                    .requestMatchers("/actuator/health").permitAll()
+
                     .anyRequest().permitAll()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())

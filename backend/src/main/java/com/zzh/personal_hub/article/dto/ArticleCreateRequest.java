@@ -1,4 +1,4 @@
-package com.zzh.personal_hub.blog.dto;
+package com.zzh.personal_hub.article.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,4 +17,7 @@ public class ArticleCreateRequest {
 
     /** 是否直接发布；不传时按 false（草稿）处理 */
     private Boolean published;
+
+    /** 可选：关联项目 id，用于展映页「制作特辑」传null表示清空 */
+    private Long relatedProjectId;
 }

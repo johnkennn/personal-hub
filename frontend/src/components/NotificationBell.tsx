@@ -11,7 +11,7 @@ import {
 } from '../api/notifications'
 import {
   articleDetailPath,
-  blogEditPath,
+  articleEditPath,
   projectDetailPath,
   projectEditPath,
   ROUTES,
@@ -31,7 +31,7 @@ function notificationHref(item: NotificationItem): string {
   const targetType = (item.targetType || '').toUpperCase()
   if (item.type === 'UNPUBLISH' && item.targetId != null) {
     // 已下架 → 草稿可编辑
-    if (targetType === 'ARTICLE') return blogEditPath(item.targetId)
+    if (targetType === 'ARTICLE') return articleEditPath(item.targetId)
     if (targetType === 'PROJECT') return projectEditPath(item.targetId)
   }
   if (item.targetId != null) {

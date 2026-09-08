@@ -5,13 +5,19 @@ import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
-import { createArticle } from '../../api/blog'
+import { RelatedProjectField } from '../../components/RelatedProjectField'
+import { createArticle } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { isLoggedIn } from '../../utils/authStorage'
 import { pushActivity } from '../../utils/activityStorage'
 import styles from '../../styles/ui.module.css'
 
-type FormValues = { title: string; content: string; published: boolean }
+type FormValues = {
+  title: string
+  content: string
+  published: boolean
+  relatedProjectId?: number | null
+}
 
 export function ArticleNewPage() {
   const navigate = useNavigate()
@@ -40,7 +46,7 @@ export function ArticleNewPage() {
         navigate(fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES)
       }
     } catch {
-      message.error('提交失败，请确认已登录（演示环境也可先用创作台假数据流程）')
+      message.error('提交失败，请确认已登录')
     }
   }
 
@@ -90,6 +96,7 @@ export function ArticleNewPage() {
               },
             ]}
           />
+          <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
               <Checkbox>直接发布</Checkbox>

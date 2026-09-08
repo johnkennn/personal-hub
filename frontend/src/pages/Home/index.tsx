@@ -20,6 +20,7 @@ import {
   CatalogPager,
 } from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
+import { WeeklyScreenings } from '../../components/WeeklyScreenings'
 import { fetchLikeSummary } from '../../api/social'
 import { getDemoCreator, type PublicArticle, type PublicProject } from '../../mocks/publicDemo'
 import { fetchFollowing } from '../../api/users'
@@ -357,6 +358,8 @@ export function HomePage() {
             description="后端无数据或不可用时，已加载示例内容（显式降级，非静默假数据）。"
           />
         ) : null}
+
+        <WeeklyScreenings projects={projects} />
 
         <div className={ui.pageHead} style={{ marginBottom: 12 }}>
           <div>

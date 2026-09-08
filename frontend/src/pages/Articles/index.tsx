@@ -32,7 +32,7 @@ import { excerpt, formatDateTime } from '../../utils/format'
 import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
-export function BlogPage() {
+export function ArticlesPage() {
   const { message } = App.useApp()
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [fromDemo, setFromDemo] = useState(false)

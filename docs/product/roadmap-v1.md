@@ -4,7 +4,7 @@
 |----|------|
 | 文档版本 | V1.0 |
 | 状态 | Confirmed |
-| 关联 | [prd-v1.0.0.md](./prd-v1.0.0.md)、[../backend/backlog-after-demo.md](../backend/backlog-after-demo.md) |
+| 关联 | [prd-v1.0.0.md](./prd-v1.0.0.md)、[../architecture/tech-v1.0.0.md](../architecture/tech-v1.0.0.md) |
 | 确认日期 | 2026-09-02 |
 
 ---

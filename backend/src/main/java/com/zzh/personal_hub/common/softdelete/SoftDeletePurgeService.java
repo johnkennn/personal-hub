@@ -3,8 +3,8 @@ package com.zzh.personal_hub.common.softdelete;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zzh.personal_hub.blog.entity.Article;
-import com.zzh.personal_hub.blog.repository.ArticleRepository;
+import com.zzh.personal_hub.article.entity.Article;
+import com.zzh.personal_hub.article.repository.ArticleRepository;
 import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.project.repository.ProjectRepository;
 import com.zzh.personal_hub.social.entity.Comment;

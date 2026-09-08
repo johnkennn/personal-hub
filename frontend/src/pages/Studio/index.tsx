@@ -22,7 +22,7 @@ import {
   batchUnpublishMyArticles,
   fetchMyArticleDrafts,
   fetchMyArticlePublished,
-} from '../../api/blog'
+} from '../../api/article'
 import {
   batchDeleteMyProjects,
   batchPublishMyProjects,

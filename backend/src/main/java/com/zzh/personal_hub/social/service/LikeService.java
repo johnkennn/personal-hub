@@ -7,7 +7,7 @@ import com.zzh.personal_hub.social.entity.ContentLike;
 import com.zzh.personal_hub.user.entity.User;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import com.zzh.personal_hub.notification.service.NotificationService;
-import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.article.service.ArticleService;
 import com.zzh.personal_hub.project.service.ProjectService;
 
 import java.time.Instant;

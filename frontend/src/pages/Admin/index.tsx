@@ -47,7 +47,7 @@ export function AdminHomePage() {
       if (status === 401 || code === 401) {
         setStatsError('登录已失效，请重新登录后再查看仪表')
       } else {
-        setStatsError('请确认后端 /api/admin/stats 可用且当前为 ADMIN')
+        setStatsError('概览加载失败，请确认已登录管理员账号且服务可用')
       }
     } finally {
       setStatsLoading(false)
@@ -157,7 +157,7 @@ export function AdminHomePage() {
             治理后台
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            运营总览与治理入口。数字来自 GET /api/admin/stats，点击可进入对应模块。
+            运营总览与治理入口。点击下方卡片进入对应用户、内容或建议管理。
           </Typography.Paragraph>
         </div>
         <Button onClick={() => void loadStats()} loading={statsLoading}>

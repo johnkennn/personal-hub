@@ -33,12 +33,15 @@ function buildAuthorIndex(
   projects: { authorId: number; authorName: string }[],
 ): SearchAuthorHit[] {
   const map = new Map<number, SearchAuthorHit>()
-  for (const c of DEMO_CREATORS) {
-    map.set(c.id, {
-      id: c.id,
-      name: c.displayName || c.username,
-      username: c.username,
-    })
+  // 演示创作者仅本地开发注入，避免生产空库搜索出假作者
+  if (import.meta.env.DEV) {
+    for (const c of DEMO_CREATORS) {
+      map.set(c.id, {
+        id: c.id,
+        name: c.displayName || c.username,
+        username: c.username,
+      })
+    }
   }
   for (const a of articles) {
     if (!a.authorId) continue

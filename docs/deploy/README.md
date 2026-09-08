@@ -369,7 +369,7 @@ journalctl -u personal-hub -n 100 --no-pager
 journalctl -u personal-hub -f
 ```
 
-验收：断开 SSH 再连，`curl http://127.0.0.1/api/articles` 仍通；浏览器打开站点 Blog/Projects 正常。
+验收：断开 SSH 再连，`curl http://127.0.0.1/api/articles` 仍通；浏览器打开站点 Articles/Projects 正常。
 
 ---
 

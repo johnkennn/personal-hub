@@ -8,8 +8,12 @@ import com.zzh.personal_hub.project.dto.ProjectUpdateRequest;
 import com.zzh.personal_hub.social.dto.LikeSummaryDto;
 import com.zzh.personal_hub.social.ContentTargetType;
 import com.zzh.personal_hub.social.service.LikeService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import com.zzh.personal_hub.social.dto.CommentCreateRequest;
+import com.zzh.personal_hub.social.dto.CommentResponse;
+import com.zzh.personal_hub.social.service.CommentService;
+import com.zzh.personal_hub.article.service.ArticleService;
+import com.zzh.personal_hub.article.entity.Article;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,11 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zzh.personal_hub.social.dto.CommentCreateRequest;
-import com.zzh.personal_hub.social.dto.CommentResponse;
-import com.zzh.personal_hub.social.service.CommentService;
-
 import java.util.List;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -33,6 +35,8 @@ public class ProjectController {
     private final ProjectService projectService;
     private final LikeService likeService;
     private final CommentService commentService;
+    private final ArticleService articleService;
+
     @GetMapping
     public ApiResponse<List<Project>> list() {
         return ApiResponse.success(projectService.listPublished());
@@ -96,5 +100,10 @@ public class ProjectController {
             @Valid @RequestBody CommentCreateRequest request) {
         return ApiResponse.success(
                 commentService.create(ContentTargetType.PROJECT, id, request.getBody()));
+    }
+    @GetMapping("/{id}/articles")
+    public ApiResponse<List<Article>> relatedArticles(@PathVariable Long id) {
+        projectService.getPublishedById(id);
+        return ApiResponse.success(articleService.listPublishedByRelatedProject(id));
     }
 }

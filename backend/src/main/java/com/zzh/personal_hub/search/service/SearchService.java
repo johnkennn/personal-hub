@@ -1,7 +1,7 @@
 package com.zzh.personal_hub.search.service;
 
-import com.zzh.personal_hub.blog.entity.Article;
-import com.zzh.personal_hub.blog.repository.ArticleRepository;
+import com.zzh.personal_hub.article.entity.Article;
+import com.zzh.personal_hub.article.repository.ArticleRepository;
 import com.zzh.personal_hub.feed.dto.FeedItemDto;
 import com.zzh.personal_hub.project.entity.Project;
 import com.zzh.personal_hub.project.repository.ProjectRepository;

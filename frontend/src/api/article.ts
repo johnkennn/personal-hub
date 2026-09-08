@@ -20,6 +20,12 @@ export function fetchArticleById(id: number | string) {
 export function fetchArticleForManage(id: number | string) {
   return request.get<ApiResponse<Article>>(`/api/articles/${id}/manage`)
 }
+
+/** 某项目下已发布的关联文章（制作特辑） */
+export function fetchProjectRelatedArticles(projectId: number | string) {
+  return request.get<ApiResponse<Article[]>>(`/api/projects/${projectId}/articles`)
+}
+
 export function updateArticle(id: number | string, data: ArticleUpdateRequest) {
   return request.put<ApiResponse<Article>>(`/api/articles/${id}`, data)
 }

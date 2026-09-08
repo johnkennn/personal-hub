@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Alert, Result, Skeleton, Space, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
@@ -7,14 +7,25 @@ import { AuthorChip } from '../../components/AuthorChip'
 import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { ReadingProgress } from '../../components/ReadingProgress'
+import { ShareCard } from '../../components/ShareCard'
 import { SocialPanel } from '../../components/SocialPanel'
+import { coverToneFromId } from '../../components/CoverStrip'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle } from '../../mocks/publicDemo'
-import { ROUTES } from '../../router/paths'
+import { projectDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicArticle } from '../../services/publicContent'
-import { formatDateTime } from '../../utils/format'
+import { excerpt, formatDateTime } from '../../utils/format'
 import styles from '../../styles/ui.module.css'
 
-export function BlogDetailPage() {
+const ARTICLE_TONES: Record<string, string> = {
+  moss: 'linear-gradient(135deg, #1a3d30 0%, #2f6b52 45%, #7cb89a 100%)',
+  ink: 'linear-gradient(135deg, #101820 0%, #1c2e38 50%, #3d6b7a 100%)',
+  ember: 'linear-gradient(135deg, #2a1810 0%, #5a3420 50%, #c4845a 100%)',
+  dusk: 'linear-gradient(145deg, #152018 0%, #24352c 50%, #4d6b5a 100%)',
+  default: 'linear-gradient(135deg, #14201b 0%, #243830 50%, #4a7a62 100%)',
+}
+
+export function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [article, setArticle] = useState<PublicArticle | null>(null)
   const [fromDemo, setFromDemo] = useState(false)
@@ -48,6 +59,16 @@ export function BlogDetailPage() {
     }
   }, [id])
 
+  usePageMeta(
+    article
+      ? {
+          title: article.title,
+          description: excerpt(article.content, 120),
+          type: 'article',
+        }
+      : null,
+  )
+
   if (!id) {
     return (
       <Result
@@ -71,6 +92,9 @@ export function BlogDetailPage() {
       />
     )
   }
+
+  const tone =
+    ARTICLE_TONES[coverToneFromId(article.id)] ?? ARTICLE_TONES.default
 
   return (
     <>
@@ -98,10 +122,23 @@ export function BlogDetailPage() {
             avatarUrl={article.avatarUrl}
           />
           <Typography.Text type="secondary">{formatDateTime(article.createdAt)}</Typography.Text>
+          {article.relatedProjectId ? (
+            <Link to={projectDetailPath(article.relatedProjectId)}>
+              <Typography.Link>查看关联展映</Typography.Link>
+            </Link>
+          ) : null}
         </Space>
 
         <div className={styles.articleBody} style={{ marginTop: 28 }}>
           <MarkdownBody content={article.content} />
+        </div>
+
+        <div style={{ marginTop: 32 }}>
+          <ShareCard
+            title={article.title}
+            description={excerpt(article.content, 120)}
+            mediaStyle={{ backgroundImage: tone }}
+          />
         </div>
 
         <SocialPanel kind="article" contentId={article.id} />

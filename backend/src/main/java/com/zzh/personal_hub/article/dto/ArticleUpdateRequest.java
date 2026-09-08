@@ -1,4 +1,4 @@
-package com.zzh.personal_hub.blog.dto;
+package com.zzh.personal_hub.article.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,4 +17,7 @@ public class ArticleUpdateRequest {
     /** true 发布 / false 下架；必填，避免误保持旧值时说不清 */
     @jakarta.validation.constraints.NotNull(message = "请指定发布状态")
     private Boolean published;
+
+    /** 可选：关联项目 id，用于展映页「制作特辑」传null表示清空 */
+    private Long relatedProjectId;
 }

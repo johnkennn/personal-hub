@@ -1,9 +1,9 @@
-package com.zzh.personal_hub.blog.controller;
+package com.zzh.personal_hub.article.controller;
 
-import com.zzh.personal_hub.blog.entity.Article;
-import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.article.entity.Article;
+import com.zzh.personal_hub.article.service.ArticleService;
 import com.zzh.personal_hub.common.response.ApiResponse;
-import com.zzh.personal_hub.blog.dto.ArticleCreateRequest;
+import com.zzh.personal_hub.article.dto.ArticleCreateRequest;
 import com.zzh.personal_hub.social.dto.LikeSummaryDto;
 import com.zzh.personal_hub.social.ContentTargetType;
 import com.zzh.personal_hub.social.service.LikeService;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
-import com.zzh.personal_hub.blog.dto.ArticleUpdateRequest;
+import com.zzh.personal_hub.article.dto.ArticleUpdateRequest;
 import com.zzh.personal_hub.social.dto.CommentResponse;
 import com.zzh.personal_hub.social.dto.CommentCreateRequest;
 import jakarta.validation.Valid;

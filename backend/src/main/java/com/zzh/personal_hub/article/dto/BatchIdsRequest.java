@@ -1,4 +1,4 @@
-package com.zzh.personal_hub.blog.dto;
+package com.zzh.personal_hub.article.dto;
 
 import lombok.Data;
 import jakarta.validation.constraints.NotEmpty;

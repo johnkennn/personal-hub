@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
-import com.zzh.personal_hub.blog.entity.Article;
+import com.zzh.personal_hub.article.entity.Article;
 import com.zzh.personal_hub.project.entity.Project;
-import com.zzh.personal_hub.blog.service.ArticleService;
+import com.zzh.personal_hub.article.service.ArticleService;
 import com.zzh.personal_hub.project.service.ProjectService;
 @RestController
 @RequestMapping("/api/users")

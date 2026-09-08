@@ -3,8 +3,12 @@ export const ROUTES = {
   ABOUT: '/about',
   ARTICLES: '/articles',
   ARTICLE_DETAIL: '/articles/:id',
+  ARTICLE_NEW: '/articles/new',
+  ARTICLE_EDIT: '/articles/:id/edit',
   PROJECTS: '/projects',
   PROJECT_DETAIL: '/projects/:id',
+  PROJECT_NEW: '/projects/new',
+  PROJECT_EDIT: '/projects/:id/edit',
   LOGIN: '/login',
   REGISTER: '/register',
   STUDIO: '/studio',
@@ -28,13 +32,8 @@ export const ROUTES = {
   ADMIN_ARTICLES: '/admin/articles',
   ADMIN_PROJECTS: '/admin/projects',
   ADMIN_SUGGESTIONS: '/admin/suggestions',
-  /** @deprecated 兼容旧链接，路由层重定向到 ARTICLES */
+  /** @deprecated 兼容旧链接，路由层重定向到 /articles */
   BLOG: '/blog',
-  ARTICLE_NEW: '/blog/new',
-  ARTICLE_EDIT: '/blog/:id/edit',
-  BLOG_DETAIL: '/blog/:id',
-  PROJECT_NEW: '/projects/new',
-  PROJECT_EDIT: '/projects/:id/edit',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
@@ -50,21 +49,16 @@ export function articleDetailPath(id: number | string) {
   return `/articles/${id}`
 }
 
-export function blogDetailPath(id: number | string) {
-  return articleDetailPath(id)
+export function articleEditPath(id: number | string) {
+  return `/studio/articles/${id}/edit`
 }
 
 export function projectDetailPath(id: number | string) {
   return `/projects/${id}`
 }
 
-/** 过渡期仍指向旧编辑页；M3 切到 Studio */
-export function blogEditPath(id: number | string) {
-  return `/blog/${id}/edit`
-}
-
 export function projectEditPath(id: number | string) {
-  return `/projects/${id}/edit`
+  return `/studio/projects/${id}/edit`
 }
 
 export function userProfilePath(userId: number | string) {
