@@ -203,6 +203,15 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # 上传的头像/封面/画廊（Spring 静态资源）；勿被 SPA try_files 吃成 index.html
+    location /media/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # SEO：动态 sitemap / robots（勿被 SPA try_files 吃掉）
     location = /sitemap.xml {
         proxy_pass http://127.0.0.1:8080;
@@ -516,14 +525,16 @@ JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
 CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN
 PUBLIC_BASE_URL=https://YOUR_DOMAIN
 ADMIN_BOOTSTRAP_PASSWORD=
-MEDIA_ROOT=/var/www/personal-hub-media
+MEDIA_ROOT=/opt/personal-hub/data/media
 ```
 
-头像等上传目录要可写：
+头像等上传目录要可写（与 `MEDIA_ROOT` 一致）。未设置时默认是 jar 工作目录下的 `./data/media`（当前生产即 `/opt/personal-hub/data/media`）：
 
 ```bash
-mkdir -p /var/www/personal-hub-media
+mkdir -p /opt/personal-hub/data/media
 ```
+
+**Nginx 必须反代 `/media/`**（见第 6 节），否则浏览器请求头像会落到前端 `index.html`，页面上看起来像「没上传成功」。
 
 ---
 
