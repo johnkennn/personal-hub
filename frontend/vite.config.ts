@@ -9,6 +9,8 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
       '/media': 'http://localhost:8080',
       '/actuator': 'http://localhost:8080',
+      '/sitemap.xml': 'http://localhost:8080',
+      '/robots.txt': 'http://localhost:8080',
     },
   },
 })

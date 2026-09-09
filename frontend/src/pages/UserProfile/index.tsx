@@ -16,7 +16,7 @@ import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
 import { CatalogListLayout, CatalogPager } from '../../components/CatalogPager'
-import { coverToneFromId } from '../../components/CoverStrip'
+import { coverMediaStyle } from '../../components/CoverStrip'
 import {
   fetchPublicProfile,
   fetchUserArticles,
@@ -45,14 +45,6 @@ import styles from '../../styles/ui.module.css'
 type TimelineItem =
   | { kind: 'article'; at: string; data: Article }
   | { kind: 'project'; at: string; data: Project }
-
-const SPOTLIGHT_TONES: Record<string, string> = {
-  moss: 'linear-gradient(135deg, #1a3d30 0%, #2f6b52 45%, #7cb89a 100%)',
-  ink: 'linear-gradient(135deg, #101820 0%, #1c2e38 50%, #3d6b7a 100%)',
-  ember: 'linear-gradient(135deg, #2a1810 0%, #5a3420 50%, #c4845a 100%)',
-  dusk: 'linear-gradient(145deg, #152018 0%, #24352c 50%, #4d6b5a 100%)',
-  default: 'linear-gradient(135deg, #14201b 0%, #243830 50%, #4a7a62 100%)',
-}
 
 /**
  * 公开作者主页 → 个人展厅：头图身份区 + 近期作品 + 时间轴。
@@ -210,12 +202,9 @@ export function UserProfilePage() {
     }
   }
 
-  const spotlightCover = spotlight
-    ? resolveMediaUrl(spotlight.coverUrl) || undefined
+  const spotlightStyle = spotlight
+    ? coverMediaStyle(spotlight.coverUrl, spotlight.id)
     : undefined
-  const spotlightTone = spotlight
-    ? SPOTLIGHT_TONES[coverToneFromId(spotlight.id)] ?? SPOTLIGHT_TONES.default
-    : SPOTLIGHT_TONES.default
 
   return (
     <div className={gallery.page}>
@@ -301,11 +290,7 @@ export function UserProfilePage() {
                         <Link to={projectDetailPath(spotlight.id)} className={gallery.spotlight}>
                           <div
                             className={gallery.spotlightMedia}
-                            style={
-                              spotlightCover
-                                ? { backgroundImage: `url(${spotlightCover})` }
-                                : { backgroundImage: spotlightTone }
-                            }
+                            style={spotlightStyle}
                           />
                           <div className={gallery.spotlightBody}>
                             <span className={gallery.spotlightLabel}>近期展映</span>

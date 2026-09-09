@@ -84,6 +84,25 @@
   height: 100%;
 }
 
+/** 整卡可点，但 meta 内作者链接需抬高层级，避免 <a> 嵌套 */
+.catalogCardShell {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+
+.catalogCardHit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.catalogCardMetaInteractive {
+  position: relative;
+  z-index: 2;
+}
+
 .catalogCard {
   height: 100%;
 }
@@ -149,6 +168,17 @@
 
 .cardLink:hover {
   color: inherit !important;
+}
+
+.articleCover {
+  margin-top: 20px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 360px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--ph-border);
 }
 
 .articleBody {

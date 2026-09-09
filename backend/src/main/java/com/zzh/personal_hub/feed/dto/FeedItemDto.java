@@ -19,6 +19,12 @@ public class FeedItemDto {
     private Long authorId;
     private String authorUsername;
     private Instant createdAt;
-    /** 点赞数；最新/搜索可先填 0，热门必须填真实值 */
+    /** 点赞数；最新/搜索可先填 0，热门 / 关注流填真实值 */
     private long likeCount;
+    /** 列表摘要（纯文本截断） */
+    private String excerpt;
+    private String coverUrl;
+    /** 展示名：昵称优先，否则用户名 */
+    private String authorDisplayName;
+    private String authorAvatarUrl;
 }

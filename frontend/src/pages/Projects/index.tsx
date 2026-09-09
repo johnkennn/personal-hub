@@ -29,17 +29,8 @@ import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { projectDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicProjects } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
-import { excerpt, formatDateTime } from '../../utils/format'
+import { excerpt, formatDateTime, splitTechStack } from '../../utils/format'
 import styles from '../../styles/ui.module.css'
-
-function techTags(techStack: string | null) {
-  if (!techStack) return []
-  return techStack
-    .split(/[,，/|]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .slice(0, 5)
-}
 
 export function ProjectsPage() {
   const { message } = App.useApp()
@@ -174,15 +165,22 @@ export function ProjectsPage() {
                   whileHover={{ y: -3 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Link
-                    to={projectDetailPath(project.id)}
-                    className={`${styles.cardLink} ${styles.catalogCardLink}`}
-                  >
+                  <div className={`${styles.cardLink} ${styles.catalogCardShell}`}>
+                    <Link
+                      to={projectDetailPath(project.id)}
+                      className={styles.catalogCardHit}
+                      aria-label={project.name}
+                    />
                     <Card
                       className={`${styles.contentCard} ${styles.catalogCard}`}
                       variant="borderless"
                     >
-                      <CoverStrip title={project.name} tone={coverToneFromId(project.id)} compact />
+                      <CoverStrip
+                        title={project.name}
+                        tone={coverToneFromId(project.id)}
+                        coverUrl={project.coverUrl}
+                        compact
+                      />
                       <Typography.Title level={5} className={styles.catalogCardTitle}>
                         {project.name}
                       </Typography.Title>
@@ -190,13 +188,13 @@ export function ProjectsPage() {
                         {excerpt(project.description, 72)}
                       </Typography.Paragraph>
                       <Space size={[4, 4]} wrap className={styles.catalogCardTags}>
-                        {techTags(project.techStack).map((tag) => (
+                        {splitTechStack(project.techStack, 5).map((tag) => (
                           <Tag key={tag} color="green">
                             {tag}
                           </Tag>
                         ))}
                       </Space>
-                      <div className={styles.catalogCardMeta}>
+                      <div className={`${styles.catalogCardMeta} ${styles.catalogCardMetaInteractive}`}>
                         <AuthorChip
                           authorId={project.authorId || undefined}
                           authorName={project.authorName}
@@ -210,7 +208,7 @@ export function ProjectsPage() {
                         </Typography.Text>
                       </div>
                     </Card>
-                  </Link>
+                  </div>
                 </motion.div>
               </Col>
             ))}

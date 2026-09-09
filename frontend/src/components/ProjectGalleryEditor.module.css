@@ -31,6 +31,12 @@
   display: block;
 }
 
+.coverPreview {
+  width: min(100%, 420px);
+  aspect-ratio: 16 / 9;
+  margin-bottom: 0.75rem;
+}
+
 .remove {
   position: absolute !important;
   top: 6px;

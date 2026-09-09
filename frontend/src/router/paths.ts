@@ -30,7 +30,9 @@ export const ROUTES = {
   ADMIN: '/admin',
   ADMIN_USERS: '/admin/users',
   ADMIN_ARTICLES: '/admin/articles',
+  ADMIN_ARTICLES_DELETED: '/admin/articles/deleted',
   ADMIN_PROJECTS: '/admin/projects',
+  ADMIN_PROJECTS_DELETED: '/admin/projects/deleted',
   ADMIN_SUGGESTIONS: '/admin/suggestions',
   /** @deprecated 兼容旧链接，路由层重定向到 /articles */
   BLOG: '/blog',

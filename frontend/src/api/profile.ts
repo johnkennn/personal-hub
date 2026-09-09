@@ -12,6 +12,6 @@ export function updateMyProfile(data: ProfileUpdateRequest) {
 
 export function uploadAvatar(file: File) {
   const form = new FormData()
-  form.append('file', file) // 字段名必须叫 file，与后端 @RequestParam("file") 一致
+  form.append('file', file, file.name) // 字段名必须叫 file，与后端 @RequestParam("file") 一致
   return request.post<ApiResponse<Profile>>('/api/me/avatar', form)
 }

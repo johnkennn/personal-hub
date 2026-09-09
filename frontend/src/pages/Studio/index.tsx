@@ -30,7 +30,8 @@ import {
   fetchMyProjectDrafts,
   fetchMyProjectPublished,
 } from '../../api/project'
-import { ROUTES, userFollowersPath, userFollowingPath } from '../../router/paths'
+import { invalidateDiscoverCatalog } from '../../services/publicContent'
+import { ROUTES, articleDetailPath, projectDetailPath, userFollowersPath, userFollowingPath } from '../../router/paths'
 import { getUserId, isAdmin, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 import studioStyles from './Studio.module.css'
@@ -329,14 +330,17 @@ export function StudioArticleDraftsPage() {
       loadItems={async () => (await fetchMyArticleDrafts()).data.data}
       onPublish={async (ids) => {
         await batchPublishMyArticles(ids)
+        invalidateDiscoverCatalog()
       }}
       onDelete={async (ids) => {
         await batchDeleteMyArticles(ids)
+        invalidateDiscoverCatalog()
       }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}
       editPath={(id) => `/studio/articles/${id}/edit`}
+      detailPath={articleDetailPath}
     />
   )
 }
@@ -353,13 +357,16 @@ export function StudioArticlePublishedPage() {
       loadItems={async () => (await fetchMyArticlePublished()).data.data}
       onUnpublish={async (ids) => {
         await batchUnpublishMyArticles(ids)
+        invalidateDiscoverCatalog()
       }}
       onDelete={async (ids) => {
         await batchDeleteMyArticles(ids)
+        invalidateDiscoverCatalog()
       }}
       getTitle={(a) => a.title}
       getSubtitle={(a) => a.content}
       getUpdatedAt={(a) => a.updatedAt}
+      detailPath={articleDetailPath}
     />
   )
 }
@@ -376,14 +383,17 @@ export function StudioProjectDraftsPage() {
       loadItems={async () => (await fetchMyProjectDrafts()).data.data}
       onPublish={async (ids) => {
         await batchPublishMyProjects(ids)
+        invalidateDiscoverCatalog()
       }}
       onDelete={async (ids) => {
         await batchDeleteMyProjects(ids)
+        invalidateDiscoverCatalog()
       }}
       getTitle={(p) => p.name}
       getSubtitle={(p) => p.description}
       getUpdatedAt={(p) => p.updatedAt}
       editPath={(id) => `/studio/projects/${id}/edit`}
+      detailPath={projectDetailPath}
     />
   )
 }
@@ -400,13 +410,16 @@ export function StudioProjectPublishedPage() {
       loadItems={async () => (await fetchMyProjectPublished()).data.data}
       onUnpublish={async (ids) => {
         await batchUnpublishMyProjects(ids)
+        invalidateDiscoverCatalog()
       }}
       onDelete={async (ids) => {
         await batchDeleteMyProjects(ids)
+        invalidateDiscoverCatalog()
       }}
       getTitle={(p) => p.name}
       getSubtitle={(p) => p.description}
       getUpdatedAt={(p) => p.updatedAt}
+      detailPath={projectDetailPath}
     />
   )
 }

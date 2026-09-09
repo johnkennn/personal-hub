@@ -2,11 +2,12 @@ package com.zzh.personal_hub.common.exception;
 
 import com.zzh.personal_hub.common.response.ApiResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice  //拦截所有 Controller 抛出的异常
 public class GlobalExceptionHandler {
@@ -18,6 +19,7 @@ public class GlobalExceptionHandler {
             case 403 -> HttpStatus.FORBIDDEN;
             case 404 -> HttpStatus.NOT_FOUND;
             case 429 -> HttpStatus.TOO_MANY_REQUESTS;
+            case 413 -> HttpStatus.PAYLOAD_TOO_LARGE;
             default -> HttpStatus.BAD_REQUEST;
         };
     }
@@ -38,6 +40,12 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getDefaultMessage())
                 .orElse("参数校验失败");
         return ApiResponse.fail(400, message);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public ApiResponse<Void> handleMaxUpload(MaxUploadSizeExceededException ex) {
+        return ApiResponse.fail(413, "图片过大，请压缩到 5MB 以内");
     }
 
     @ExceptionHandler(Exception.class)  // 处理 Exception 异常

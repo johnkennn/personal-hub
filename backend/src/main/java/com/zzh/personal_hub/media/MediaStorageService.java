@@ -9,6 +9,7 @@ import com.zzh.personal_hub.common.security.CurrentUserService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.nio.file.Path;
@@ -32,19 +33,19 @@ public class MediaStorageService {
      * @return 对外可访问路径，例如 /media/avatars/3/uuid.png
      */
     public String saveImage(MultipartFile file, String subDir) {
-        if(file == null || file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             throw new BusinessException(400, "请选择图片");
         }
         Long userId = currentUserService.requireUser().getId();
         String key = "upload:" + userId;
-        if(!rateLimiter.tryAcquire(key, rateLimitProperties.getUploadPerMinute(), UPLOAD_WINDOW_MS)) {
+        if (!rateLimiter.tryAcquire(key, rateLimitProperties.getUploadPerMinute(), UPLOAD_WINDOW_MS)) {
             throw new BusinessException(429, "上传过于频繁，请稍后再试");
         }
-        if(file.getSize() > MAX_BYTES) {
+        if (file.getSize() > MAX_BYTES) {
             throw new BusinessException(400, "图片大小不能超过 5MB");
         }
-        String contentType = file.getContentType();
-        if(contentType == null || !ALLOWED.contains(contentType)) {
+        String contentType = resolveContentType(file);
+        if (contentType == null || !ALLOWED.contains(contentType)) {
             throw new BusinessException(400, "仅支持 jpeg、png、gif、webp 格式");
         }
 
@@ -54,7 +55,7 @@ public class MediaStorageService {
         Path dir = Path.of(mediaProperties.getRootDir(), subDir).normalize();
         Path dest = dir.resolve(fileName).normalize();
         // 防止 subDir 被拼成 ../../etc
-        if(!dest.startsWith(dir)) {
+        if (!dest.startsWith(dir)) {
             throw new BusinessException(400, "非法的子目录");
         }
 
@@ -66,10 +67,42 @@ public class MediaStorageService {
         }
 
         String prefix = mediaProperties.getPublicPrefix();
-        if(prefix.endsWith("/")) {
+        if (prefix.endsWith("/")) {
             prefix = prefix.substring(0, prefix.length() - 1);
         }
         return prefix + "/" + subDir.replace("\\", "/") + "/" + fileName;
+    }
+
+    /** 浏览器偶发给空类型 / octet-stream，按文件名后缀兜底 */
+    private String resolveContentType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType != null) {
+            contentType = contentType.toLowerCase(Locale.ROOT).trim();
+            if (ALLOWED.contains(contentType)) {
+                return contentType;
+            }
+            if ("image/jpg".equals(contentType)) {
+                return "image/jpeg";
+            }
+        }
+        String name = file.getOriginalFilename();
+        if (name == null) {
+            return contentType;
+        }
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        return contentType;
     }
 
     private String extensionOf(String contentType) {

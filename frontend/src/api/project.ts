@@ -63,7 +63,7 @@ export function batchDeleteMyProjects(ids: number[]) {
 
 export function uploadProjectCover(id: number | string, file: File) {
   const form = new FormData()
-  form.append('file', file)
+  form.append('file', file, file.name)
   return request.post<ApiResponse<Project>>(`/api/me/projects/${id}/cover`, form)
 }
 
@@ -78,7 +78,7 @@ export function fetchMyProjectMedia(projectId: number | string) {
 
 export function uploadProjectMedia(projectId: number | string, file: File) {
   const form = new FormData()
-  form.append('file', file)
+  form.append('file', file, file.name)
   return request.post<ApiResponse<ProjectMedia>>(`/api/me/projects/${projectId}/media`, form)
 }
 

@@ -9,6 +9,8 @@ export interface AdminStats {
   projectPublished: number
   commentActive: number
   suggestionTotal: number
+  articleDeleted: number
+  projectDeleted: number
 }
 
 export function fetchAdminStats() {

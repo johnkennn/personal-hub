@@ -127,10 +127,12 @@ export function ArticlesPage() {
                   whileHover={{ y: -3 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Link
-                    to={articleDetailPath(article.id)}
-                    className={`${styles.cardLink} ${styles.catalogCardLink}`}
-                  >
+                  <div className={`${styles.cardLink} ${styles.catalogCardShell}`}>
+                    <Link
+                      to={articleDetailPath(article.id)}
+                      className={styles.catalogCardHit}
+                      aria-label={article.title}
+                    />
                     <Card
                       className={`${styles.contentCard} ${styles.catalogCard}`}
                       variant="borderless"
@@ -138,6 +140,7 @@ export function ArticlesPage() {
                       <CoverStrip
                         title={article.title}
                         tone={article.coverTone ?? coverToneFromId(article.id)}
+                        coverUrl={article.coverUrl}
                         compact
                       />
                       <Typography.Title level={5} className={styles.catalogCardTitle}>
@@ -146,7 +149,7 @@ export function ArticlesPage() {
                       <Typography.Paragraph type="secondary" className={styles.catalogCardExcerpt}>
                         {excerpt(article.content, 72)}
                       </Typography.Paragraph>
-                      <div className={styles.catalogCardMeta}>
+                      <div className={`${styles.catalogCardMeta} ${styles.catalogCardMetaInteractive}`}>
                         <AuthorChip
                           authorId={article.authorId || undefined}
                           authorName={article.authorName}
@@ -160,7 +163,7 @@ export function ArticlesPage() {
                         </Typography.Text>
                       </div>
                     </Card>
-                  </Link>
+                  </div>
                 </motion.div>
               </Col>
             ))}

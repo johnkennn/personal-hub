@@ -27,6 +27,7 @@ import { articleDetailPath, projectDetailPath, ROUTES, userProfilePath } from '.
 import { loadDiscoverCatalog } from '../../services/publicContent'
 import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from './Home.module.css'
 import ui from '../../styles/ui.module.css'
 
@@ -46,47 +47,47 @@ function likeKey(type: 'article' | 'project', id: number) {
   return `${type}:${id}`
 }
 
-function mapFeedToRows(
-  items: FeedItem[],
-  articleMap: Map<number, PublicArticle>,
-  projectMap: Map<number, PublicProject>,
-): FeedRow[] {
-  const rows: FeedRow[] = []
-  for (const f of items) {
-    if (f.type === 'ARTICLE') {
-      const item =
-        articleMap.get(f.id) ??
-        ({
-          id: f.id,
-          title: f.titleOrName,
-          content: '',
-          published: true,
-          authorId: f.authorId,
-          authorName: f.authorUsername,
-          createdAt: f.createdAt,
-          updatedAt: f.createdAt,
-        } satisfies PublicArticle)
-      rows.push({ type: 'article', item, at: item.updatedAt || f.createdAt })
-    } else {
-      const item =
-        projectMap.get(f.id) ??
-        ({
-          id: f.id,
-          name: f.titleOrName,
-          description: '',
-          techStack: null,
-          repoUrl: null,
-          demoUrl: null,
-          published: true,
-          authorId: f.authorId,
-          authorName: f.authorUsername,
-          createdAt: f.createdAt,
-          updatedAt: f.createdAt,
-        } satisfies PublicProject)
-      rows.push({ type: 'project', item, at: item.updatedAt || f.createdAt })
+/** 关注流 FeedItem → 与最新/最热同一套卡片数据 */
+function followingItemToRow(item: FeedItem): FeedRow {
+  const authorName = (item.authorDisplayName || item.authorUsername || '未知作者').trim()
+  const avatarUrl = resolveMediaUrl(item.authorAvatarUrl) || undefined
+  if (item.type === 'ARTICLE') {
+    return {
+      type: 'article',
+      at: item.createdAt,
+      item: {
+        id: item.id,
+        title: item.titleOrName,
+        content: item.excerpt || '',
+        published: true,
+        createdAt: item.createdAt,
+        updatedAt: item.createdAt,
+        authorId: item.authorId,
+        authorName,
+        avatarUrl,
+        coverUrl: item.coverUrl,
+      },
     }
   }
-  return rows.sort((x, y) => y.at.localeCompare(x.at))
+  return {
+    type: 'project',
+    at: item.createdAt,
+    item: {
+      id: item.id,
+      name: item.titleOrName,
+      description: item.excerpt || '',
+      techStack: null,
+      repoUrl: null,
+      demoUrl: null,
+      published: true,
+      createdAt: item.createdAt,
+      updatedAt: item.createdAt,
+      authorId: item.authorId,
+      authorName,
+      avatarUrl,
+      coverUrl: item.coverUrl,
+    },
+  }
 }
 
 function FeedGrid({
@@ -135,6 +136,7 @@ function FeedGrid({
           const tone = isArticle
             ? (row.item.coverTone ?? coverToneFromId(id))
             : coverToneFromId(id)
+          const coverUrl = row.item.coverUrl
           const likes = likeCounts?.[likeKey(row.type, id)] ?? 0
 
           return (
@@ -144,9 +146,10 @@ function FeedGrid({
                 whileHover={{ y: -3 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link to={href} className={`${ui.cardLink} ${ui.catalogCardLink}`}>
+                <div className={`${ui.cardLink} ${ui.catalogCardShell}`}>
+                  <Link to={href} className={ui.catalogCardHit} aria-label={title} />
                   <Card className={`${ui.contentCard} ${ui.catalogCard}`} variant="borderless">
-                    <CoverStrip title={title} tone={tone} compact />
+                    <CoverStrip title={title} tone={tone} coverUrl={coverUrl} compact />
                     <Tag
                       color={isArticle ? undefined : 'green'}
                       style={{ marginBottom: 8, width: 'fit-content' }}
@@ -159,7 +162,7 @@ function FeedGrid({
                     <Typography.Paragraph type="secondary" className={ui.catalogCardExcerpt}>
                       {excerpt(body, 72)}
                     </Typography.Paragraph>
-                    <div className={ui.catalogCardMeta}>
+                    <div className={`${ui.catalogCardMeta} ${ui.catalogCardMetaInteractive}`}>
                       <AuthorChip
                         authorId={row.item.authorId || undefined}
                         authorName={row.item.authorName}
@@ -171,7 +174,7 @@ function FeedGrid({
                       </Typography.Text>
                     </div>
                   </Card>
-                </Link>
+                </div>
               </motion.div>
             </Col>
           )
@@ -216,10 +219,10 @@ export function HomePage() {
     })
   }, [])
 
-  // 首屏：只要文章 + 项目列表（本周上映 / 最新），不再逐条拉点赞
+  // 每次进入发现页强制拉最新公开内容（写操作后不会看到旧缓存）
   useEffect(() => {
     let cancelled = false
-    loadDiscoverCatalog().then((data) => {
+    loadDiscoverCatalog(true).then((data) => {
       if (cancelled) return
       setArticles(data.articles)
       setProjects(data.projects)
@@ -291,12 +294,10 @@ export function HomePage() {
     )
   }, [articles, projects, likeCounts])
 
-  const followingRows = useMemo(() => {
-    if (followingFeedItems == null) return null
-    const articleMap = new Map(articles.map((a) => [a.id, a]))
-    const projectMap = new Map(projects.map((p) => [p.id, p]))
-    return mapFeedToRows(followingFeedItems, articleMap, projectMap)
-  }, [followingFeedItems, articles, projects])
+  const followingMix = useMemo(() => {
+    if (!followingFeedItems) return []
+    return followingFeedItems.map(followingItemToRow)
+  }, [followingFeedItems])
 
   const authors = useMemo(() => {
     const map = new Map<number, AuthorChipItem>()
@@ -442,33 +443,25 @@ export function HomePage() {
                 <Empty
                   description={
                     <span>
-                      <Link to={ROUTES.LOGIN}>登录</Link> 并关注创作者后，这里会汇聚他们的新发布
+                      <Link to={ROUTES.LOGIN}>登录</Link> 后查看关注作者的新作品
                     </span>
                   }
                 />
-              ) : followingRows == null ? (
+              ) : followingFeedItems == null ? (
                 <Empty description="加载关注动态…" />
-              ) : followingRows.length === 0 ? (
+              ) : followingMix.length === 0 ? (
                 <Empty
                   description={
-                    authors.length > 0 ? (
-                      <span>
-                        还没有关注内容。去看看{' '}
-                        {authors.slice(0, 3).map((c, i) => (
-                          <span key={c.id}>
-                            {i > 0 ? ' / ' : null}
-                            <Link to={userProfilePath(c.id)}>{c.name}</Link>
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      '还没有关注内容'
-                    )
+                    <span>
+                      还没有关注动态。去{' '}
+                      <Link to={ROUTES.ARTICLES}>文章</Link> /{' '}
+                      <Link to={ROUTES.PROJECTS}>项目</Link> 页关注感兴趣的创作者吧
+                    </span>
                   }
                 />
               ) : (
                 <FeedGrid
-                  rows={followingRows}
+                  rows={followingMix}
                   page={followingPage}
                   pageSize={pageSize}
                   onPageChange={(p, ps) => onCatalogPageChange(setFollowingPage, p, ps)}

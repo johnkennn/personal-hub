@@ -3,13 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { App, Button, Card, Checkbox, Form, Input, Space, Tabs, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
+import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
 import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
-import { createArticle } from '../../api/article'
+import { createArticle, updateArticle, uploadArticleCover } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
+import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
-import { pushActivity } from '../../utils/activityStorage'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = {
@@ -25,6 +26,8 @@ export function ArticleNewPage() {
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [preview, setPreview] = useState({ title: '', content: '' })
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const fromStudio = location.pathname.startsWith('/studio')
 
   useEffect(() => {
@@ -32,21 +35,42 @@ export function ArticleNewPage() {
   }, [navigate])
 
   async function onFinish(values: FormValues) {
+    setSubmitting(true)
     try {
-      const res = await createArticle(values)
-      message.success(values.published ? '已发布' : '已保存')
-      pushActivity({
-        title: values.published ? '你发布了一篇文章' : '你保存了一篇草稿',
-        desc: values.title,
-        href: values.published ? articleDetailPath(res.data.data.id) : ROUTES.STUDIO_ARTICLE_DRAFTS,
+      // 封面接口要求草稿态：先创建草稿，上传后再按需发布
+      const res = await createArticle({
+        title: values.title,
+        content: values.content,
+        relatedProjectId: values.relatedProjectId,
+        published: false,
       })
-      if (values.published) {
-        navigate(articleDetailPath(res.data.data.id))
-      } else {
-        navigate(fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES)
+      const article = res.data.data
+
+      if (coverFile) {
+        try {
+          await uploadArticleCover(article.id, coverFile)
+        } catch {
+          message.warning('文章已创建，封面上传失败，可在详情页点「编辑」重试')
+        }
       }
+
+      if (values.published) {
+        await updateArticle(article.id, {
+          title: values.title,
+          content: values.content,
+          relatedProjectId: values.relatedProjectId,
+          published: true,
+        })
+        message.success('已发布')
+      } else {
+        message.success('已保存草稿')
+      }
+      invalidateDiscoverCatalog()
+      navigate(articleDetailPath(article.id), { replace: true })
     } catch {
       message.error('提交失败，请确认已登录')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -89,13 +113,16 @@ export function ArticleNewPage() {
                 label: '预览',
                 children: (
                   <div style={{ minHeight: 280, padding: '8px 0' }}>
-                    <TypographyTitle title={preview.title || '未命名'} />
+                    <h2 style={{ fontFamily: 'var(--ph-font-display)', marginTop: 0, marginBottom: 16 }}>
+                      {preview.title || '未命名'}
+                    </h2>
                     <MarkdownBody content={preview.content || '*还没有正文*'} />
                   </div>
                 ),
               },
             ]}
           />
+          <ArticleCoverEditor pendingFile={coverFile} onPendingFileChange={setCoverFile} />
           <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
@@ -105,17 +132,11 @@ export function ArticleNewPage() {
               </Typography.Text>
             </Space>
           </Form.Item>
-          <Button type="primary" htmlType="submit" size="large">
+          <Button type="primary" htmlType="submit" size="large" loading={submitting}>
             提交
           </Button>
         </Form>
       </Card>
     </motion.div>
-  )
-}
-
-function TypographyTitle({ title }: { title: string }) {
-  return (
-    <h2 style={{ fontFamily: 'var(--ph-font-display)', marginTop: 0, marginBottom: 16 }}>{title}</h2>
   )
 }

@@ -11,6 +11,10 @@ export type FeedItem = {
   authorUsername: string
   createdAt: string
   likeCount: number
+  excerpt?: string | null
+  coverUrl?: string | null
+  authorDisplayName?: string | null
+  authorAvatarUrl?: string | null
 }
 
 export function fetchFeedLatest(limit = 50) {

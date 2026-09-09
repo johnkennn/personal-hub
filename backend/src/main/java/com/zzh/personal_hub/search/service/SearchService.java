@@ -28,52 +28,57 @@ public class SearchService {
     private final UserRepository userRepository;
 
     public List<FeedItemDto> search(String q) {
-        // 1) 规范化关键词：null / 空白 → 直接空结果
         if (q == null || q.isBlank()) {
             return List.of();
         }
         String keyword = q.trim();
 
-        // 2) 分别搜文章、项目（过滤条件已在 Repository）
         List<Article> articles = articleRepository
                 .findByTitleContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(keyword);
         List<Project> projects = projectRepository
                 .findByNameContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(keyword);
 
-        // 3) 批量查作者，避免循环里 findById（N+1）——和 Feed 同款手法
         Set<Long> authorIds = articles.stream().map(Article::getAuthorId).collect(Collectors.toSet());
         projects.forEach(p -> authorIds.add(p.getAuthorId()));
         Map<Long, User> authors = userRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        // 4) 映射成统一卡片
         List<FeedItemDto> items = new ArrayList<>();
 
         for (Article a : articles) {
             User author = authors.get(a.getAuthorId());
+            String username = author != null ? author.getUsername() : "unknown";
             items.add(new FeedItemDto(
                     ContentTargetType.ARTICLE,
                     a.getId(),
                     a.getTitle(),
                     a.getAuthorId(),
-                    author != null ? author.getUsername() : "unknown",
+                    username,
                     a.getCreatedAt(),
-                0));
+                    0L,
+                    null,
+                    a.getCoverUrl(),
+                    username,
+                    null));
         }
 
         for (Project p : projects) {
             User author = authors.get(p.getAuthorId());
+            String username = author != null ? author.getUsername() : "unknown";
             items.add(new FeedItemDto(
                     ContentTargetType.PROJECT,
                     p.getId(),
                     p.getName(),
                     p.getAuthorId(),
-                    author != null ? author.getUsername() : "unknown",
+                    username,
                     p.getCreatedAt(),
-                0));
+                    0L,
+                    null,
+                    p.getCoverUrl(),
+                    username,
+                    null));
         }
 
-        // 5) 混合后再按时间排（否则会先全是文章再全是项目）
         items.sort(Comparator.comparing(FeedItemDto::getCreatedAt,
                 Comparator.nullsLast(Comparator.reverseOrder())));
         return items;

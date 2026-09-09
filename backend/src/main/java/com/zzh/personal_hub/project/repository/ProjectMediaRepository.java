@@ -14,4 +14,6 @@ public interface ProjectMediaRepository extends JpaRepository<ProjectMedia, Long
     long countByProjectId(Long projectId);
 
     Optional<ProjectMedia> findByIdAndProjectId(Long id, Long projectId);
+
+    void deleteByProjectId(Long projectId);
 }

@@ -10,6 +10,7 @@ import {
 } from '../api/project'
 import type { ProjectMedia } from '../types/projectMedia'
 import { resolveMediaUrl } from '../utils/mediaUrl'
+import { apiErrorMessage } from '../utils/apiError'
 import styles from './ProjectGalleryEditor.module.css'
 
 const MAX_ITEMS = 12
@@ -70,7 +71,7 @@ export function ProjectGalleryEditor({ projectId }: ProjectGalleryEditorProps) {
           setItems((prev) => [...prev, res.data.data])
           message.success('已加入画廊')
         })
-        .catch(() => message.error('上传失败（仅草稿可编辑）'))
+        .catch((e) => message.error(apiErrorMessage(e, '上传失败')))
         .finally(() => setBusy(false))
       return false
     },

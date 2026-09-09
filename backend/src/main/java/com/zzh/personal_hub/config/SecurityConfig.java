@@ -47,6 +47,7 @@ public class SecurityConfig {
                     // —— 探活 / 静态媒体 / Feed / 搜索 ——
                     .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()
                     .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/feed/latest", "/api/feed/hot").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/search").permitAll()

@@ -14,6 +14,8 @@ import { ProjectNewPage } from '../pages/Projects/New'
 import { ArticleEditPage } from '../pages/Articles/Edit'
 import { ProjectEditPage } from '../pages/Projects/Edit'
 import { AdminArticlesPage } from '../pages/Admin/Articles'
+import { AdminDeletedArticlesPage } from '../pages/Admin/DeletedArticles'
+import { AdminDeletedProjectsPage } from '../pages/Admin/DeletedProjects'
 import { AdminProjectsPage } from '../pages/Admin/Projects'
 import { AdminUsersPage } from '../pages/Admin/Users'
 import { AdminSuggestionsPage } from '../pages/Admin/Suggestions'
@@ -88,7 +90,9 @@ export const router = createBrowserRouter([
       { path: 'admin', element: <AdminHomePage /> },
       { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/articles', element: <AdminArticlesPage /> },
+      { path: 'admin/articles/deleted', element: <AdminDeletedArticlesPage /> },
       { path: 'admin/projects', element: <AdminProjectsPage /> },
+      { path: 'admin/projects/deleted', element: <AdminDeletedProjectsPage /> },
       { path: 'admin/suggestions', element: <AdminSuggestionsPage /> },
     ],
   },

@@ -1,46 +1,71 @@
+import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Image, Result, Skeleton, Tag, Typography } from 'antd'
 import { LinkOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
+import { AdminDeletedActions } from '../../components/AdminDeletedActions'
 import { AuthorChip } from '../../components/AuthorChip'
 import { BackNavButton } from '../../components/BackNavButton'
-import { coverToneFromId } from '../../components/CoverStrip'
+import { coverMediaStyle } from '../../components/CoverStrip'
+import { OwnerContentActions } from '../../components/OwnerContentActions'
 import { ShareCard } from '../../components/ShareCard'
 import { SocialPanel } from '../../components/SocialPanel'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle, PublicProject } from '../../mocks/publicDemo'
-import { articleDetailPath, ROUTES } from '../../router/paths'
-import { fetchProjectMedia } from '../../api/project'
+import { articleDetailPath, projectEditPath, ROUTES } from '../../router/paths'
+import { fetchAdminDeletedProjectMedia } from '../../api/adminDeleted'
+import { fetchMyProjectMedia, fetchProjectMedia } from '../../api/project'
 import type { ProjectMedia } from '../../types/projectMedia'
 import {
-  loadPublicProject,
+  loadProjectForViewer,
   loadRelatedArticlesForProject,
 } from '../../services/publicContent'
-import { excerpt, formatDateTime } from '../../utils/format'
+import { getUserId } from '../../utils/authStorage'
+import { excerpt, formatDateTime, splitTechStack } from '../../utils/format'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from './Showcase.module.css'
 
-const TONES: Record<string, string> = {
-  moss: 'linear-gradient(135deg, #1a3d30 0%, #2f6b52 45%, #7cb89a 100%)',
-  ink: 'linear-gradient(135deg, #101820 0%, #1c2e38 50%, #3d6b7a 100%)',
-  ember: 'linear-gradient(135deg, #2a1810 0%, #5a3420 50%, #c4845a 100%)',
-  dusk: 'linear-gradient(145deg, #152018 0%, #24352c 50%, #4d6b5a 100%)',
-  default: 'linear-gradient(135deg, #14201b 0%, #243830 50%, #4a7a62 100%)',
+function ShowcaseSection({
+  title,
+  desc,
+  children,
+}: {
+  title: string
+  desc: string
+  children: ReactNode
+}) {
+  return (
+    <motion.section
+      className={styles.section}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.4 }}
+    >
+      <Typography.Title level={2} className={styles.sectionTitle}>
+        {title}
+      </Typography.Title>
+      <Typography.Paragraph className={styles.sectionDesc}>{desc}</Typography.Paragraph>
+      {children}
+    </motion.section>
+  )
 }
 
-/**
- * 项目展映页：故事 / 技术 / 演示 / 制作特辑 / 分享
- */
+/** 项目展映页：故事 / 技术 / 画廊 / 制作特辑 / 分享 */
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [project, setProject] = useState<PublicProject | null>(null)
   const [related, setRelated] = useState<PublicArticle[]>([])
   const [gallery, setGallery] = useState<ProjectMedia[]>([])
+  const [adminDeletedPreview, setAdminDeletedPreview] = useState(false)
+  const [deletedAt, setDeletedAt] = useState<string | null>(null)
+  const [purgeAt, setPurgeAt] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadedId, setLoadedId] = useState<string | undefined>(undefined)
+  const [meId, setMeId] = useState(getUserId)
 
   if (id !== loadedId) {
     setLoadedId(id)
@@ -48,25 +73,51 @@ export function ProjectDetailPage() {
     setProject(null)
     setRelated([])
     setGallery([])
+    setAdminDeletedPreview(false)
+    setDeletedAt(null)
+    setPurgeAt(null)
     setError('')
   }
 
   useEffect(() => {
+    setMeId(getUserId())
+  }, [id])
+
+  useEffect(() => {
     if (!id) return
     let cancelled = false
-    Promise.all([
-      loadPublicProject(id),
-      loadRelatedArticlesForProject(id),
-      fetchProjectMedia(id)
-        .then((r) => r.data.data ?? [])
-        .catch(() => [] as ProjectMedia[]),
-    ])
-      .then(([projectRes, relatedRes, mediaItems]) => {
+    loadProjectForViewer(id)
+      .then(async (projectRes) => {
         if (cancelled) return
         setProject(projectRes.item)
+        setAdminDeletedPreview(projectRes.adminDeletedPreview)
+        setDeletedAt(projectRes.deletedAt ?? null)
+        setPurgeAt(projectRes.purgeAt ?? null)
+        if (!projectRes.item) {
+          setRelated([])
+          setGallery([])
+          setError('项目不存在或加载失败')
+          return
+        }
+        setError('')
+        const isDeletedAdmin = projectRes.adminDeletedPreview
+        const isDraft = !projectRes.item.published
+        const mediaFetcher = isDeletedAdmin
+          ? fetchAdminDeletedProjectMedia
+          : isDraft
+            ? fetchMyProjectMedia
+            : fetchProjectMedia
+        const [relatedRes, mediaItems] = await Promise.all([
+          isDraft || isDeletedAdmin
+            ? Promise.resolve({ items: [] as PublicArticle[] })
+            : loadRelatedArticlesForProject(id),
+          mediaFetcher(id)
+            .then((r) => r.data.data ?? [])
+            .catch(() => [] as ProjectMedia[]),
+        ])
+        if (cancelled) return
         setRelated(relatedRes.items)
         setGallery(mediaItems)
-        setError(projectRes.item ? '' : '项目不存在或加载失败')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -76,14 +127,13 @@ export function ProjectDetailPage() {
     }
   }, [id])
 
-  const cover = project ? resolveMediaUrl(project.coverUrl) || undefined : undefined
-  const tone = project
-    ? TONES[coverToneFromId(project.id)] ?? TONES.default
-    : TONES.default
+  const coverSource = project?.coverUrl || gallery[0]?.url
+  const cover = resolveMediaUrl(coverSource)
   const lead = project ? excerpt(project.description, 96) : ''
+  const mediaStyle = project ? coverMediaStyle(coverSource, project.id) : undefined
 
   usePageMeta(
-    project
+    project?.published && !adminDeletedPreview
       ? {
           title: project.name,
           description: lead,
@@ -107,7 +157,7 @@ export function ProjectDetailPage() {
     return <Skeleton active paragraph={{ rows: 10 }} />
   }
 
-  if (error || !project) {
+  if (error || !project || !mediaStyle) {
     return (
       <Result
         status="404"
@@ -117,13 +167,15 @@ export function ProjectDetailPage() {
     )
   }
 
-  const tags = (project.techStack ?? '')
-    .split(/[,，/|]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-  const mediaStyle = cover
-    ? { backgroundImage: `url(${cover})` }
-    : { backgroundImage: tone }
+  const tags = splitTechStack(project.techStack)
+  const isOwner = meId != null && project.authorId === meId
+  const backFallback = adminDeletedPreview
+    ? ROUTES.ADMIN_PROJECTS_DELETED
+    : isOwner
+      ? project.published
+        ? ROUTES.STUDIO_PROJECT_PUBLISHED
+        : ROUTES.STUDIO_PROJECT_DRAFTS
+      : ROUTES.PROJECTS
 
   return (
     <div className={styles.page}>
@@ -137,7 +189,25 @@ export function ProjectDetailPage() {
         />
         <div className={styles.heroShade} aria-hidden />
         <div className={styles.heroInner}>
-          <BackNavButton fallback={ROUTES.PROJECTS} className={styles.back} />
+          <BackNavButton fallback={backFallback} className={styles.back} />
+          {adminDeletedPreview ? (
+            <AdminDeletedActions
+              kind="project"
+              contentId={project.id}
+              published={project.published}
+              deletedAt={deletedAt}
+              purgeAt={purgeAt}
+            />
+          ) : isOwner ? (
+            <OwnerContentActions
+              kind="project"
+              contentId={project.id}
+              published={project.published}
+              editPath={projectEditPath(project.id)}
+              draftsPath={ROUTES.STUDIO_PROJECT_DRAFTS}
+              publishedPath={ROUTES.STUDIO_PROJECT_PUBLISHED}
+            />
+          ) : null}
           <motion.p
             className={styles.eyebrow}
             initial={{ opacity: 0, y: 8 }}
@@ -202,36 +272,12 @@ export function ProjectDetailPage() {
       </section>
 
       <div className={styles.body}>
-        <motion.section
-          className={styles.section}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: 0.4 }}
-        >
-          <Typography.Title level={2} className={styles.sectionTitle}>
-            故事
-          </Typography.Title>
-          <Typography.Paragraph className={styles.sectionDesc}>
-            这个作品要解决什么问题、为什么值得做成产品。
-          </Typography.Paragraph>
+        <ShowcaseSection title="故事" desc="这个作品要解决什么问题、为什么值得做成产品。">
           <p className={styles.story}>{project.description}</p>
-        </motion.section>
+        </ShowcaseSection>
 
         {tags.length > 0 ? (
-          <motion.section
-            className={styles.section}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.4 }}
-          >
-            <Typography.Title level={2} className={styles.sectionTitle}>
-              技术
-            </Typography.Title>
-            <Typography.Paragraph className={styles.sectionDesc}>
-              支撑作品落地的关键技术栈。
-            </Typography.Paragraph>
+          <ShowcaseSection title="技术" desc="支撑作品落地的关键技术栈。">
             <div className={styles.techList}>
               {tags.map((tag) => (
                 <Tag key={tag} className={styles.techChip}>
@@ -239,52 +285,11 @@ export function ProjectDetailPage() {
                 </Tag>
               ))}
             </div>
-          </motion.section>
+          </ShowcaseSection>
         ) : null}
 
-        {(project.demoUrl || project.repoUrl) && (
-          <motion.section
-            className={styles.section}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.4 }}
-          >
-            <Typography.Title level={2} className={styles.sectionTitle}>
-              演示
-            </Typography.Title>
-            <Typography.Paragraph className={styles.sectionDesc}>
-              亲自体验，或从仓库继续探索。
-            </Typography.Paragraph>
-            <div className={styles.linkCard}>
-              {project.demoUrl ? (
-                <Button type="primary" href={project.demoUrl} target="_blank" rel="noreferrer">
-                  打开 Demo
-                </Button>
-              ) : null}
-              {project.repoUrl ? (
-                <Button href={project.repoUrl} target="_blank" rel="noreferrer">
-                  查看 Repository
-                </Button>
-              ) : null}
-            </div>
-          </motion.section>
-        )}
-
         {gallery.length > 0 ? (
-          <motion.section
-            className={styles.section}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.4 }}
-          >
-            <Typography.Title level={2} className={styles.sectionTitle}>
-              画廊
-            </Typography.Title>
-            <Typography.Paragraph className={styles.sectionDesc}>
-              作品界面与现场截图，点击可放大预览。
-            </Typography.Paragraph>
+          <ShowcaseSection title="画廊" desc="作品界面与现场截图，点击可放大预览。">
             <Image.PreviewGroup>
               <div className={styles.galleryGrid}>
                 {gallery.map((m) => {
@@ -303,23 +308,11 @@ export function ProjectDetailPage() {
                 })}
               </div>
             </Image.PreviewGroup>
-          </motion.section>
+          </ShowcaseSection>
         ) : null}
 
         {related.length > 0 ? (
-          <motion.section
-            className={styles.section}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.4 }}
-          >
-            <Typography.Title level={2} className={styles.sectionTitle}>
-              制作特辑
-            </Typography.Title>
-            <Typography.Paragraph className={styles.sectionDesc}>
-              与本作品相关的构建日志与文章。
-            </Typography.Paragraph>
+          <ShowcaseSection title="制作特辑" desc="与本作品相关的构建日志与文章。">
             <ul className={styles.featureList}>
               {related.map((a) => (
                 <li key={a.id}>
@@ -333,26 +326,32 @@ export function ProjectDetailPage() {
                 </li>
               ))}
             </ul>
-          </motion.section>
+          </ShowcaseSection>
         ) : null}
 
-        <motion.section
-          className={styles.section}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: 0.4 }}
-        >
-          <ShareCard
-            title={project.name}
-            description={project.description}
-            mediaStyle={mediaStyle}
-          />
-        </motion.section>
+        {!adminDeletedPreview ? (
+          <>
+            <motion.section
+              className={styles.section}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.4 }}
+            >
+              <ShareCard
+                title={project.name}
+                description={project.description}
+                mediaStyle={mediaStyle}
+              />
+            </motion.section>
 
-        <div className={styles.socialWrap}>
-          <SocialPanel kind="project" contentId={project.id} />
-        </div>
+            {project.published ? (
+              <div className={styles.socialWrap}>
+                <SocialPanel kind="project" contentId={project.id} />
+              </div>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </div>
   )

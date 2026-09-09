@@ -4,9 +4,11 @@ import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Typograph
 import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
+import { ProjectCoverEditor } from '../../components/ProjectCoverEditor'
 import { ProjectGalleryEditor } from '../../components/ProjectGalleryEditor'
 import { fetchProjectForManage, updateProject } from '../../api/project'
 import { projectDetailPath, ROUTES } from '../../router/paths'
+import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -30,6 +32,7 @@ export function ProjectEditPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [publishedLocked, setPublishedLocked] = useState(false)
+  const [coverUrl, setCoverUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -50,6 +53,7 @@ export function ProjectEditPage() {
           setPublishedLocked(true)
           return
         }
+        setCoverUrl(project.coverUrl ?? null)
         form.setFieldsValue({
           name: project.name,
           description: project.description,
@@ -84,11 +88,14 @@ export function ProjectEditPage() {
         demoUrl: values.demoUrl,
         published: values.published,
       })
+      invalidateDiscoverCatalog()
       message.success('已保存')
       if (res.data.data.published) {
-        navigate(projectDetailPath(res.data.data.id))
+        navigate(projectDetailPath(res.data.data.id), { replace: true })
       } else {
-        navigate(fromStudio ? ROUTES.STUDIO_PROJECT_DRAFTS : ROUTES.PROJECTS)
+        navigate(fromStudio ? ROUTES.STUDIO_PROJECT_DRAFTS : ROUTES.PROJECTS, {
+          replace: true,
+        })
       }
     } catch {
       message.error('保存失败（已发布内容需先下架）')
@@ -157,7 +164,12 @@ export function ProjectEditPage() {
           <Form.Item name="demoUrl" label="Demo 地址">
             <Input />
           </Form.Item>
-          {id ? <ProjectGalleryEditor projectId={id} /> : null}
+          {id ? (
+            <>
+              <ProjectCoverEditor projectId={id} initialCoverUrl={coverUrl} />
+              <ProjectGalleryEditor projectId={id} />
+            </>
+          ) : null}
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
               <Checkbox>保存时直接发布</Checkbox>

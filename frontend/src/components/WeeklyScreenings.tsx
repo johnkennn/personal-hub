@@ -2,20 +2,11 @@ import { Link } from 'react-router-dom'
 import { Typography } from 'antd'
 import { motion } from 'framer-motion'
 
-import { coverToneFromId } from './CoverStrip'
+import { coverMediaStyle } from './CoverStrip'
 import type { PublicProject } from '../mocks/publicDemo'
 import { projectDetailPath } from '../router/paths'
 import { excerpt, formatDateTime } from '../utils/format'
-import { resolveMediaUrl } from '../utils/mediaUrl'
 import styles from './WeeklyScreenings.module.css'
-
-const TONES: Record<string, string> = {
-  moss: 'linear-gradient(135deg, #1a3d30 0%, #2f6b52 45%, #7cb89a 100%)',
-  ink: 'linear-gradient(135deg, #101820 0%, #1c2e38 50%, #3d6b7a 100%)',
-  ember: 'linear-gradient(135deg, #2a1810 0%, #5a3420 50%, #c4845a 100%)',
-  dusk: 'linear-gradient(145deg, #152018 0%, #24352c 50%, #4d6b5a 100%)',
-  default: 'linear-gradient(135deg, #14201b 0%, #243830 50%, #4a7a62 100%)',
-}
 
 function weekCutoff(): Date {
   const d = new Date()
@@ -76,7 +67,10 @@ export function WeeklyScreenings({ projects }: WeeklyScreeningsProps) {
       {!feature ? (
         <div className={styles.empty}>还没有可展映的项目</div>
       ) : (
-        <div className={styles.grid} style={rest.length === 0 ? { gridTemplateColumns: '1fr' } : undefined}>
+        <div
+          className={styles.grid}
+          style={rest.length === 0 ? { gridTemplateColumns: '1fr' } : undefined}
+        >
           <ScreeningCard project={feature} featured />
           {rest.length > 0 ? (
             <div className={styles.sideStack}>
@@ -100,12 +94,6 @@ function ScreeningCard({
   featured?: boolean
   delay?: number
 }) {
-  const cover = resolveMediaUrl(project.coverUrl)
-  const tone = TONES[coverToneFromId(project.id)] ?? TONES.default
-  const mediaStyle = cover
-    ? { backgroundImage: `url(${cover})` }
-    : { backgroundImage: tone }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -118,7 +106,7 @@ function ScreeningCard({
         to={projectDetailPath(project.id)}
         className={featured ? styles.feature : styles.sideCard}
       >
-        <div className={styles.media} style={mediaStyle} />
+        <div className={styles.media} style={coverMediaStyle(project.coverUrl, project.id)} />
         <div className={styles.shade} aria-hidden />
         <div className={styles.body}>
           <p className={styles.kind}>作品展映</p>

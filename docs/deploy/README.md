@@ -203,6 +203,19 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # SEO：动态 sitemap / robots（勿被 SPA try_files 吃掉）
+    location = /sitemap.xml {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /robots.txt {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location /api/ {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
@@ -278,6 +291,7 @@ DB_USERNAME=hub
 DB_PASSWORD=YOUR_HUB_PASSWORD
 JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
 CORS_ALLOWED_ORIGINS=http://YOUR_PUBLIC_IP
+PUBLIC_BASE_URL=http://YOUR_PUBLIC_IP
 ADMIN_BOOTSTRAP_PASSWORD=YOUR_FIRST_ADMIN_PASSWORD
 EOF
 chmod 600 /opt/personal-hub/personal-hub.env
@@ -296,6 +310,7 @@ echo "DB_URL=$DB_URL"
 | `DB_USERNAME` / `DB_PASSWORD` | 建议用 `hub`，不要用 root 跑应用 |
 | `JWT_SECRET` | ≥32 字符随机串 |
 | `CORS_ALLOWED_ORIGINS` | 前端源，如 `http://IP` 或以后的域名；多个逗号分隔 |
+| `PUBLIC_BASE_URL` | 站点根 URL（无尾斜杠），写入 `sitemap.xml` / `robots.txt` |
 | `ADMIN_BOOTSTRAP_PASSWORD` | 仅库中尚无管理员时用于初始化；有管理员后可留空 |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 
@@ -499,6 +514,7 @@ DB_USERNAME=hub
 DB_PASSWORD=YOUR_HUB_PASSWORD
 JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
 CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN
+PUBLIC_BASE_URL=https://YOUR_DOMAIN
 ADMIN_BOOTSTRAP_PASSWORD=
 MEDIA_ROOT=/var/www/personal-hub-media
 ```

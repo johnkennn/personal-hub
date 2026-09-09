@@ -14,6 +14,10 @@ request.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // 上传 multipart 容易超过默认 5s
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.timeout = Math.max(config.timeout ?? 0, 60_000)
+  }
   return config
 })
 

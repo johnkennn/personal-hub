@@ -29,6 +29,11 @@
   font-size: 0.85rem;
 }
 
+.titleLink:hover {
+  color: var(--ph-accent) !important;
+  text-decoration: underline;
+}
+
 .heroActions :global(.ant-btn) {
   min-width: 6.5rem;
 }

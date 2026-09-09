@@ -11,17 +11,25 @@ import java.time.Instant;
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     List<Project> findByPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc();
-    Optional<Project> findByIdAndPublishedTrueAndDeletedAtIsNull(Long id);
-    List<Project> findAllByOrderByUpdatedAtDesc();
-    List<Project> findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
-    List<Project> findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
-    List<Project> findByAuthorIdInAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(
-    Collection<Long> authorIds);
 
-    List<Project> findByNameContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(
-        String name);
+    Optional<Project> findByIdAndPublishedTrueAndDeletedAtIsNull(Long id);
+
+    List<Project> findAllByOrderByUpdatedAtDesc();
+
+    List<Project> findByAuthorIdAndPublishedFalseAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
+
+    List<Project> findByAuthorIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(Long authorId);
+
+    List<Project> findByAuthorIdInAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(
+            Collection<Long> authorIds);
+
+    List<Project> findByNameContainingAndPublishedTrueAndDeletedAtIsNullOrderByCreatedAtDesc(String name);
 
     long countByPublishedTrueAndDeletedAtIsNull();
 
     List<Project> findByDeletedAtNotNullAndDeletedAtBefore(Instant cutoff);
+
+    List<Project> findByDeletedAtNotNullOrderByDeletedAtDesc();
+
+    long countByDeletedAtNotNull();
 }

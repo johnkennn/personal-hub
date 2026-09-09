@@ -66,6 +66,6 @@ export function batchDeleteMyArticles(ids: number[]) {
 
 export function uploadArticleCover(id: number | string, file: File) {
   const form = new FormData()
-  form.append('file', file)
+  form.append('file', file, file.name)
   return request.post<ApiResponse<Article>>(`/api/me/articles/${id}/cover`, form)
 }

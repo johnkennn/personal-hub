@@ -8,6 +8,9 @@ app:
     # 本地开发：项目下的目录；生产再改成 /var/www/personal-hub-media
     root-dir: ${MEDIA_ROOT:./data/media}
     public-prefix: /media
+  seo:
+    # sitemap / robots 里的站点根；生产设 PUBLIC_BASE_URL=https://你的域名
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
   ratelimit:
     login-per-minute: 10
     register-per-minute: 5

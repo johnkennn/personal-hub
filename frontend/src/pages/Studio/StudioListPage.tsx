@@ -46,6 +46,8 @@ type StudioListPageProps<T extends { id: number }> = {
   getSubtitle: (item: T) => string
   getUpdatedAt: (item: T) => string
   editPath?: (id: number) => string
+  /** 点击标题进入详情（草稿也能预览） */
+  detailPath?: (id: number) => string
 }
 
 /**
@@ -68,6 +70,7 @@ export function StudioListPage<T extends { id: number }>({
   getSubtitle,
   getUpdatedAt,
   editPath,
+  detailPath,
 }: StudioListPageProps<T>) {
   const navigate = useNavigate()
   const { message, modal } = App.useApp()
@@ -119,11 +122,22 @@ export function StudioListPage<T extends { id: number }>({
     }
   }
 
+  function confirmUnpublish(ids: number[]) {
+    if (!onUnpublish) return
+    modal.confirm({
+      title: ids.length > 1 ? `批量下架 ${ids.length} 项？` : '确认下架？',
+      content: '下架后进入草稿，才可编辑；访客将不可见。',
+      okText: '下架',
+      cancelText: '取消',
+      onOk: () => runUnpublish(ids),
+    })
+  }
+
   function confirmDelete(ids: number[]) {
     if (!onDelete) return
     modal.confirm({
       title: `确认删除 ${ids.length} 项？`,
-      content: '删除后进入软删除，列表中不再显示。',
+      content: '删除后将从列表中移除，且访客不可见。',
       okType: 'danger',
       okText: '删除',
       onOk: async () => {
@@ -146,9 +160,17 @@ export function StudioListPage<T extends { id: number }>({
         key: 'main',
         render: (_, record) => (
           <div>
-            <Typography.Text strong style={{ display: 'block' }}>
-              {getTitle(record)}
-            </Typography.Text>
+            {detailPath ? (
+              <Link to={detailPath(record.id)} style={{ color: 'inherit' }}>
+                <Typography.Text strong style={{ display: 'block' }} className={studioStyles.titleLink}>
+                  {getTitle(record)}
+                </Typography.Text>
+              </Link>
+            ) : (
+              <Typography.Text strong style={{ display: 'block' }}>
+                {getTitle(record)}
+              </Typography.Text>
+            )}
             <Typography.Text type="secondary" className={studioStyles.sub}>
               {excerpt(getSubtitle(record), 72)}
             </Typography.Text>
@@ -184,7 +206,7 @@ export function StudioListPage<T extends { id: number }>({
                   key: 'unpublish',
                   icon: <RollbackOutlined />,
                   label: '下架到草稿',
-                  onClick: () => void runUnpublish([record.id]),
+                  onClick: () => confirmUnpublish([record.id]),
                 },
             {
               key: 'delete',
@@ -197,6 +219,11 @@ export function StudioListPage<T extends { id: number }>({
 
           return (
             <Space>
+              {detailPath ? (
+                <Button type="link" size="small" onClick={() => navigate(detailPath(record.id))}>
+                  查看
+                </Button>
+              ) : null}
               {isDraft && editPath ? (
                 <Button
                   type="link"
@@ -206,11 +233,11 @@ export function StudioListPage<T extends { id: number }>({
                 >
                   编辑
                 </Button>
-              ) : (
+              ) : !isDraft ? (
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                   需下架后编辑
                 </Typography.Text>
-              )}
+              ) : null}
               <Dropdown menu={{ items: menuItems }} trigger={['click']}>
                 <Button type="text" icon={<MoreOutlined />} />
               </Dropdown>
@@ -220,7 +247,7 @@ export function StudioListPage<T extends { id: number }>({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, isDraft, editPath],
+    [items, isDraft, editPath, detailPath],
   )
 
   const rowSelection: TableProps<T>['rowSelection'] = {
@@ -283,14 +310,7 @@ export function StudioListPage<T extends { id: number }>({
             ) : (
               <Button
                 icon={<RollbackOutlined />}
-                onClick={() => {
-                  const ids = selectedRowKeys.map(Number)
-                  modal.confirm({
-                    title: `批量下架 ${ids.length} 项？`,
-                    content: '下架后进入草稿，才可编辑。',
-                    onOk: () => runUnpublish(ids),
-                  })
-                }}
+                onClick={() => confirmUnpublish(selectedRowKeys.map(Number))}
               >
                 批量下架
               </Button>

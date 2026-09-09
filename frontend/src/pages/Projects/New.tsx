@@ -1,11 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { App, Button, Card, Checkbox, Form, Input, Space, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { BackNavButton } from '../../components/BackNavButton'
-import { createProject } from '../../api/project'
+import { ProjectCoverEditor } from '../../components/ProjectCoverEditor'
+import { createProject, updateProject, uploadProjectCover } from '../../api/project'
 import { projectDetailPath, ROUTES } from '../../router/paths'
+import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -24,27 +26,54 @@ export function ProjectNewPage() {
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const fromStudio = location.pathname.startsWith('/studio')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!isLoggedIn()) navigate(ROUTES.LOGIN, { replace: true })
   }, [navigate])
 
   async function onFinish(values: FormValues) {
+    setSubmitting(true)
     try {
+      // 封面接口要求草稿态：先创建草稿，上传后再按需发布
       const res = await createProject({
-        ...values,
+        name: values.name,
+        description: values.description,
         techStack: values.techStack || undefined,
         repoUrl: values.repoUrl || undefined,
         demoUrl: values.demoUrl || undefined,
+        published: false,
       })
-      message.success(values.published ? '项目已发布' : '已创建')
-      if (values.published) {
-        navigate(projectDetailPath(res.data.data.id))
-      } else {
-        navigate(fromStudio ? ROUTES.STUDIO_PROJECT_DRAFTS : ROUTES.PROJECTS)
+      const project = res.data.data
+
+      if (coverFile) {
+        try {
+          await uploadProjectCover(project.id, coverFile)
+        } catch {
+          message.warning('项目已创建，封面上传失败，可在详情页点「编辑」重试')
+        }
       }
+
+      if (values.published) {
+        await updateProject(project.id, {
+          name: values.name,
+          description: values.description,
+          techStack: values.techStack,
+          repoUrl: values.repoUrl,
+          demoUrl: values.demoUrl,
+          published: true,
+        })
+        message.success('项目已发布')
+      } else {
+        message.success('已创建草稿')
+      }
+      invalidateDiscoverCatalog()
+      navigate(projectDetailPath(project.id), { replace: true })
     } catch {
       message.error('创建失败')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -70,6 +99,10 @@ export function ProjectNewPage() {
           <Form.Item name="demoUrl" label="Demo 地址">
             <Input />
           </Form.Item>
+          <ProjectCoverEditor
+            pendingFile={coverFile}
+            onPendingFileChange={setCoverFile}
+          />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>
               <Checkbox>直接发布</Checkbox>
@@ -78,7 +111,7 @@ export function ProjectNewPage() {
               </Typography.Text>
             </Space>
           </Form.Item>
-          <Button type="primary" htmlType="submit" size="large">
+          <Button type="primary" htmlType="submit" size="large" loading={submitting}>
             创建
           </Button>
         </Form>

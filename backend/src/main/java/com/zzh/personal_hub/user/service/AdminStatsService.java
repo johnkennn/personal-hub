@@ -35,7 +35,9 @@ public class AdminStatsService {
             articleRepository.countByPublishedTrueAndDeletedAtIsNull(),
             projectRepository.countByPublishedTrueAndDeletedAtIsNull(),
             commentRepository.countByDeletedAtIsNull(),
-            suggestionRepository.count()
+            suggestionRepository.count(),
+            articleRepository.countByDeletedAtNotNull(),
+            projectRepository.countByDeletedAtNotNull()
         );
     }
 

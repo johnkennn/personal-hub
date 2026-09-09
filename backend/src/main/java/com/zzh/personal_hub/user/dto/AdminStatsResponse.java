@@ -15,4 +15,6 @@ public class AdminStatsResponse {
     private long projectPublished;
     private long commentActive;
     private long suggestionTotal;
+    private long articleDeleted;
+    private long projectDeleted;
 }

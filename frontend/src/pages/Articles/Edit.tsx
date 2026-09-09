@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
+import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { BackNavButton } from '../../components/BackNavButton'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
 import { fetchArticleForManage, updateArticle } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
+import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -29,6 +31,7 @@ export function ArticleEditPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [publishedLocked, setPublishedLocked] = useState(false)
+  const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [preview, setPreview] = useState({ title: '', content: '' })
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function ArticleEditPage() {
           setPublishedLocked(true)
           return
         }
+        setCoverUrl(article.coverUrl ?? null)
         form.setFieldsValue({
           title: article.title,
           content: article.content,
@@ -76,11 +80,14 @@ export function ArticleEditPage() {
     if (!id) return
     try {
       const res = await updateArticle(id, values)
+      invalidateDiscoverCatalog()
       message.success('已保存')
       if (res.data.data.published) {
-        navigate(articleDetailPath(res.data.data.id))
+        navigate(articleDetailPath(res.data.data.id), { replace: true })
       } else {
-        navigate(fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES)
+        navigate(fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES, {
+          replace: true,
+        })
       }
     } catch {
       message.error('保存失败（已发布内容需先下架）')
@@ -166,6 +173,7 @@ export function ArticleEditPage() {
               },
             ]}
           />
+          {id ? <ArticleCoverEditor articleId={id} initialCoverUrl={coverUrl} /> : null}
           <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>

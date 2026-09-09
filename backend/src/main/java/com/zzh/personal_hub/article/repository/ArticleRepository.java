@@ -27,5 +27,9 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findByDeletedAtNotNullAndDeletedAtBefore(Instant cutoff);
 
+    List<Article> findByDeletedAtNotNullOrderByDeletedAtDesc();
+
+    long countByDeletedAtNotNull();
+
     List<Article> findByRelatedProjectIdAndPublishedTrueAndDeletedAtIsNullOrderByUpdatedAtDesc(Long relatedProjectId);
 }
