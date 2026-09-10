@@ -59,4 +59,4 @@ jobs:
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/personal-hub/
           ssh -i ~/.ssh/deploy_key -p 22 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            'systemctl restart personal-hub && sleep 5 && systemctl is-active personal-hub && curl -sf http://127.0.0.1:8080/actuator/health'
+            'systemctl restart personal-hub && for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/actuator/health && exit 0; sleep 2; done; echo "health check failed"; systemctl status personal-hub --no-pager; journalctl -u personal-hub -n 50 --no-pager; exit 1'
