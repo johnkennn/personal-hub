@@ -1,287 +1,281 @@
-# Personal Hub 全栈技术文档 V1.0.0
+# AI Tools Hub — 技术方案
 
 | 项 | 说明 |
 |----|------|
-| 对应产品 | [prd-outline.md](../product/prd-outline.md)（AI Tools Hub，暂定） |
+| 对应产品 | [prd-outline.md](../product/prd-outline.md) |
 | 路线图 | [roadmap.md](../product/roadmap.md) |
-| 状态 | 技术栈 Confirmed；**领域模块随产品演进**（将增 Tool / Deal / AiMiniTool，Project/Follow 降权） |
-| 部署形态 | 无 Docker：Nginx + Spring Boot jar + MySQL（延续现网） |
+| 文档版本 | Tech 0.4（由 Personal Hub tech-v1.0.0 演进） |
+| 状态 | **与大纲 0.5 / 路线图 0.4 对齐；可开 P1 开发** |
+| 部署 | 无 Docker：Nginx + Spring Boot jar + MySQL；GitHub Actions CI/CD |
+| 工程名 | 仓库 / Maven 包名暂保持 `personal-hub` / `com.zzh.personal_hub` |
 
-> 下文描述的是**当前已实现**的栈与模块。产品已转向工具导航，实现新域时改代码并增量更新本节，不必为改方向重写全文。
+> **目标：** 支撑「面向用户的成熟好用」产品——稳定、可运营、可控成本、体验偏成熟 AI 产品。  
+> 下文分：现状可复用、目标架构、前端 IA/视觉、AI 约定、新增领域、安全与非功能。
 
 ---
 
 ## 1. 架构总览
 
-```
+```text
 浏览器 / 手机
     │
     ▼
 Nginx
-    ├─ /           → 前端 SPA（Vite 构建产物）
+    ├─ /           → 前端 SPA（Vite）；默认路由为聊天
     ├─ /api/       → Spring Boot :8080
-    └─ /media/     → 本地上传目录（静态）
+    └─ /media/     → 本地上传目录
 
-Spring Boot（现状）
-    ├─ Auth（注册 / 登录 / JWT）
-    ├─ User / Profile / Avatar
-    ├─ Follow（关注 / 粉丝）← 产品降权，可保留
-    ├─ Article / Project（分表 + 共用状态机）← Article 复用；Project 降权
-    ├─ Media（本地存储）
-    ├─ Like / Comment
-    └─ Admin
-
-规划增量：Tool / Deal / AiMiniTool / ClickLog 等（见产品大纲）
+Spring Boot
+    ├─ Auth / User / Profile / Media / Admin     ← 已有，复用
+    ├─ Article（→ AI评测）/ Like / Comment        ← 复用并扩展
+    ├─ Project / Follow / Feed                   ← 降权保留
+    ├─ Search / SEO / RateLimit                  ← 复用并扩展 Tool
+    └─ 规划：Tool / Deal / AiMiniTool / ClickLog / AiClient / Favorite
 
 MySQL 8 + Flyway
+LLM 厂商（可插拔）← 仅服务器持有密钥
 ```
 
 ---
 
-## 2. 技术选型（已确认）
+## 2. 技术选型
 
-### 前端
+### 2.1 前端
 
 | 类别 | 选型 |
 |------|------|
-| 框架 | React + TypeScript + Vite（现有） |
-| UI | **Ant Design 5**（深色主题定制） |
-| 动效 | Framer Motion |
-| 路由 | React Router |
+| 框架 | React 19 + TypeScript + Vite |
+| UI | Ant Design 6 + 深色算法；主色青绿 `#2ee6a6`、辅色电蓝 `#3d9eff` |
+| 动效 | Framer Motion（入场、卡片悬停；克制使用） |
+| 路由 | React Router 7；路径常量 `frontend/src/router/paths.ts` |
 | HTTP | Axios + JWT 拦截器 |
-| 正文 | **Markdown**（编辑器推荐 `@uiw/react-md-editor` 或等价） |
-| 上传 | Ant Design Upload + 自研上传 API |
-| 样式 | Ant Design 主题 Token + CSS Module；首页可适当自定义 |
+| 正文 | Markdown（评测） |
+| 样式 | CSS 变量（`index.css`）+ CSS Module + Ant Token |
+| 字体 | Orbitron / Syne（展示）+ Noto Sans SC（正文） |
 
-### 后端
+### 2.2 后端
 
 | 类别 | 选型 |
 |------|------|
-| 框架 | Spring Boot（现有 4.x 路线） |
-| 安全 | Spring Security + JWT；扩展多用户与角色 |
+| 框架 | Spring Boot 4.x、Java 21 |
+| 安全 | Spring Security + JWT |
 | 持久化 | Spring Data JPA + MySQL |
-| 迁移 | **Flyway**（生产 `ddl-auto: validate`） |
+| 迁移 | Flyway（生产 `ddl-auto: validate`） |
 | 校验 | Bean Validation |
-| 文件 | `StorageService` + **LocalStorage**（磁盘目录）；接口预留 OSS |
+| 文件 | LocalStorage + Nginx `/media/`；预留 OSS |
 | API | 统一 `ApiResponse` |
-| 文档 | SpringDoc OpenAPI（建议） |
-| 限流 | 注册 / 登录 / 评论 / 上传 IP 限流 |
+| 限流 | 已有 IP 限流；扩展到 `/ai-tools/**/run` |
+| AI | `AiClient` 接口 + 可插拔实现（通义 / DeepSeek / OpenAI 等） |
 
-### 决策摘要（产品确认）
+### 2.3 运维
 
-| 决策 | 结论 |
+| 类别 | 选型 |
 |------|------|
-| 注册 | 开放注册 + 限流 |
-| 评论 | 仅登录 |
-| 正文 | Markdown |
-| UI | Ant Design 5 |
-| 图片 | 本地 + Nginx `/media/` |
-| 删除 | **软删除**（见下） |
-| 关注 | V1.0.0 必做 |
+| 进程 | systemd `personal-hub` |
+| CI | `.github/workflows/ci.yml` 构建前端+后端 |
+| CD | `.github/workflows/deploy.yml` SSH 上传 + 健康检查重试 |
+| 探活 | `/actuator/health` |
 
 ---
 
-## 3. 软删除实现约定
+## 3. 前端信息架构（以代码为准）
 
-- 内容表、评论表等需对外「消失」的实体：使用 `deleted_at DATETIME NULL`。  
-- 所有默认查询：`deleted_at IS NULL`。  
-- 业务「删除」= 设置 `deleted_at = now()`，不 `DELETE FROM`。  
-- 点赞记录：内容软删后读接口不再暴露；可级联保留或定期清理。  
-- 可选：`PurgeJob` 清理 N 天前软删数据（V1.0.0 可先留接口与配置项）。
+| 路径 | 页面 | 说明 |
+|------|------|------|
+| `/` | 聊天检索 | **默认落地**；左侧技能；含模糊搜产品/评测；`/chat` → `/` |
+| `/discover` | 发现 | 热门、技能入口、精选评测 |
+| `/tools` | AI导航 | 分类产品库 |
+| `/tools/:slug` | 工具详情 | P1 |
+| `/ai-tools/**` | （历史） | 兼容可留，非主路径 |
+| `/articles` | AI评测 | |
+| `/deals` | 限时优惠 | |
+| `/about` | 关于 | |
+| `/login` `/register` | 账号 | 成功后进聊天 |
+| `/studio/**` | 个人中心 | |
+| `/admin/**` | 治理 | 扩展 Tool/Deal/AiMiniTool |
 
-**后端必须拒绝：** 对 `PUBLISHED` 的更新正文/标题接口；仅允许 `unpublish`、`softDelete`、批量接口。
+顶栏顺序：`聊天 | 发现 | AI导航 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
 
----
+**聊天侧栏模式 id（`chatModes.ts`）：**
 
-## 4. 领域模型
+| group | id | 说明 |
+|-------|-----|------|
+| 对话 | `chat` | 聊天检索：问答、导流、模糊搜 |
+| 文本 | `copywriting` `translate` `resume` | 文案 / 翻译 / 简历 |
+| 视觉 | `image-gen` `vision` `video` | 生图 / 识图 / 视频 |
+| 文档 | `doc-summary` `contract` | **内容总结（Word/Excel/PPT/PDF）** / 合同助手 |
 
-### 4.1 用户
-
-```
-users
-  id, username, email, password_hash
-  role: AUTHOR | ADMIN
-  status: ACTIVE | DISABLED
-  created_at, updated_at
-
-user_profiles
-  user_id PK/FK
-  nickname, bio, avatar_url, links_json
-```
-
-### 4.2 关注
-
-```
-user_follows
-  id
-  follower_id   -- 关注者
-  followee_id   -- 被关注者
-  created_at
-  UNIQUE(follower_id, followee_id)
-  CHECK follower_id <> followee_id
-```
-
-查询：粉丝列表、关注列表、计数；关注动态 = 关注的人的已发布内容按时间合并分页。
-
-### 4.3 内容（方案 A：分表 + 模板）
-
-```
-articles / projects 公共字段：
-  id, user_id
-  status: DRAFT | PUBLISHED
-  published_at
-  deleted_at
-  created_at, updated_at
-  -- 各模块特有字段（title/content 或 name/description/tech_stack/...）
-```
-
-服务层抽象：`publish` / `unpublish` / `softDelete` / `batchSoftDelete` / `batchUnpublish`，先校验归属与状态。
-
-### 4.4 媒体
-
-```
-media_assets
-  id, user_id, url, mime, size_bytes
-  biz_type: AVATAR | ARTICLE | PROJECT
-  biz_id (nullable until attached)
-  created_at
-```
-
-磁盘路径示例：`/var/www/personal-hub-media/{yyyy}/{mm}/{uuid}.ext`  
-Nginx：`location /media/ { alias ...; }`
-
-### 4.5 社交
-
-```
-content_likes
-  user_id, target_type, target_id
-  UNIQUE(user_id, target_type, target_id)
-
-comments
-  id, user_id, target_type, target_id
-  body, deleted_at, created_at
-```
-
-`target_type`: `ARTICLE` | `PROJECT`（枚举可扩展）。
+目录检索：`searchCatalog()` → `{ tools, reviews }`，由聊天检索调用；日后可换语义 API。  
+⌘/Ctrl+K → 回到聊天。  
+品牌：`SITE_BRAND = 'AI Tools Hub'`。
 
 ---
 
-## 5. API 分组草图
+## 4. 视觉体系（AI 风）
 
-### Auth
+| Token | 约定 |
+|-------|------|
+| `--ph-bg` | `#05070f` 深空 |
+| `--ph-accent` | `#2ee6a6` 青绿 |
+| `--ph-accent-2` | `#3d9eff` 电蓝 |
+| `--ph-accent-3` | `#7c5cff` 点缀（少用） |
+| 氛围 | 固定背景光斑 + 轻网格；顶栏毛玻璃与渐变描边 |
+| 卡片 | 半透明深色底 + hover 光边 |
+| 原则 | 吸睛但主路径可读；动效服务层级，不堆特效；前台不出现工程黑话 |
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-
-### Me / Profile
-
-- `GET/PATCH /api/me/profile`
-- `POST /api/me/avatar`
-
-### Follow
-
-- `POST /api/me/following/{userId}` 关注  
-- `DELETE /api/me/following/{userId}` 取关  
-- `GET /api/users/{id}/followers`  
-- `GET /api/users/{id}/following`  
-- `GET /api/me/feed/following` 关注的人的已发布动态（分页）
-
-### Public Content
-
-- `GET /api/articles` `GET /api/articles/{id}`
-- `GET /api/projects` `GET /api/projects/{id}`
-- `GET /api/users/{id}/profile` + 已发布列表
-
-### Creator Content（以文章为例，项目对称）
-
-- `GET /api/me/articles?status=DRAFT|PUBLISHED`
-- `POST /api/me/articles`
-- `PUT /api/me/articles/{id}`（仅 DRAFT 且未删除）
-- `POST /api/me/articles/{id}/publish`
-- `POST /api/me/articles/{id}/unpublish`
-- `DELETE /api/me/articles/{id}`（软删）
-- `POST /api/me/articles/batch-delete`
-- `POST /api/me/articles/batch-unpublish`
-
-### Media / Social / Admin
-
-- `POST /api/media/upload`
-- `POST /api/likes/toggle` `GET /api/likes/summary`
-- `GET/POST /api/comments` `DELETE /api/comments/{id}`
-- Admin：禁用用户、强制下架、删评论
-
-**鉴权原则：** `/api/me/**` 必须登录；写操作校验 `resource.userId == currentUserId`（ADMIN 治理例外）；公开读仅 `PUBLISHED AND deleted_at IS NULL`。
+新页面必须复用上述变量与 `styles/ui.module.css` 模式，避免另起一套肤色。
 
 ---
 
-## 6. 前端信息架构
+## 5. AI 应用约定
 
-```
-/                         发现首页（最新 / 关注动态）
-/articles                 公开文章
-/projects                 公开项目
-/u/:userId                创作者主页（含关注按钮、粉丝/关注列表入口）
-/login  /register
+| 项 | 约定 |
+|----|------|
+| 双轨 | Tool = AI导航；AiMiniTool / 模式 id = 聊天技能 |
+| LLM | `AiClient` 可插拔；密钥仅环境变量 / 服务器配置 |
+| 运行 API | `POST /api/ai-tools/{slug}/run`；优先 SSE；**结果回写当前对话** |
+| 文档技能 | `doc-summary`：解析 Word/Excel/PPT/PDF（限制大小/页数）；临时存储可过期删除 |
+| 成本 | 日配额（访客/登录/会员可不同）+ IP/用户限流 + `AiRunLog` |
+| 聊天 | P0 规则意图；P1+ 可接 LLM；跳转白名单 |
+| E1 / E2 / E3 | 语义搜 / 荐工具 / 摘要增强（见 roadmap） |
+| 点击 | ClickLog 后 302 |
+| 失败体验 | 用户可读错误；可重试；Admin 可关停单技能 |
 
-/studio                   创作台概览
-/studio/articles/drafts
-/studio/articles/published
-/studio/articles/new
-/studio/articles/:id/edit   # 仅草稿
-/studio/projects/...        # 对称
+---
 
-/admin                    治理（ADMIN）
+## 6. 可复用现状（摘要）
+
+以下已在线上跑通，新产品继续用：
+
+- 注册 / 登录 / JWT / Profile / 头像  
+- Article 状态机（草稿/发布/下架）+ Studio + Admin  
+- 媒体本地存储 + `/media/`  
+- 点赞 / 评论、软删除与管理员恢复  
+- 搜索、sitemap/robots、限流、Actuator  
+- CI/CD  
+
+**软删除约定（仍有效）：** `deleted_at`；默认查询过滤；业务删除不物理删；已发布不可直接改正文。
+
+---
+
+## 7. 新增 / 演进领域模型
+
+### 7.1 Tool（AI导航）
+
+```text
+tools
+  id, name, slug, category, tags_json
+  summary, pros_json, cons_json, pricing_note
+  website_url, affiliate_url
+  score, weight, pinned, status: DRAFT|PUBLISHED|OFFLINE
+  cover_url, deleted_at, created_at, updated_at
 ```
 
-目录建议：`features/auth|profile|follow|article|project|social|studio|admin` + `shared`。
+### 7.2 Deal（限时优惠）
+
+```text
+deals
+  id, tool_id, title, description, promo_code
+  url, starts_at, ends_at, status
+  deleted_at, created_at, updated_at
+```
+
+### 7.3 AiMiniTool + 用量
+
+```text
+ai_mini_tools
+  id, slug, name, description
+  prompt_template, model, enabled
+  guest_daily_quota, user_daily_quota
+
+ai_run_logs
+  id, user_id nullable, slug, tokens_or_units, ip, created_at
+```
+
+### 7.4 ClickLog / Favorite
+
+```text
+click_logs
+  id, target_type: TOOL|DEAL, target_id, user_id nullable, ip, created_at
+
+favorites
+  user_id, tool_id, created_at
+  UNIQUE(user_id, tool_id)
+```
+
+### 7.5 Article 扩展（AI评测）
+
+- `content_type`（如 REVIEW）  
+- `related_tool_ids`（JSON 或关联表）  
+- 保留旧 `related_project_id` 但不作为主路径  
 
 ---
 
-## 7. 安全
+## 8. API 草图（增量）
 
-- BCrypt 密码；JWT 过期与密钥来自环境变量  
-- 上传白名单与大小限制；随机文件名；禁止执行权限  
-- Markdown 渲染消毒（XSS）  
-- 注册/登录/评论/上传限流  
-- 已发布更新接口直接 403/业务错误  
+### 公开
+
+- `GET /api/tools` `GET /api/tools/{slug}`  
+- `GET /api/deals`  
+- `POST /api/ai-tools/{slug}/run`（及 SSE 变体）  
+- `GET /api/r/tools/{id}` → 302  
+- `GET /api/search`（扩展 tool 命中）  
+
+### 登录用户
+
+- `GET/POST/DELETE /api/me/favorites`  
+- `GET /api/me/ai-quota`  
+
+### Admin
+
+- Tool / Deal / AiMiniTool CRUD  
+- 点击与用量汇总  
+- 既有用户 / 文章 / 软删治理  
+
+鉴权：`/api/me/**`、Admin、写操作需登录；公开读仅上架且未删除。
 
 ---
 
-## 8. 与现网演进
+## 9. 安全
 
-1. 保留 Nginx + jar + MySQL 部署方式。  
-2. 引入 Flyway；停止依赖生产 `ddl-auto=update`。  
-3. 将原 `AdminUser` 迁移为 `users.role=ADMIN`，历史文章/项目挂到该用户且 `PUBLISHED`。  
-4. 前端按里程碑替换页面；创作台与公开站共用 Design Token。  
-5. 媒体目录权限与磁盘监控写入部署文档。  
-
-开发期可清库；上正式 V1.0.0 前对现网数据执行备份 + 迁移脚本。
+- BCrypt；JWT 密钥环境变量  
+- 上传白名单与大小限制  
+- Markdown XSS 消毒  
+- `/run` 与鉴权接口限流；配额强制服务端校验  
+- Affiliate 跳转只允许配置过的 URL，防开放重定向  
+- LLM 输入做长度与敏感策略限制  
 
 ---
 
-## 9. 非功能
+## 10. 非功能
 
 | 项 | 目标 |
 |----|------|
-| 移动端 | 主路径全通 |
-| 列表 | 统一分页 |
-| 图片 | 限制分辨率/大小，避免 2G 机磁盘暴涨 |
-| 扩展 | 新模块复制分表 + 枚举 + Studio 路由 |
+| 移动端 | 聊天、导航、工具、评测、优惠主路径可用 |
+| 性能 | 列表分页；聊天首屏轻量；流式尽快出首 token |
+| 可用性 | 空态/加载/错误统一；文案用户向 |
+| 可运维 | Flyway、health、日志、Deploy 健康重试 |
+| 成本可控 | 配额、关停、用量可查 |
 
 ---
 
-## 10. 实施里程碑（与 PRD 对齐）
+## 11. 实施与里程碑（对齐路线图）
 
-| 里程碑 | 工程重点 |
-|--------|----------|
-| M0 | Ant Design 深色主题、布局壳、路由 |
-| M1 | User 模型、注册登录、Profile、头像上传 API |
-| M2 | `user_follows` + 列表/计数 API + 前端关注按钮 |
-| M3 | Article 状态机与 Studio |
-| M4 | Project 对称 |
-| M5 | Media 本地存储 + Nginx |
-| M6 | Like/Comment |
-| M7 | 首页 Feed + Following Feed + 动效/自适应 |
-| M8 | Admin + Flyway + 迁移 + 部署文档更新 |
+| 阶段 | 工程重点 |
+|------|----------|
+| **P0** | IA、默认聊天检索（含模糊搜）、侧栏技能、AI 视觉；无顶栏搜索 ✅ |
+| **P1** | Tool 域 + Admin + 前台导航；AiClient + 文案技能对话内生成 + 配额；发现/搜索接真数据 |
+| **P2** | Deal、ClickLog、评测关联、内容总结（文档解析）、SSE |
+| **P3** | E1/E2/E3、会员、更多技能 |
 
-下一步工程从 **M0** 开始。
+遗留创作者里程碑（旧 M0–M8）视为**已完成底座**，不再作为产品主排期。
+
+---
+
+## 12. 文档同步规则
+
+1. 产品方向变更 → 先改 `prd-outline.md`  
+2. 排期变更 → 改 `roadmap.md`  
+3. 路由 / AI / 数据模型变更 → 改本文并对照 `frontend/src/router/paths.ts`  
+4. 部署变更 → `docs/deploy/README.md`  
+5. 前台禁止出现本文中的内部阶段名（P0/P1、E1…）

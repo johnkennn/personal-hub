@@ -1,10 +1,10 @@
 import { Card, Form, Input, Button, Typography, App, Space } from 'antd'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 
 import { login } from '../../api/auth'
-import { ROUTES } from '../../router/paths'
+import { ROUTES, SITE_BRAND } from '../../router/paths'
 import { setAuth } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -13,8 +13,14 @@ type LoginForm = {
   password: string
 }
 
+function safeInternalPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { message } = App.useApp()
   const [form] = Form.useForm<LoginForm>()
 
@@ -24,7 +30,7 @@ export function LoginPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('登录成功')
-      navigate(ROUTES.HOME)
+      navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.CHAT)
     } catch {
       message.error('登录失败，请检查用户名或密码')
     }
@@ -37,12 +43,12 @@ export function LoginPage() {
       transition={{ duration: 0.35 }}
     >
       <Card className={styles.panel} variant="borderless">
-        <p className={styles.brand}>Personal Hub</p>
+        <p className={styles.brand}>{SITE_BRAND}</p>
         <Typography.Title level={3} style={{ marginTop: 0 }}>
           欢迎回来
         </Typography.Title>
         <Typography.Paragraph type="secondary">
-          登录后管理草稿、发布作品，并完善个人资料。
+          登录后可收藏工具、使用更高额度的实用工具，并管理账号。
         </Typography.Paragraph>
 
         <Form form={form} layout="vertical" size="large" onFinish={onFinish} requiredMark={false}>

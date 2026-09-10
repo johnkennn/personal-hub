@@ -9,8 +9,9 @@ export type PageMetaInput = {
   type?: 'website' | 'article'
 }
 
-const SITE = 'Personal Hub'
-const DEFAULT_DESC = '个人作品展映与创作主页 — 浏览项目、文章与创作者展厅。'
+const SITE = 'AI Tools Hub'
+const DEFAULT_DESC =
+  '发现分类齐全的 AI 产品、试用站内实用工具、阅读真实评测，并了解近期限时优惠。'
 
 function absoluteUrl(pathOrUrl: string | undefined): string | undefined {
   if (!pathOrUrl) return undefined

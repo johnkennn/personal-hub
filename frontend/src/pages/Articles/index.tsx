@@ -68,10 +68,10 @@ export function ArticlesPage() {
       <div className={styles.pageHead}>
         <div>
           <Typography.Title level={2} className={styles.pageTitle}>
-            文章
+            AI评测
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            已发布创作。支持最新 / 最热排序；点作者进入主页。
+            针对具体 AI 工具的评测与体验帖，帮你判断值不值得用。
           </Typography.Paragraph>
         </div>
         <Space wrap>

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { LockOutlined, MailOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 
 import { register } from '../../api/auth'
-import { ROUTES } from '../../router/paths'
+import { ROUTES, SITE_BRAND } from '../../router/paths'
 import { setAuth } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -31,7 +31,7 @@ export function RegisterPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('注册成功，已自动登录')
-      navigate(ROUTES.HOME)
+      navigate(ROUTES.CHAT)
     } catch {
       message.error('注册失败，用户名 / 邮箱 / 手机号可能已被占用')
     }
@@ -44,12 +44,12 @@ export function RegisterPage() {
       transition={{ duration: 0.35 }}
     >
       <Card className={styles.panel} variant="borderless">
-        <p className={styles.brand}>Personal Hub</p>
+        <p className={styles.brand}>{SITE_BRAND}</p>
         <Typography.Title level={3} style={{ marginTop: 0 }}>
-          创建创作者账号
+          创建账号
         </Typography.Title>
         <Typography.Paragraph type="secondary">
-          需填写用户名、邮箱与手机号；邮箱对外展示，手机号仅自己与管理员可见。
+          注册后可收藏工具、使用实用工具，并管理个人账号。
         </Typography.Paragraph>
 
         <Form form={form} layout="vertical" size="large" onFinish={onFinish} requiredMark={false}>

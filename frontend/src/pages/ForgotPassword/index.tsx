@@ -4,7 +4,7 @@ import { LockOutlined, MailOutlined, MobileOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import { forgotPassword } from '../../api/auth'
-import { ROUTES } from '../../router/paths'
+import { ROUTES, SITE_BRAND } from '../../router/paths'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = {
@@ -43,7 +43,7 @@ export function ForgotPasswordPage() {
       transition={{ duration: 0.35 }}
     >
       <Card className={styles.panel} variant="borderless">
-        <p className={styles.brand}>Personal Hub</p>
+        <p className={styles.brand}>{SITE_BRAND}</p>
         <Typography.Title level={3} style={{ marginTop: 0 }}>
           忘记密码
         </Typography.Title>

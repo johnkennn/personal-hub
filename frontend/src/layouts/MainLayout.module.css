@@ -1,6 +1,7 @@
 .layout {
   min-height: 100vh;
   background: transparent !important;
+  position: relative;
 }
 
 .main {
@@ -14,4 +15,6 @@
   max-width: var(--ph-max);
   margin: 0 auto;
   padding: 1.25rem 1.25rem 2.75rem;
+  position: relative;
+  z-index: 1;
 }

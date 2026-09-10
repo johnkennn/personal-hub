@@ -1,111 +1,88 @@
 import { fetchSearch } from '../api/search'
-import { loadPublicArticles, loadPublicProjects } from './publicContent'
+import { SEED_TOOLS, seedToolToCatalogHit } from '../data/seedTools'
+import { loadPublicArticles } from './publicContent'
 
-export type SearchAuthorHit = {
-  id: number
-  name: string
-  username?: string
+/** 目录检索：AI 产品（导航库）+ AI 评测；由「聊天检索」模式调用 */
+export type CatalogToolHit = {
+  /** 稳定键；有真实 id 后可改用数字 */
+  key: string
+  title: string
+  category: string
+  href: string
+  hint?: string
 }
 
-export type SearchContentHit = {
+export type CatalogReviewHit = {
   id: number
   title: string
   authorName?: string
 }
 
-export type GlobalSearchResult = {
-  authors: SearchAuthorHit[]
-  articles: SearchContentHit[]
-  projects: SearchContentHit[]
+export type CatalogSearchResult = {
+  tools: CatalogToolHit[]
+  reviews: CatalogReviewHit[]
 }
 
 const LIMIT_PER_TYPE = 8
 
-let indexPromise: Promise<{
-  authors: SearchAuthorHit[]
-  articles: SearchContentHit[]
-  projects: SearchContentHit[]
-}> | null = null
+let reviewIndexPromise: Promise<CatalogReviewHit[]> | null = null
 
-function buildAuthorIndex(
-  articles: { authorId: number; authorName: string }[],
-  projects: { authorId: number; authorName: string }[],
-): SearchAuthorHit[] {
-  const map = new Map<number, SearchAuthorHit>()
-  for (const a of articles) {
-    if (!a.authorId) continue
-    const prev = map.get(a.authorId)
-    map.set(a.authorId, {
-      id: a.authorId,
-      name: a.authorName || prev?.name || `用户${a.authorId}`,
-      username: prev?.username,
-    })
-  }
-  for (const p of projects) {
-    if (!p.authorId) continue
-    const prev = map.get(p.authorId)
-    map.set(p.authorId, {
-      id: p.authorId,
-      name: p.authorName || prev?.name || `用户${p.authorId}`,
-      username: prev?.username,
-    })
-  }
-  return [...map.values()]
-}
-
-async function ensureIndex() {
-  if (!indexPromise) {
-    indexPromise = Promise.all([loadPublicArticles(), loadPublicProjects()]).then(([a, p]) => ({
-      authors: buildAuthorIndex(a.items, p.items),
-      articles: a.items.map((item) => ({
+async function ensureReviewIndex() {
+  if (!reviewIndexPromise) {
+    reviewIndexPromise = loadPublicArticles().then((a) =>
+      a.items.map((item) => ({
         id: item.id,
         title: item.title,
         authorName: item.authorName,
       })),
-      projects: p.items.map((item) => ({
-        id: item.id,
-        title: item.name,
-        authorName: item.authorName,
-      })),
-    }))
+    )
   }
-  return indexPromise
+  return reviewIndexPromise
 }
 
-/** 清除缓存（发布后可选刷新）；一般无需调用 */
+export function invalidateCatalogSearchIndex() {
+  reviewIndexPromise = null
+}
+
+/** @deprecated 使用 invalidateCatalogSearchIndex */
 export function invalidateGlobalSearchIndex() {
-  indexPromise = null
+  invalidateCatalogSearchIndex()
 }
 
 function match(text: string, q: string) {
   return text.toLowerCase().includes(q)
 }
 
+function searchSeedTools(q: string): CatalogToolHit[] {
+  return SEED_TOOLS.filter(
+    (t) =>
+      match(t.name, q) ||
+      match(t.category, q) ||
+      match(t.summary, q) ||
+      t.keywords.some((k) => match(k, q) || q.includes(k.toLowerCase())) ||
+      t.tags.some((tag) => match(tag, q)),
+  )
+    .slice(0, LIMIT_PER_TYPE)
+    .map(seedToolToCatalogHit)
+}
+
 /**
- * 模糊搜索作者 / 文章 / 项目。
- * 文章与项目优先走 /api/search；失败时用本地公开列表降级。
- * 作者从公开内容作者索引 + 演示创作者中匹配。
+ * 目录检索（关键词）。预留同一返回结构，便于日后换成语义检索 API。
  */
-export async function searchGlobal(query: string): Promise<GlobalSearchResult> {
-  const q = query.trim().toLowerCase()
+export async function searchCatalog(query: string): Promise<CatalogSearchResult> {
+  const raw = query.trim()
+  const q = raw.toLowerCase()
   if (!q) {
-    return { authors: [], articles: [], projects: [] }
+    return { tools: [], reviews: [] }
   }
 
-  const index = await ensureIndex()
-  const authors = index.authors
-    .filter(
-      (a) =>
-        match(a.name, q) ||
-        (a.username ? match(a.username, q) : false) ||
-        match(String(a.id), q),
-    )
-    .slice(0, LIMIT_PER_TYPE)
+  const tools = searchSeedTools(q)
+  const reviewIndex = await ensureReviewIndex()
 
   try {
-    const res = await fetchSearch(query.trim())
+    const res = await fetchSearch(raw)
     const items = res.data.data ?? []
-    const articles = items
+    const reviews = items
       .filter((i) => i.type === 'ARTICLE')
       .map((i) => ({
         id: i.id,
@@ -113,30 +90,27 @@ export async function searchGlobal(query: string): Promise<GlobalSearchResult> {
         authorName: i.authorUsername,
       }))
       .slice(0, LIMIT_PER_TYPE)
-    const projects = items
-      .filter((i) => i.type === 'PROJECT')
-      .map((i) => ({
-        id: i.id,
-        title: i.titleOrName,
-        authorName: i.authorUsername,
-      }))
-      .slice(0, LIMIT_PER_TYPE)
-
-    // API 有结果则用 API；全空时再试本地（含演示）
-    if (articles.length + projects.length > 0) {
-      return { authors, articles, projects }
+    if (reviews.length > 0) {
+      return { tools, reviews }
     }
   } catch {
-    /* 降级本地 */
+    /* 降级本地评测索引 */
   }
 
   return {
-    authors,
-    articles: index.articles.filter((a) => match(a.title, q)).slice(0, LIMIT_PER_TYPE),
-    projects: index.projects.filter((p) => match(p.title, q)).slice(0, LIMIT_PER_TYPE),
+    tools,
+    reviews: reviewIndex.filter((r) => match(r.title, q)).slice(0, LIMIT_PER_TYPE),
   }
 }
 
-export function countSearchHits(r: GlobalSearchResult) {
-  return r.authors.length + r.articles.length + r.projects.length
+/** @deprecated 兼容旧名，请用 searchCatalog */
+export async function searchGlobal(query: string): Promise<CatalogSearchResult> {
+  return searchCatalog(query)
 }
+
+export function countSearchHits(r: CatalogSearchResult) {
+  return r.tools.length + r.reviews.length
+}
+
+/** @deprecated */
+export type GlobalSearchResult = CatalogSearchResult

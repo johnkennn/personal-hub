@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
@@ -9,15 +9,9 @@ import {
   Grid,
   Layout,
   Menu,
-  theme,
 } from 'antd'
-import type { InputRef, MenuProps } from 'antd'
-import {
-  LogoutOutlined,
-  MenuOutlined,
-  SearchOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
+import type { MenuProps } from 'antd'
+import { LogoutOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons'
 
 import { fetchMyProfile } from '../../api/profile'
 import {
@@ -32,9 +26,7 @@ import {
   subscribeProfileDisplayChange,
 } from '../../utils/profileDisplay'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
-import { NAV_ITEMS, ROUTES } from '../../router/paths'
-import { GlobalSearch } from '../GlobalSearch'
-import { HeaderSearch } from '../HeaderSearch'
+import { NAV_ITEMS, ROUTES, SITE_BRAND } from '../../router/paths'
 import { NotificationBell } from '../NotificationBell'
 import styles from './AppHeader.module.css'
 
@@ -45,14 +37,11 @@ export function AppHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const screens = useBreakpoint()
-  const { token } = theme.useToken()
-  const searchInputRef = useRef<InputRef>(null)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [username, setUsername] = useState(getUsername)
   const [avatarUrl, setAvatarUrl] = useState(() => getCachedProfileDisplay().avatarUrl)
   const [nickname, setNickname] = useState(() => getCachedProfileDisplay().nickname)
   const [open, setOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     return subscribeAuthChange(() => {
@@ -98,16 +87,13 @@ export function AppHeader() {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        if (isMobile) {
-          setSearchOpen(true)
-        } else {
-          searchInputRef.current?.focus()
-        }
+        setOpen(false)
+        navigate(ROUTES.CHAT)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isMobile])
+  }, [navigate])
 
   const selectedKeys = useMemo(() => {
     const match = NAV_ITEMS.find((item) =>
@@ -157,21 +143,8 @@ export function AppHeader() {
     },
   ]
 
-  const mobileSearchBtn = (
-    <Button
-      type="text"
-      icon={<SearchOutlined />}
-      aria-label="搜索"
-      onClick={() => {
-        setOpen(false)
-        setSearchOpen(true)
-      }}
-    />
-  )
-
   const authActions = loggedIn ? (
     <div className={styles.actions}>
-      {!isMobile ? <HeaderSearch inputRef={searchInputRef} /> : mobileSearchBtn}
       <NotificationBell />
       <Dropdown menu={{ items: userMenu }} placement="bottomRight">
         <Button type="text" className={styles.userTrigger}>
@@ -182,7 +155,6 @@ export function AppHeader() {
     </div>
   ) : (
     <div className={styles.actions}>
-      {!isMobile ? <HeaderSearch inputRef={searchInputRef} /> : mobileSearchBtn}
       <NotificationBell />
       <Button
         type="text"
@@ -206,11 +178,11 @@ export function AppHeader() {
   )
 
   return (
-    <Header className={styles.header} style={{ borderBottomColor: token.colorBorder }}>
+    <Header className={styles.header}>
       <div className={styles.inner}>
         <Flex align="center" gap="large" className={styles.left}>
-          <Link to={ROUTES.HOME} className={styles.brand}>
-            Personal Hub
+          <Link to={ROUTES.CHAT} className={styles.brand}>
+            {SITE_BRAND}
           </Link>
           {!isMobile ? (
             <Menu
@@ -237,7 +209,7 @@ export function AppHeader() {
       </div>
 
       <Drawer
-        title="Personal Hub"
+        title={SITE_BRAND}
         placement="right"
         open={open}
         onClose={() => setOpen(false)}
@@ -252,8 +224,6 @@ export function AppHeader() {
         />
         {authActions}
       </Drawer>
-
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </Header>
   )
 }

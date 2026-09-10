@@ -5,6 +5,12 @@ import { AboutPage } from '../pages/About'
 import { ArticlesPage } from '../pages/Articles'
 import { ArticleDetailPage } from '../pages/Articles/Details'
 import { HomePage } from '../pages/Home'
+import { ChatPage } from '../pages/Chat'
+import { ToolsPage } from '../pages/Tools'
+import { ToolDetailPage } from '../pages/Tools/Details'
+import { DealsPage } from '../pages/Deals'
+import { AiToolsPage } from '../pages/AiTools'
+import { ProductDescPage } from '../pages/AiTools/ProductDesc'
 import { ProjectsPage } from '../pages/Projects'
 import { LoginPage } from '../pages/Login'
 import { RegisterPage } from '../pages/Register'
@@ -50,8 +56,15 @@ export const router = createBrowserRouter([
     path: '/',
     element: <MainLayout />,
     children: [
-      { index: true, element: <HomePage /> },
+      { index: true, element: <ChatPage /> },
+      { path: 'chat', element: <Navigate to="/" replace /> },
+      { path: 'discover', element: <HomePage /> },
       { path: 'about', element: <AboutPage /> },
+      { path: 'tools', element: <ToolsPage /> },
+      { path: 'tools/:slug', element: <ToolDetailPage /> },
+      { path: 'deals', element: <DealsPage /> },
+      { path: 'ai-tools', element: <AiToolsPage /> },
+      { path: 'ai-tools/product-desc', element: <ProductDescPage /> },
 
       { path: 'articles', element: <ArticlesPage /> },
       { path: 'articles/new', element: <ArticleNewPage /> },

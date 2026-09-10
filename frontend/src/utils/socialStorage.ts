@@ -80,6 +80,14 @@ export function getLikeCount(kind: ContentKind, id: number | string) {
   return (readLikes()[key] ?? []).length
 }
 
+export function getCommentCount(kind: ContentKind, id: number | string) {
+  return listComments(kind, id).length
+}
+
+export function getHeatScore(kind: ContentKind, id: number | string) {
+  return getLikeCount(kind, id) + getCommentCount(kind, id)
+}
+
 export function isLikedByMe(kind: ContentKind, id: number | string) {
   const user = currentUser()
   if (!user) return false

@@ -10,7 +10,7 @@ export function Footer() {
   return (
     <AntFooter className={styles.footer}>
       <Typography.Text type="secondary" className={styles.text}>
-        © {year} Personal Hub · 创作者内容平台
+        © {year} AI Tools Hub · 找对 AI，用得上手
       </Typography.Text>
     </AntFooter>
   )

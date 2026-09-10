@@ -63,13 +63,13 @@ export function FloatingDock() {
 
       <Modal title="演示快捷键" open={helpOpen} onCancel={() => setHelpOpen(false)} footer={null}>
         <Typography.Paragraph>
-          <Typography.Text code>⌘/Ctrl + K</Typography.Text> 打开全局搜索
+          <Typography.Text code>⌘/Ctrl + K</Typography.Text> 回到聊天检索
         </Typography.Paragraph>
         <Typography.Paragraph>
           <Typography.Text code>?</Typography.Text> 打开本帮助
         </Typography.Paragraph>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          建议演示路径：发现 → 最新/最热/我的关注 → 顶栏搜索作者/文章/项目 → 详情赞评 → 作者主页关注 → 个人中心批量发布 → 内容治理。
+          建议演示路径：聊天检索（搜产品/评测）→ 左侧技能 → AI导航 / AI评测 → 个人中心。
         </Typography.Paragraph>
       </Modal>
     </>

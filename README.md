@@ -1,22 +1,30 @@
 # Personal Hub → AI Tools Hub
 
-仓库工程名仍为 `personal-hub`。**产品方向（暂定）已调整为 AI 工具导航 / 评测聚合 + 自研小工具**，在现有全栈代码上演进，不整体重构。
+仓库工程名仍为 `personal-hub`。
+
+**产品：** [AI Tools Hub](docs/product/prd-outline.md) — 聊天检索为默认入口（模糊搜产品/评测 + 侧栏技能），AI导航浏览外部产品。  
+**阶段：** P0 壳已就绪，进入 **P1 正式开发**（见 [roadmap.md](docs/product/roadmap.md)）。
+
+**工程：** 在现有 React + Spring Boot + MySQL 上演进，不整体重构；部署见 [docs/deploy/README.md](docs/deploy/README.md)。
 
 ## 学习目标
 
-完整互联网项目流程：React、Spring Boot、MySQL、Redis、Linux、Nginx、CI/CD 等。
+完整互联网项目流程：React、Spring Boot、MySQL、Linux、Nginx、CI/CD，以及 LLM 网关 / 配额 / 流式等 AI 应用能力。
 
 ## 目录
 
 | 路径 | 说明 |
 |------|------|
-| `frontend/` | React（Vite）前端 |
+| `frontend/` | React（Vite）前端；默认页为聊天 `/` |
 | `backend/` | Spring Boot 后端 |
-| `docs/product/prd-outline.md` | **产品需求大纲（暂定准绳）** |
-| `docs/product/roadmap.md` | 分期路线图 |
-| `docs/architecture/tech-v1.0.0.md` | 技术栈与结构（领域随产品演进） |
-| `docs/deploy/README.md` | 无 Docker 部署说明 |
+| `docs/product/prd-outline.md` | **产品需求大纲（准绳）** |
+| `docs/product/roadmap.md` | 分期路线图（P0–P3） |
+| `docs/architecture/tech-v1.0.0.md` | 技术方案与 AI / 视觉约定 |
+| `docs/deploy/README.md` | 无 Docker 部署与运维 |
 
 ## 文档原则
 
-产品以 `docs/product/prd-outline.md` 为准；与之冲突的旧创作者 / 展映 PRD 已删除。改需求先改大纲与路线图，再改代码。
+1. 产品以 `prd-outline.md` 为准。  
+2. 先改大纲 → 再改路线图 / 技术方案 → 再动代码。  
+3. 前台文案只写用户收益，不写排期与技术黑话。  
+4. 旧创作者 / 展映 PRD 已删除，不再分叉。

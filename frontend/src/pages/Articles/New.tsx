@@ -1,6 +1,17 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { App, Button, Card, Checkbox, Form, Input, Space, Tabs, Typography } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import {
+  App,
+  Button,
+  Card,
+  Checkbox,
+  Form,
+  Input,
+  Select,
+  Space,
+  Tabs,
+  Typography,
+} from 'antd'
 import { motion } from 'framer-motion'
 
 import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
@@ -8,8 +19,10 @@ import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
 import { createArticle, updateArticle, uploadArticleCover } from '../../api/article'
+import { SEED_TOOLS } from '../../data/seedTools'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { invalidateDiscoverCatalog } from '../../services/publicContent'
+import { saveArticleToolBindings } from '../../utils/articleToolBindings'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -18,11 +31,13 @@ type FormValues = {
   content: string
   published: boolean
   relatedProjectId?: number | null
+  relatedToolSlugs?: string[]
 }
 
 export function ArticleNewPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [preview, setPreview] = useState({ title: '', content: '' })
@@ -30,14 +45,39 @@ export function ArticleNewPage() {
   const [submitting, setSubmitting] = useState(false)
   const fromStudio = location.pathname.startsWith('/studio')
 
+  const presetTools = useMemo(() => {
+    const raw = searchParams.get('tools') ?? ''
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => SEED_TOOLS.some((t) => t.slug === s))
+  }, [searchParams])
+
   useEffect(() => {
-    if (!isLoggedIn()) navigate(ROUTES.LOGIN, { replace: true })
-  }, [navigate])
+    if (!isLoggedIn()) {
+      const from = `${location.pathname}${location.search}`
+      navigate(`${ROUTES.LOGIN}?from=${encodeURIComponent(from)}`, { replace: true })
+    }
+  }, [navigate, location.pathname, location.search])
+
+  useEffect(() => {
+    if (presetTools.length > 0) {
+      form.setFieldsValue({ relatedToolSlugs: presetTools })
+    }
+  }, [form, presetTools])
+
+  const toolOptions = useMemo(
+    () =>
+      SEED_TOOLS.map((t) => ({
+        value: t.slug,
+        label: `${t.name}（${t.category}）`,
+      })),
+    [],
+  )
 
   async function onFinish(values: FormValues) {
     setSubmitting(true)
     try {
-      // 封面接口要求草稿态：先创建草稿，上传后再按需发布
       const res = await createArticle({
         title: values.title,
         content: values.content,
@@ -45,6 +85,8 @@ export function ArticleNewPage() {
         published: false,
       })
       const article = res.data.data
+
+      saveArticleToolBindings(article.id, values.relatedToolSlugs ?? [])
 
       if (coverFile) {
         try {
@@ -79,16 +121,32 @@ export function ArticleNewPage() {
       <Space style={{ marginBottom: 16 }}>
         <BackNavButton fallback={fromStudio ? ROUTES.STUDIO : ROUTES.ARTICLES} />
       </Space>
-      <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="写文章">
+      <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="写评测">
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{ published: false }}
-          onValuesChange={(_, all) => setPreview({ title: all.title ?? '', content: all.content ?? '' })}
+          initialValues={{ published: false, relatedToolSlugs: presetTools }}
+          onValuesChange={(_, all) =>
+            setPreview({ title: all.title ?? '', content: all.content ?? '' })
+          }
         >
+          <Form.Item
+            name="relatedToolSlugs"
+            label="关联 AI 工具"
+            rules={[{ required: true, type: 'array', min: 1, message: '请至少绑定一个 AI 工具' }]}
+            extra="一篇评测可绑定多个工具；绑定后会出现在对应产品详情的「相关评测」里。"
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="选择评测涉及的 AI 产品"
+              options={toolOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
           <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
-            <Input size="large" placeholder="文章标题" />
+            <Input size="large" placeholder="例如：豆包一周体验：日常问答够用吗？" />
           </Form.Item>
           <Tabs
             items={[
@@ -103,7 +161,9 @@ export function ArticleNewPage() {
                   >
                     <Input.TextArea
                       rows={14}
-                      placeholder={'支持标题、列表、引用、代码块等，例如：\n\n## 小节\n\n- 要点一\n- 要点二'}
+                      placeholder={
+                        '支持标题、列表、引用、代码块等，例如：\n\n## 使用场景\n\n- 优点\n- 不足'
+                      }
                     />
                   </Form.Item>
                 ),
@@ -113,7 +173,13 @@ export function ArticleNewPage() {
                 label: '预览',
                 children: (
                   <div style={{ minHeight: 280, padding: '8px 0' }}>
-                    <h2 style={{ fontFamily: 'var(--ph-font-display)', marginTop: 0, marginBottom: 16 }}>
+                    <h2
+                      style={{
+                        fontFamily: 'var(--ph-font-display)',
+                        marginTop: 0,
+                        marginBottom: 16,
+                      }}
+                    >
                       {preview.title || '未命名'}
                     </h2>
                     <MarkdownBody content={preview.content || '*还没有正文*'} />
