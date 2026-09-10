@@ -2,9 +2,12 @@
 
 | 项 | 说明 |
 |----|------|
-| 对应产品 | [prd-v1.0.0.md](../product/prd-v1.0.0.md) |
-| 状态 | Confirmed |
+| 对应产品 | [prd-outline.md](../product/prd-outline.md)（AI Tools Hub，暂定） |
+| 路线图 | [roadmap.md](../product/roadmap.md) |
+| 状态 | 技术栈 Confirmed；**领域模块随产品演进**（将增 Tool / Deal / AiMiniTool，Project/Follow 降权） |
 | 部署形态 | 无 Docker：Nginx + Spring Boot jar + MySQL（延续现网） |
+
+> 下文描述的是**当前已实现**的栈与模块。产品已转向工具导航，实现新域时改代码并增量更新本节，不必为改方向重写全文。
 
 ---
 
@@ -19,14 +22,16 @@ Nginx
     ├─ /api/       → Spring Boot :8080
     └─ /media/     → 本地上传目录（静态）
 
-Spring Boot
+Spring Boot（现状）
     ├─ Auth（注册 / 登录 / JWT）
     ├─ User / Profile / Avatar
-    ├─ Follow（关注 / 粉丝）
-    ├─ Article / Project（分表 + 共用状态机）
+    ├─ Follow（关注 / 粉丝）← 产品降权，可保留
+    ├─ Article / Project（分表 + 共用状态机）← Article 复用；Project 降权
     ├─ Media（本地存储）
     ├─ Like / Comment
     └─ Admin
+
+规划增量：Tool / Deal / AiMiniTool / ClickLog 等（见产品大纲）
 
 MySQL 8 + Flyway
 ```

@@ -1,5 +1,6 @@
 # Personal Hub 部署说明（无 Docker）
 
+> 产品方向见 [prd-outline.md](../product/prd-outline.md)；本文只讲**现网部署**，与品牌/功能改版无关。  
 > 目标环境：Linux 云主机（已在阿里云 ECS / Alibaba Cloud Linux 验证）  
 > 架构：浏览器 → Nginx（静态前端 + `/api` 反代）→ Spring Boot jar → MySQL（本机）
 
