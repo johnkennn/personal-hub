@@ -803,12 +803,12 @@ export function ChatPage() {
           </div>
         ) : (
           <>
-            <div className={styles.listWrap}>
-              <div
-                className={`${styles.list} ph-scroll`}
-                ref={listRef}
-                onScroll={onListScroll}
-              >
+            <div
+              className={styles.listWrap}
+              ref={listRef}
+              onScroll={onListScroll}
+            >
+              <div className={styles.list}>
                 {messages.map((m) => (
                   <motion.div
                     key={m.id}
@@ -938,10 +938,12 @@ export function ChatPage() {
               ) : null}
             </div>
 
-            <p className={styles.composerTip}>
-              我也可能会犯错哦，重要信息请务必自行核查，也可以去AI导览寻找或在这里搜索专业AI工具～
-            </p>
-            {composer}
+            <div className={styles.bottomDock}>
+              <p className={styles.composerTip}>
+                我也可能会犯错哦，重要信息请务必自行核查，也可以去AI导览寻找或在这里搜索专业AI工具～
+              </p>
+              {composer}
+            </div>
           </>
         )}
       </div>

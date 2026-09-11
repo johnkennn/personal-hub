@@ -11,8 +11,16 @@ export function MainLayout() {
   return (
     <div className={styles.layout}>
       <Header />
-      <main className={`${fillViewport ? styles.mainFill : styles.main} ph-scroll`}>
-        <div className={fillViewport ? styles.mainInnerFill : styles.mainInner}>
+      <main
+        className={
+          fillViewport ? styles.mainFill : `${styles.main} ph-scroll`
+        }
+      >
+        <div
+          className={
+            fillViewport ? styles.mainInnerFillBleed : styles.mainInner
+          }
+        >
           <Outlet />
         </div>
       </main>
