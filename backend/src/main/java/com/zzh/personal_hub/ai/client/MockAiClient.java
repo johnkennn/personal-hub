@@ -32,9 +32,23 @@ public class MockAiClient implements AiClient {
     private String buildDraft(String systemPrompt, String userPrompt) {
         String brief = userPrompt == null ? "" : userPrompt.replaceAll("\\s+", " ").trim();
         if (!StringUtils.hasText(brief)) {
-            return systemPrompt != null && systemPrompt.contains("翻译")
-                ? "请粘贴要翻译的文本，并说明目标语言（例如：译成英文）。"
-                : "请先描述卖点、受众与语气，我再帮你写文案。";
+            if (systemPrompt != null && systemPrompt.contains("翻译")) {
+                return "请粘贴要翻译的文本，并说明目标语言（例如：译成英文）。";
+            }
+            if (systemPrompt != null && systemPrompt.contains("简历")) {
+                return "请粘贴简历片段或说明目标岗位，我再帮你润色（仅供参考）。";
+            }
+            return "请先描述卖点、受众与语气，我再帮你写文案。";
+        }
+
+        if (systemPrompt != null && systemPrompt.contains("简历")) {
+            String clipped = brief.length() > 220 ? brief.substring(0, 220) + "…" : brief;
+            return """
+                    【简历优化演示】（mock，未调真模型）
+                    仅供参考，非求职保证。
+                    原文摘要：%s
+                    建议：用成果量化改写经历；按目标岗对齐关键词；去掉空泛形容词。
+                    """.formatted(clipped);
         }
 
         if (systemPrompt != null && systemPrompt.contains("翻译")) {

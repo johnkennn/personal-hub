@@ -5,7 +5,7 @@
 | 对应产品 | [prd-outline.md](../product/prd-outline.md) |
 | 路线图 | [roadmap.md](../product/roadmap.md) |
 | 文档版本 | Tech 0.4（由 Personal Hub tech-v1.0.0 演进） |
-| 状态 | **与大纲 0.5 / 路线图 0.4 对齐；可开 P1 开发** |
+| 状态 | **与大纲 0.6 / 路线图 0.5 对齐；P1 统一聊天轻量版已落地** |
 | 部署 | 无 Docker：Nginx + Spring Boot jar + MySQL；GitHub Actions CI/CD |
 | 工程名 | 仓库 / Maven 包名暂保持 `personal-hub` / `com.zzh.personal_hub` |
 
@@ -82,30 +82,32 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 
 | 路径 | 页面 | 说明 |
 |------|------|------|
-| `/` | 聊天检索 | **默认落地**；左侧技能；含模糊搜产品/评测；`/chat` → `/` |
-| `/discover` | 发现 | 热门、技能入口、精选评测 |
+| `/` | 统一聊天 | **默认落地**；无侧栏；搜产品/评测 + 办事；`/chat` → `/` |
+| `/discover` | 发现 | 热门、精选评测 |
 | `/tools` | AI导航 | 分类产品库 |
-| `/tools/:slug` | 工具详情 | P1 |
+| `/tools/:slug` | 工具详情 | |
 | `/ai-tools/**` | （历史） | 兼容可留，非主路径 |
 | `/articles` | AI评测 | |
 | `/deals` | 限时优惠 | |
 | `/about` | 关于 | |
 | `/login` `/register` | 账号 | 成功后进聊天 |
 | `/studio/**` | 个人中心 | |
-| `/admin/**` | 治理 | 扩展 Tool/Deal/AiMiniTool |
+| `/admin/**` | 治理 | Tool 等 |
 
 顶栏顺序：`聊天 | 发现 | AI导航 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
 
-**聊天侧栏模式 id（`chatModes.ts`）：**
+**统一聊天（前端）：**
 
-| group | id | 说明 |
-|-------|-----|------|
-| 对话 | `chat` | 聊天检索：问答、导流、模糊搜 |
-| 文本 | `copywriting` `translate` `resume` | 文案 / 翻译 / 简历 |
-| 视觉 | `image-gen` `vision` `video` | 生图 / 识图 / 视频 |
-| 文档 | `doc-summary` `contract` | **内容总结（Word/Excel/PPT/PDF）** / 合同助手 |
+| 模块 | 说明 |
+|------|------|
+| `pages/Chat` | 单一对话壳；附件回形针；追问按钮 |
+| `services/chatRouter.ts` | 规则意图：search / skill / clarify / section；可升级后端或 LLM |
+| `utils/chatStorage.ts` | `sessionStorage`（`ai-hub-chat-messages-v2`）；关标签清空 |
+| 技能执行 | `runAiToolStream` → `POST /api/ai-tools/{slug}/run/stream` |
 
-目录检索：`searchCatalog()` → `{ tools, reviews }`，由聊天检索调用；日后可换语义 API。  
+内部技能 slug（对用户不可见）：`copywriting` `translate` `resume`；（渐进）`summary` `contract` 等。
+
+目录检索：`searchCatalog()` → `{ tools, reviews }`，由统一聊天调用。  
 ⌘/Ctrl+K → 回到聊天。  
 品牌：`SITE_BRAND = 'AI Tools Hub'`。
 
@@ -131,15 +133,15 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 
 | 项 | 约定 |
 |----|------|
-| 双轨 | Tool = AI导航；AiMiniTool / 模式 id = 聊天技能 |
-| LLM | `AiClient` 可插拔；密钥仅环境变量 / 服务器配置 |
-| 运行 API | `POST /api/ai-tools/{slug}/run`；优先 SSE；**结果回写当前对话** |
-| 文档技能 | `doc-summary`：解析 Word/Excel/PPT/PDF（限制大小/页数）；临时存储可过期删除 |
-| 成本 | 日配额（访客/登录/会员可不同）+ IP/用户限流 + `AiRunLog` |
-| 聊天 | P0 规则意图；P1+ 可接 LLM；跳转白名单 |
+| 双轨 | Tool = AI导航；聊天内办事 = 意图路由 + `AiClient`（slug 仅内部） |
+| LLM | `AiClient` 可插拔（mock / openai-compatible）；密钥仅环境变量 |
+| 运行 API | `POST /api/ai-tools/{slug}/run` 与 `/run/stream`（SSE）；预留 `/api/chat` 门面 |
+| 配额 | `app.ai.quota-enabled`；关闭时不拦请求；`AiRunLog` 仍可记 |
+| 文档 / 附件 | 前端白名单；服务端临时文件 + TTL（待加深）；不默认长期存原文 |
+| 聊天意图 | 前端 `RuleChatRouter`；低置信 clarify；搜优先于模糊办事；P2+ 可 LLM |
 | E1 / E2 / E3 | 语义搜 / 荐工具 / 摘要增强（见 roadmap） |
 | 点击 | ClickLog 后 302 |
-| 失败体验 | 用户可读错误；可重试；Admin 可关停单技能 |
+| 失败体验 | 用户可读错误；可重试 |
 
 ---
 
@@ -263,10 +265,10 @@ favorites
 
 | 阶段 | 工程重点 |
 |------|----------|
-| **P0** | IA、默认聊天检索（含模糊搜）、侧栏技能、AI 视觉；无顶栏搜索 ✅ |
-| **P1** | Tool 域 + Admin + 前台导航；AiClient + 文案技能对话内生成 + 配额；发现/搜索接真数据 |
-| **P2** | Deal、ClickLog、评测关联、内容总结（文档解析）、SSE |
-| **P3** | E1/E2/E3、会员、更多技能 |
+| **P0** | IA、默认聊天、AI 视觉；无顶栏搜索 ✅ |
+| **P1** | Tool 域 + Admin + 导航；统一聊天（无侧栏）+ 规则意图 + SSE 文案/翻译/简历；配额开关；发现/搜索接真数据 ✅ 轻量 |
+| **P2** | Deal、ClickLog、评测关联、内容总结（文档解析）、`/api/chat` 门面、附件 TTL |
+| **P3** | E1/E2/E3、LLM 意图、会员、更多技能 |
 
 遗留创作者里程碑（旧 M0–M8）视为**已完成底座**，不再作为产品主排期。
 

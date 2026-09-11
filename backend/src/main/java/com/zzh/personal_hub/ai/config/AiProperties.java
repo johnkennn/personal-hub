@@ -16,4 +16,6 @@ public class AiProperties {
     private int guestDailyQuota = 5;
     private int userDailyQuota = 30;
     private int timeoutMs = 45000;
+    /** false：暂不限额（演示期）；接真模型后改 true */
+    private boolean quotaEnabled = false;
 }

@@ -39,7 +39,10 @@ public class AiToolRunService {
                 + "结构清晰，避免空话；不要编造无法从输入推断的参数。",
         "translate",
         "你是专业翻译助手。根据用户指定的目标语言翻译文本；若未说明目标语言，默认译为英文。"
-                + "只输出译文（必要时可加一行极短的语言说明），不要扩写、不要评论原文。"
+                + "只输出译文（必要时可加一行极短的语言说明），不要扩写、不要评论原文。",
+        "resume",
+        "你是简历优化助手。在保留事实的前提下润色结构与措辞，给出可直接粘贴的改写建议。"
+        + "不要编造经历；可简短免责：仅供参考、非求职保证。"
     );
 
     private static final ExecutorService STREAM_EXECUTOR = Executors.newFixedThreadPool(8, r -> {
@@ -123,7 +126,7 @@ public class AiToolRunService {
         Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
         long used = aiRunLogRepository.countBySlugAndClientKeyAndCreatedAtGreaterThanEqual(
                 normalized, clientKey, dayStart);
-        if (used >= dailyQuota) {
+        if (aiProperties.isQuotaEnabled() && used >= dailyQuota) {
             throw new BusinessException(429, "今日额度已用完，登录或明天再试");
         }
 

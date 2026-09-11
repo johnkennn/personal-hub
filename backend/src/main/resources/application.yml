@@ -28,6 +28,7 @@ app:
     guest-daily-quota: 5
     user-daily-quota: 30
     timeout-ms: 45000
+    quota-enabled: ${AI_QUOTA_ENABLED:false}
 spring:
   application:
     name: personal-hub
