@@ -27,8 +27,7 @@ export const CHAT_MODES: ChatMode[] = [
     group: '对话',
     blurb: '问答、导流与模糊搜索',
     placeholder: '问问题，或说「搜豆包」「找 Midjourney 评测」…',
-    welcome:
-      '当前是聊天检索：可以问答、跳转到导航 / 评测 / 优惠，也可以直接搜已收录的 AI 产品与评测（例如「搜通义千问」「找绘画相关评测」）。结果会以可点击列表回复。写文案、总结文档等请切换左侧技能模式。',
+    welcome: '搜产品、问答，直接说即可。',
     ready: true,
   },
   {

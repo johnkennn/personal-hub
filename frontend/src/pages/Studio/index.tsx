@@ -6,7 +6,6 @@ import {
   EditOutlined,
   FileTextOutlined,
   FolderOutlined,
-  LockOutlined,
   MessageOutlined,
   TeamOutlined,
   UserOutlined,
@@ -60,11 +59,13 @@ type Entry = {
   to: string
   icon: ReactNode
   count?: number | null
+  /** 少数入口需要替换历史时再开（例如不希望返回落到中间页） */
+  replace?: boolean
 }
 
 function EntryCard({ item }: { item: Entry }) {
   return (
-    <Link to={item.to} className={styles.cardLink}>
+    <Link to={item.to} replace={item.replace} className={styles.cardLink}>
       <Card className={styles.studioCard} variant="borderless">
         <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
           <Space align="start">
@@ -212,12 +213,6 @@ export function StudioHomePage() {
       desc: '昵称、邮箱、手机与头像',
       to: ROUTES.STUDIO_PROFILE,
       icon: <UserOutlined />,
-    },
-    {
-      title: '修改密码',
-      desc: '验证旧密码后更换',
-      to: ROUTES.STUDIO_PASSWORD,
-      icon: <LockOutlined />,
     },
     {
       title: '关注',

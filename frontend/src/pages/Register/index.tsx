@@ -31,7 +31,7 @@ export function RegisterPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('注册成功，已自动登录')
-      navigate(ROUTES.CHAT)
+      navigate(ROUTES.CHAT, { replace: true })
     } catch {
       message.error('注册失败，用户名 / 邮箱 / 手机号可能已被占用')
     }
@@ -103,7 +103,9 @@ export function RegisterPage() {
 
         <Space>
           <Typography.Text type="secondary">已有账号？</Typography.Text>
-          <Link to={ROUTES.LOGIN}>去登录</Link>
+          <Link to={ROUTES.LOGIN} replace>
+            去登录
+          </Link>
         </Space>
       </Card>
     </motion.div>

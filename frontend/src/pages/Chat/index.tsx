@@ -229,7 +229,7 @@ export function ChatPage() {
 
   usePageMeta({
     title: '聊天',
-    description: `${SITE_BRAND} 统一对话：搜产品、翻译、文案、简历与文档助手。`,
+    description: `${SITE_BRAND} 聊天：搜产品、翻译、写文案。`,
   })
 
   useEffect(() => {
@@ -466,7 +466,7 @@ export function ChatPage() {
                   聊天
                 </Typography.Title>
                 <Typography.Paragraph className={styles.sub} type="secondary">
-                  统一对话 · 搜产品 / 办事 · 附件仅本会话
+                  搜产品 · 翻译 · 写文案
                 </Typography.Paragraph>
               </div>
             </div>
@@ -570,7 +570,7 @@ export function ChatPage() {
           <Input.TextArea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="说需求，或点左侧回形针上传文件…（Shift+Enter 换行）"
+            placeholder="说需求，或上传文件…"
             autoSize={{ minRows: 1, maxRows: 4 }}
             onPressEnter={(e) => {
               if (!e.shiftKey) {

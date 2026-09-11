@@ -26,6 +26,7 @@ import { AdminProjectsPage } from '../pages/Admin/Projects'
 import { AdminUsersPage } from '../pages/Admin/Users'
 import { AdminSuggestionsPage } from '../pages/Admin/Suggestions'
 import { AdminToolsPage } from '../pages/Admin/Tools'
+import { AdminDealsPage } from '../pages/Admin/Deals'
 import { AdminHomePage } from '../pages/Admin'
 import {
   StudioArticleDraftsPage,
@@ -109,6 +110,7 @@ export const router = createBrowserRouter([
       { path: 'admin/projects/deleted', element: <AdminDeletedProjectsPage /> },
       { path: 'admin/suggestions', element: <AdminSuggestionsPage /> },
       { path: 'admin/tools', element: <AdminToolsPage /> },
+      { path: 'admin/deals', element: <AdminDealsPage /> },
     ],
   },
 ])

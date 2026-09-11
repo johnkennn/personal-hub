@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   FileTextOutlined,
   FolderOutlined,
+  GiftOutlined,
   MessageOutlined,
   RightOutlined,
   TeamOutlined,
@@ -99,6 +100,13 @@ export function AdminHomePage() {
       desc: '维护分类与 AI 产品，上架后前台导览 / 检索可见。',
       to: ROUTES.ADMIN_TOOLS,
       icon: <AppstoreOutlined />,
+      metrics: [],
+    },
+    {
+      title: '限时优惠',
+      desc: '维护进行中的折扣与活动，关联导览产品。',
+      to: ROUTES.ADMIN_DEALS,
+      icon: <GiftOutlined />,
       metrics: [],
     },
     {

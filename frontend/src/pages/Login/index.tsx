@@ -30,7 +30,7 @@ export function LoginPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('登录成功')
-      navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.CHAT)
+      navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.CHAT, { replace: true })
     } catch {
       message.error('登录失败，请检查用户名或密码')
     }
@@ -80,9 +80,13 @@ export function LoginPage() {
         <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
           <Space>
             <Typography.Text type="secondary">还没有账号？</Typography.Text>
-            <Link to={ROUTES.REGISTER}>立即注册</Link>
+            <Link to={ROUTES.REGISTER} replace>
+              立即注册
+            </Link>
           </Space>
-          <Link to={ROUTES.FORGOT_PASSWORD}>忘记密码</Link>
+          <Link to={ROUTES.FORGOT_PASSWORD} replace>
+            忘记密码
+          </Link>
         </Space>
       </Card>
     </motion.div>

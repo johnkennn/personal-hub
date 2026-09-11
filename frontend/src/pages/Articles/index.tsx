@@ -22,8 +22,10 @@ import {
   CatalogPager,
 } from '../../components/CatalogPager'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
+import { PageHero } from '../../components/PageHero'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
 import { isLoggedIn } from '../../utils/authStorage'
@@ -38,6 +40,11 @@ export function ArticlesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
   const [sort, setSort] = useState<'latest' | 'hot'>('latest')
+
+  usePageMeta({
+    title: 'AI评测',
+    description: '体验与对比，帮你判断适不适合。',
+  })
 
   useEffect(() => {
     loadPublicArticles()
@@ -64,16 +71,10 @@ export function ArticlesPage() {
   }, [sorted, page, pageSize])
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <div className={styles.pageHead}>
-        <div>
-          <Typography.Title level={2} className={styles.pageTitle}>
-            AI评测
-          </Typography.Title>
-          <Typography.Paragraph className={styles.pageDesc}>
-            针对具体 AI 工具的评测与体验帖，帮你判断值不值得用。
-          </Typography.Paragraph>
-        </div>
+    <PageHero
+      title="AI评测"
+      tagline="真实体验，帮你判断值不值得用"
+      extra={
         <Space wrap>
           <Segmented
             value={sort}
@@ -101,8 +102,8 @@ export function ArticlesPage() {
             </Link>
           ) : null}
         </Space>
-      </div>
-
+      }
+    >
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : articles.length === 0 ? (
@@ -170,6 +171,6 @@ export function ArticlesPage() {
           </Row>
         </CatalogListLayout>
       )}
-    </motion.div>
+    </PageHero>
   )
 }

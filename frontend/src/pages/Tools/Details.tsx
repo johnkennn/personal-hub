@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
-import {
-  ArrowLeftOutlined,
-  EditOutlined,
-  ExportOutlined,
-  FireOutlined,
-} from '@ant-design/icons'
+import { EditOutlined, ExportOutlined, FireOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
+import { BackNavButton } from '../../components/BackNavButton'
 import { listSeedReviewsForTool } from '../../data/seedToolReviews'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle } from '../../mocks/publicDemo'
@@ -174,9 +170,7 @@ export function ToolDetailPage() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <Empty description="没有找到这个产品" style={{ marginTop: 48 }}>
-          <Link to={ROUTES.TOOLS}>
-            <Button type="primary">返回 AI导览</Button>
-          </Link>
+          <BackNavButton fallback={ROUTES.TOOLS} type="primary" label="返回上一页" />
         </Empty>
       </motion.div>
     )
@@ -190,9 +184,7 @@ export function ToolDetailPage() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Link to={ROUTES.TOOLS} className={styles.back}>
-        <ArrowLeftOutlined /> 返回 AI导览
-      </Link>
+      <BackNavButton fallback={ROUTES.TOOLS} className={styles.back} />
 
       <header className={styles.detailHead}>
         <div>

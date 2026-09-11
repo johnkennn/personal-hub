@@ -48,6 +48,7 @@ export const ROUTES = {
   ADMIN_PROJECTS_DELETED: '/admin/projects/deleted',
   ADMIN_SUGGESTIONS: '/admin/suggestions',
   ADMIN_TOOLS: '/admin/tools',
+  ADMIN_DEALS: '/admin/deals',
   /** @deprecated 兼容旧链接，路由层重定向到 /articles */
   BLOG: '/blog',
   /** @deprecated 请用 CHAT；保留以免旧引用报错 */

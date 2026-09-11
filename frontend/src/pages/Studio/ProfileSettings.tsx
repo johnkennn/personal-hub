@@ -227,7 +227,9 @@ export function ProfileSettingsPage() {
               <Button type="primary" htmlType="submit">
                 保存修改
               </Button>
-              <Button onClick={() => navigate(ROUTES.STUDIO_PASSWORD)}>修改密码</Button>
+              <Button onClick={() => navigate(ROUTES.STUDIO_PASSWORD, { replace: true })}>
+                修改密码
+              </Button>
             </Space>
           </Form.Item>
         </Form>

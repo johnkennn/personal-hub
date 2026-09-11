@@ -27,21 +27,9 @@ const MESSAGES_KEY = 'ai-hub-chat-messages-v2'
 const LEGACY_MODE_KEY = 'ai-hub-chat-mode-v1'
 
 export const UNIFIED_WELCOME: ChatMessage = {
-  id: 'welcome-unified',
+  id: 'welcome-unified-v3',
   role: 'assistant',
-  text: [
-    '你好，我是 AI Tools Hub 助手。',
-    '',
-    '直接说需求即可，例如：',
-    '· 「搜豆包」——找产品 / 评测',
-    '· 「译成英文：……」——翻译',
-    '· 「写个耳机卖点文案」——写作',
-    '· 「帮我润色这段简历：……」——简历优化（仅供参考，非求职保证）',
-    '',
-    '也可稍后上传图片或 PDF 等（当前会话有效；关闭标签页后对话与附件会消失，我们不长期保存原文）。',
-    '',
-    '若我说不清你的意图，会先追问再动手，避免跑偏。',
-  ].join('\n'),
+  text: '你好。搜产品、翻译、写文案，直接说即可。附件仅本会话有效。',
 }
 
 function isHit(value: unknown): value is ChatHit {
@@ -88,7 +76,15 @@ export function loadChatMessages(): ChatMessage[] {
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) return fallback
     const list = parsed.filter(isMessage)
-    return list.length > 0 ? list : fallback
+    if (list.length === 0) return fallback
+    // 仅欢迎语时换成最新短文案；有真实对话则保留历史
+    if (list.length === 1 && list[0].id.startsWith('welcome-unified')) {
+      return fallback
+    }
+    if (list[0]?.id.startsWith('welcome-unified')) {
+      return [UNIFIED_WELCOME, ...list.slice(1)]
+    }
+    return list
   } catch {
     return fallback
   }

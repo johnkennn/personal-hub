@@ -80,9 +80,10 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/api/projects/*").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/projects", "/api/projects/*").permitAll()
 
-                    // —— Tools（AI导航）——
+                    // —— Tools（AI导览）+ 限时优惠 ——
                     .requestMatchers(HttpMethod.GET, "/api/tool-categories", "/api/tool-categories/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/*").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/deals").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/chat/stream").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/ai-tools/*/run", "/api/ai-tools/*/run/stream").permitAll()
 

@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
 
-import { FloatingDock } from '../components/FloatingDock'
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
 import styles from './MainLayout.module.css'
@@ -17,8 +16,7 @@ export function MainLayout() {
           <Outlet />
         </div>
       </main>
-      <Footer />
-      {import.meta.env.DEV ? <FloatingDock /> : null}
+      {!fillViewport ? <Footer /> : null}
     </div>
   )
 }

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
+import { Empty, Segmented, Skeleton, Tag } from 'antd'
 import { motion } from 'framer-motion'
 
+import { PageHero } from '../../components/PageHero'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { toolDetailPath } from '../../router/paths'
 import {
@@ -11,7 +12,6 @@ import {
   loadHubTools,
 } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
-import ui from '../../styles/ui.module.css'
 import styles from './Tools.module.css'
 
 export function ToolsPage() {
@@ -22,7 +22,7 @@ export function ToolsPage() {
 
   usePageMeta({
     title: 'AI导览',
-    description: '按写作、绘画、视频、编程等分类浏览成熟的 AI 产品。',
+    description: '成熟 AI 产品按场景分类浏览。',
   })
 
   useEffect(() => {
@@ -48,26 +48,19 @@ export function ToolsPage() {
   )
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <div className={ui.pageHead}>
-        <div>
-          <Typography.Title level={2} className={ui.pageTitle}>
-            AI导览
-          </Typography.Title>
-          <Typography.Paragraph className={ui.pageDesc}>
-            汇集市面成熟 AI 产品，按场景分类整理。点进详情可看简介并前往官网。
-          </Typography.Paragraph>
+    <PageHero
+      title="AI导览"
+      tagline="成熟产品，按场景分类"
+      extra={
+        <div className={styles.filters}>
+          <Segmented
+            value={category}
+            onChange={(v) => setCategory(String(v))}
+            options={categoryNames}
+          />
         </div>
-      </div>
-
-      <div className={styles.filters}>
-        <Segmented
-          value={category}
-          onChange={(v) => setCategory(String(v))}
-          options={categoryNames}
-        />
-      </div>
-
+      }
+    >
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : filtered.length === 0 ? (
@@ -77,7 +70,7 @@ export function ToolsPage() {
           {filtered.map((t, i) => (
             <motion.div
               key={t.slug}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.04, 0.28) }}
             >
@@ -96,6 +89,6 @@ export function ToolsPage() {
           ))}
         </div>
       )}
-    </motion.div>
+    </PageHero>
   )
 }

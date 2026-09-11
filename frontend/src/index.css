@@ -107,6 +107,51 @@ body {
   background: transparent;
 }
 
+/*
+ * Ant Design Modal 默认挂到 document.body（不在 #root 内）。
+ * 限制整框高度，header/footer 固定，仅 body 内部滚动。
+ */
+.ant-modal-wrap {
+  overflow: auto;
+}
+
+.ant-modal {
+  max-width: calc(100vw - 32px);
+  padding-bottom: 0;
+  top: 7.5vh;
+  margin: 0 auto;
+}
+
+.ant-modal .ant-modal-container,
+.ant-modal .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+}
+
+.ant-modal .ant-modal-header,
+.ant-modal .ant-modal-footer {
+  flex-shrink: 0;
+}
+
+.ant-modal .ant-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 230, 166, 0.55) transparent;
+}
+
+.ant-drawer-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* 未标记区域的滚动条也尽量克制，避免再出现粗白条 */
 * {
   scrollbar-width: thin;

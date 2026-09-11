@@ -38,7 +38,7 @@ export function ChangePasswordPage() {
       })
       message.success('密码已更新')
       form.resetFields()
-      navigate(ROUTES.STUDIO)
+      navigate(ROUTES.STUDIO, { replace: true })
     } catch {
       message.error('修改失败：请确认旧密码正确')
     } finally {

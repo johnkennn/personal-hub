@@ -1,34 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Button,
-  Card,
-  Col,
-  Empty,
-  Row,
-  Tag,
-  Typography,
-} from 'antd'
+import { Button, Card, Col, Empty, Row, Tag, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
+import { PageHero, pageHeroStyles, SectionHead } from '../../components/PageHero'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   articleDetailPath,
   ROUTES,
-  SITE_BRAND,
   toolDetailPath,
 } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
 import { loadFeaturedHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
 import { excerpt, formatDateTime } from '../../utils/format'
-import styles from './Home.module.css'
 import ui from '../../styles/ui.module.css'
-
-const { Title, Paragraph } = Typography
 
 export function HomePage() {
   const [articles, setArticles] = useState<PublicArticle[]>([])
@@ -36,7 +25,7 @@ export function HomePage() {
 
   usePageMeta({
     title: '发现',
-    description: '热门 AI 产品、站内实用工具与精选评测。',
+    description: '热门 AI 产品与精选评测。',
   })
 
   useEffect(() => {
@@ -65,53 +54,21 @@ export function HomePage() {
   )
 
   return (
-    <div>
-      <section className={styles.hero}>
-        <div className={styles.heroGlow} aria-hidden />
-        <div className={styles.heroContent}>
-          <motion.p
-            className={styles.brand}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            {SITE_BRAND}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.06 }}
-          >
-            <Title level={1} className={styles.headline}>
-              发现好用的 AI
-            </Title>
-            <Paragraph className={styles.lead}>
-              热门产品、实用工具与精选评测，一站看清再做选择。
-            </Paragraph>
-          </motion.div>
-        </div>
-      </section>
-
+    <PageHero title="发现" tagline="热门产品 · 聊天技能 · 精选评测">
       <motion.section
-        className={styles.section}
-        initial={{ opacity: 0, y: 8 }}
+        className={pageHeroStyles.section}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.08 }}
       >
-        <div className={ui.pageHead} style={{ marginBottom: 12 }}>
-          <div>
-            <Typography.Title level={3} className={ui.pageTitle}>
-              热门 AI 产品
-            </Typography.Title>
-            <Typography.Paragraph className={ui.pageDesc}>
-              精选与近期热门，快速了解适用场景与入口。
-            </Typography.Paragraph>
-          </div>
-          <Link to={ROUTES.TOOLS}>
-            <Button type="link">AI导览</Button>
-          </Link>
-        </div>
+        <SectionHead
+          label="热门产品"
+          action={
+            <Link to={ROUTES.TOOLS}>
+              <Button type="link">AI导览</Button>
+            </Link>
+          }
+        />
         <Row gutter={[14, 14]}>
           {hotTools.map((t) => (
             <Col key={t.slug} xs={24} sm={12} lg={6}>
@@ -132,34 +89,29 @@ export function HomePage() {
       </motion.section>
 
       <motion.section
-        className={styles.section}
-        initial={{ opacity: 0, y: 8 }}
+        className={pageHeroStyles.section}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.14 }}
+        transition={{ delay: 0.12 }}
       >
-        <div className={ui.pageHead} style={{ marginBottom: 12 }}>
-          <div>
-            <Typography.Title level={3} className={ui.pageTitle}>
-              聊天技能
-            </Typography.Title>
-            <Typography.Paragraph className={ui.pageDesc}>
-              在聊天左侧切换模式，直接在对话框里完成，例如文案写作。
-            </Typography.Paragraph>
-          </div>
-          <Link to={ROUTES.CHAT}>
-            <Button type="link">打开聊天</Button>
-          </Link>
-        </div>
+        <SectionHead
+          label="快捷入口"
+          action={
+            <Link to={ROUTES.CHAT}>
+              <Button type="link">打开聊天</Button>
+            </Link>
+          }
+        />
         <Row gutter={[14, 14]}>
           <Col xs={24} sm={12} lg={8}>
             <Link to={ROUTES.CHAT} className={ui.cardLink}>
               <Card className={ui.contentCard} variant="borderless" hoverable>
-                <Tag style={{ marginBottom: 8 }}>聊天内</Tag>
+                <Tag style={{ marginBottom: 8 }}>聊天</Tag>
                 <Typography.Title level={4} style={{ marginTop: 0 }}>
                   文案写作
                 </Typography.Title>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  在聊天左侧切换「文案写作」，直接描述卖点即可生成草稿。
+                  对话里直接生成卖点草稿
                 </Typography.Paragraph>
               </Card>
             </Link>
@@ -172,7 +124,7 @@ export function HomePage() {
                   限时优惠
                 </Typography.Title>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  汇总近期有折扣或活动的 AI 产品。
+                  折扣与活动一站看
                 </Typography.Paragraph>
               </Card>
             </Link>
@@ -181,27 +133,22 @@ export function HomePage() {
       </motion.section>
 
       <motion.section
-        className={styles.section}
-        initial={{ opacity: 0, y: 8 }}
+        className={pageHeroStyles.section}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.18 }}
+        transition={{ delay: 0.16 }}
       >
-        <div className={ui.pageHead} style={{ marginBottom: 12 }}>
-          <div>
-            <Typography.Title level={3} className={ui.pageTitle}>
-              精选评测
-            </Typography.Title>
-            <Typography.Paragraph className={ui.pageDesc}>
-              针对具体 AI 工具的体验与对比，帮你判断适不适合。
-            </Typography.Paragraph>
-          </div>
-          <Link to={ROUTES.ARTICLES}>
-            <Button type="link">更多评测</Button>
-          </Link>
-        </div>
+        <SectionHead
+          label="精选评测"
+          action={
+            <Link to={ROUTES.ARTICLES}>
+              <Button type="link">更多</Button>
+            </Link>
+          }
+        />
 
         {featuredReviews.length === 0 ? (
-          <Empty description="暂无评测，稍后再来看看" />
+          <Empty description="暂无评测" />
         ) : (
           <Row gutter={[14, 14]}>
             {featuredReviews.map((item) => (
@@ -250,6 +197,6 @@ export function HomePage() {
           </Row>
         )}
       </motion.section>
-    </div>
+    </PageHero>
   )
 }

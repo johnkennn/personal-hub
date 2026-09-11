@@ -30,7 +30,7 @@ export function ForgotPasswordPage() {
         newPassword: values.newPassword,
       })
       message.success('密码已重置，请登录')
-      navigate(ROUTES.LOGIN)
+      navigate(ROUTES.LOGIN, { replace: true })
     } catch {
       message.error('重置失败：请确认邮箱与手机号匹配同一账号')
     }
@@ -108,7 +108,9 @@ export function ForgotPasswordPage() {
         </Form>
 
         <Space>
-          <Link to={ROUTES.LOGIN}>返回登录</Link>
+          <Link to={ROUTES.LOGIN} replace>
+            返回登录
+          </Link>
         </Space>
       </Card>
     </motion.div>
