@@ -2,14 +2,51 @@ package com.zzh.personal_hub.ai.client;
 
 import org.springframework.util.StringUtils;
 
+import java.util.function.Consumer;
+
 public class MockAiClient implements AiClient {
 
     @Override
     public String complete(String systemPrompt, String userPrompt) {
+        return buildDraft(systemPrompt, userPrompt);
+    }
+
+    @Override
+    public void stream(String systemPrompt, String userPrompt, Consumer<String> onDelta) {
+        String full = buildDraft(systemPrompt, userPrompt);
+        // 模拟「打字机」：每次吐几个字，方便本地不配 Key 也能验收流式
+        int i = 0;
+        while (i < full.length()) {
+            int end = Math.min(full.length(), i + 4);
+            onDelta.accept(full.substring(i, end));
+            i = end;
+            try {
+                Thread.sleep(18);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
+    private String buildDraft(String systemPrompt, String userPrompt) {
         String brief = userPrompt == null ? "" : userPrompt.replaceAll("\\s+", " ").trim();
         if (!StringUtils.hasText(brief)) {
-            return "请先描述卖点、受众与语气，我再帮你写文案。";
+            return systemPrompt != null && systemPrompt.contains("翻译")
+                ? "请粘贴要翻译的文本，并说明目标语言（例如：译成英文）。"
+                : "请先描述卖点、受众与语气，我再帮你写文案。";
         }
+
+        if (systemPrompt != null && systemPrompt.contains("翻译")) {
+            String clipped = brief.length() > 220 ? brief.substring(0, 220) + "…" : brief;
+            return """
+                    【译文演示】
+                    （检测到翻译请求；当前为 mock，未调用真模型）
+                    原文摘要：%s
+                    演示译文：This is a demo translation of your text. Configure app.ai.provider=openai-compatible and set an API key for real results.
+                    """.formatted(clipped);
+        }
+
         String clipped = brief.length() > 180 ? brief.substring(0, 180) + "…" : brief;
         return """
                 【商品描述草稿】

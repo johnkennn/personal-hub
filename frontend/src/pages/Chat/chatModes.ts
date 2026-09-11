@@ -47,8 +47,9 @@ export const CHAT_MODES: ChatMode[] = [
     group: '文本',
     blurb: '多语言互译',
     placeholder: '粘贴要翻译的文本，并说明目标语言…',
-    welcome: '文本翻译模式即将开放。上线后在本对话直接粘贴文本即可翻译，无需跳转。',
-    ready: false,
+    welcome:
+      '文本翻译模式：粘贴原文并说明目标语言（例如「译成英文」「中译日」），发送后会在对话里流式给出译文。访客有每日额度，登录后额度更高。',
+    ready: true,
   },
   {
     id: 'resume',

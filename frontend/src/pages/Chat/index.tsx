@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input, Space, Typography } from 'antd'
 import { ClearOutlined, MenuOutlined, SendOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
-import { runAiTool } from '../../api/aiTools'
+import { runAiToolStream } from '../../api/aiTools'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   articleDetailPath,
@@ -220,6 +220,65 @@ function draftCopywritingFallback(raw: string): string {
   ].join('\n')
 }
 
+function draftTranslateFallback(raw: string): string {
+  const brief = raw.replace(/\s+/g, ' ').trim()
+  return [
+    '【译文草稿】（本地兜底，后端暂不可用）',
+    '',
+    '原文摘录：',
+    brief.slice(0, 240) + (brief.length > 240 ? '…' : ''),
+    '',
+    '请稍后重试，或检查后端是否已开放 translate 技能。',
+  ].join('\n')
+}
+
+function uid() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** 文案 / 翻译等技能共用：占位气泡 + 流式追加 + 额度提示 */
+async function streamSkillReply(
+  slug: 'copywriting' | 'translate',
+  content: string,
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
+  fallback: (raw: string) => string,
+) {
+  const assistantId = uid()
+  setMessages((prev) => [
+    ...prev,
+    { id: assistantId, role: 'assistant', text: '' },
+  ])
+  try {
+    await runAiToolStream(slug, content, {
+      onDelta: (chunk) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, text: m.text + chunk } : m,
+          ),
+        )
+      },
+      onDone: ({ remainingQuota, dailyQuota }) => {
+        if (remainingQuota < 0) return
+        const hint = `\n\n（今日剩余额度 ${remainingQuota}/${dailyQuota}）`
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, text: m.text + hint } : m,
+          ),
+        )
+      },
+    })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : ''
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === assistantId
+          ? { ...m, text: msg || fallback(content) }
+          : m,
+      ),
+    )
+  }
+}
+
 async function replyInSkillMode(mode: ChatModeId, input: string): Promise<IntentResult> {
   const m = getChatMode(mode)
   const raw = input.trim()
@@ -233,31 +292,8 @@ async function replyInSkillMode(mode: ChatModeId, input: string): Promise<Intent
     }
   }
 
-  if (mode === 'copywriting') {
-    try {
-      const res = await runAiTool('copywriting', raw)
-      const data = res.data.data
-      const quotaHint =
-        data.remainingQuota >= 0
-          ? `\n\n（今日剩余额度 ${data.remainingQuota}/${data.dailyQuota}）`
-          : ''
-      return { text: `${data.text}${quotaHint}` }
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        ''
-      if (msg) {
-        return { text: msg }
-      }
-      return { text: draftCopywritingFallback(raw) }
-    }
-  }
-
+  // 文案 / 翻译走流式，见 send()；其它技能占位
   return { text: '已收到。' }
-}
-
-function uid() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 export function ChatPage() {
@@ -310,6 +346,16 @@ export function ChatPage() {
     setBusy(true)
 
     try {
+      if (mode === 'copywriting' || mode === 'translate') {
+        await streamSkillReply(
+          mode,
+          content,
+          setMessages,
+          mode === 'copywriting' ? draftCopywritingFallback : draftTranslateFallback,
+        )
+        return
+      }
+
       const intent =
         mode === 'chat'
           ? await replyInChatMode(content)
