@@ -13,7 +13,6 @@ import { motion } from 'framer-motion'
 
 import { AuthorChip } from '../../components/AuthorChip'
 import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
-import { SEED_TOOLS } from '../../data/seedTools'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
@@ -23,6 +22,8 @@ import {
   toolDetailPath,
 } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
+import { loadFeaturedHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import { excerpt, formatDateTime } from '../../utils/format'
 import styles from './Home.module.css'
 import ui from '../../styles/ui.module.css'
@@ -31,6 +32,7 @@ const { Title, Paragraph } = Typography
 
 export function HomePage() {
   const [articles, setArticles] = useState<PublicArticle[]>([])
+  const [hotTools, setHotTools] = useState<HubTool[]>([])
 
   usePageMeta({
     title: '发现',
@@ -46,6 +48,9 @@ export function HomePage() {
       .catch(() => {
         if (!cancelled) setArticles([])
       })
+    loadFeaturedHubTools(4).then((list) => {
+      if (!cancelled) setHotTools(list)
+    })
     return () => {
       cancelled = true
     }
@@ -57,11 +62,6 @@ export function HomePage() {
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .slice(0, 4),
     [articles],
-  )
-
-  const hotTools = useMemo(
-    () => SEED_TOOLS.filter((t) => t.featured).slice(0, 4),
-    [],
   )
 
   return (

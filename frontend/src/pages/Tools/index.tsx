@@ -1,27 +1,51 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Empty, Segmented, Tag, Typography } from 'antd'
+import { Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
-import {
-  listSeedTools,
-  TOOL_CATEGORIES,
-  type ToolCategoryFilter,
-} from '../../data/seedTools'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { toolDetailPath } from '../../router/paths'
+import {
+  filterHubToolsByCategoryName,
+  loadHubToolCategories,
+  loadHubTools,
+} from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import ui from '../../styles/ui.module.css'
 import styles from './Tools.module.css'
 
 export function ToolsPage() {
-  const [category, setCategory] = useState<ToolCategoryFilter>('全部')
+  const [category, setCategory] = useState('全部')
+  const [tools, setTools] = useState<HubTool[]>([])
+  const [categoryNames, setCategoryNames] = useState<string[]>(['全部'])
+  const [loading, setLoading] = useState(true)
 
   usePageMeta({
     title: 'AI导航',
     description: '按写作、绘画、视频、编程等分类浏览成熟的 AI 产品。',
   })
 
-  const tools = useMemo(() => listSeedTools(category), [category])
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([loadHubTools(), loadHubToolCategories()])
+      .then(([list, cats]) => {
+        if (cancelled) return
+        setTools(list)
+        setCategoryNames(['全部', ...cats.map((c) => c.name)])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filtered = useMemo(
+    () => filterHubToolsByCategoryName(tools, category),
+    [tools, category],
+  )
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
@@ -39,16 +63,18 @@ export function ToolsPage() {
       <div className={styles.filters}>
         <Segmented
           value={category}
-          onChange={(v) => setCategory(v as ToolCategoryFilter)}
-          options={[...TOOL_CATEGORIES]}
+          onChange={(v) => setCategory(String(v))}
+          options={categoryNames}
         />
       </div>
 
-      {tools.length === 0 ? (
+      {loading ? (
+        <Skeleton active paragraph={{ rows: 6 }} />
+      ) : filtered.length === 0 ? (
         <Empty description="该分类暂无产品" />
       ) : (
         <div className={styles.grid}>
-          {tools.map((t, i) => (
+          {filtered.map((t, i) => (
             <motion.div
               key={t.slug}
               initial={{ opacity: 0, y: 10 }}

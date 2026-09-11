@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, Empty, Segmented, Tag, Typography } from 'antd'
+import { Button, Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
 import {
   ArrowLeftOutlined,
   EditOutlined,
@@ -10,7 +10,6 @@ import {
 import { motion } from 'framer-motion'
 
 import { listSeedReviewsForTool } from '../../data/seedToolReviews'
-import { getSeedTool } from '../../data/seedTools'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import {
@@ -19,6 +18,8 @@ import {
   toolDetailPath,
 } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
+import { loadHubToolBySlug, loadHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import { listArticleIdsBoundToTool } from '../../utils/articleToolBindings'
 import { excerpt, formatDateTime } from '../../utils/format'
 import {
@@ -51,7 +52,9 @@ function writeReviewPath(slug: string) {
 
 export function ToolDetailPage() {
   const { slug = '' } = useParams()
-  const tool = getSeedTool(slug)
+  const [tool, setTool] = useState<HubTool | null>(null)
+  const [toolNames, setToolNames] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [sort, setSort] = useState<ReviewSort>('latest')
 
@@ -59,6 +62,26 @@ export function ToolDetailPage() {
     title: tool ? tool.name : '工具详情',
     description: tool?.summary ?? 'AI 产品详情',
   })
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setTool(null)
+    Promise.all([loadHubToolBySlug(slug), loadHubTools()])
+      .then(([item, all]) => {
+        if (cancelled) return
+        setTool(item)
+        const map: Record<string, string> = {}
+        for (const t of all) map[t.slug] = t.name
+        setToolNames(map)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
 
   useEffect(() => {
     let cancelled = false
@@ -139,6 +162,14 @@ export function ToolDetailPage() {
     return merged
   }, [tool, articles, sort])
 
+  if (loading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <Skeleton active paragraph={{ rows: 10 }} />
+      </motion.div>
+    )
+  }
+
   if (!tool) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -201,7 +232,7 @@ export function ToolDetailPage() {
       <div className={styles.split}>
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>适合谁</h3>
-          <p className={styles.sectionBody}>{tool.audience}</p>
+          <p className={styles.sectionBody}>{tool.audience || '通用用户'}</p>
         </section>
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>定价参考</h3>
@@ -211,11 +242,15 @@ export function ToolDetailPage() {
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>典型用法</h3>
-        <ul className={styles.bulletList}>
-          {tool.useCases.map((u) => (
-            <li key={u}>{u}</li>
-          ))}
-        </ul>
+        {tool.useCases.length > 0 ? (
+          <ul className={styles.bulletList}>
+            {tool.useCases.map((u) => (
+              <li key={u}>{u}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.sectionBody}>暂无补充用法说明。</p>
+        )}
       </section>
 
       <div className={styles.split}>
@@ -298,11 +333,11 @@ export function ToolDetailPage() {
                     {r.relatedToolSlugs.length > 1 ? (
                       <div className={styles.reviewTools}>
                         {r.relatedToolSlugs.map((s) => {
-                          const name = getSeedTool(s)?.name ?? s
+                          const label = toolNames[s] ?? s
                           if (s === tool.slug) {
                             return (
                               <Tag key={s} className={styles.miniToolTag}>
-                                {name}
+                                {label}
                               </Tag>
                             )
                           }
@@ -313,7 +348,7 @@ export function ToolDetailPage() {
                               className={styles.miniToolLink}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <Tag className={styles.miniToolTag}>{name}</Tag>
+                              <Tag className={styles.miniToolTag}>{label}</Tag>
                             </Link>
                           )
                         })}

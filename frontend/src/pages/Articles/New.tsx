@@ -19,9 +19,10 @@ import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
 import { createArticle, updateArticle, uploadArticleCover } from '../../api/article'
-import { SEED_TOOLS } from '../../data/seedTools'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { invalidateDiscoverCatalog } from '../../services/publicContent'
+import { loadHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import { saveArticleToolBindings } from '../../utils/articleToolBindings'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
@@ -43,15 +44,18 @@ export function ArticleNewPage() {
   const [preview, setPreview] = useState({ title: '', content: '' })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [hubTools, setHubTools] = useState<HubTool[]>([])
   const fromStudio = location.pathname.startsWith('/studio')
 
+  const toolsQuery = searchParams.get('tools') ?? ''
+
   const presetTools = useMemo(() => {
-    const raw = searchParams.get('tools') ?? ''
-    return raw
+    const allowed = new Set(hubTools.map((t) => t.slug))
+    return toolsQuery
       .split(',')
       .map((s) => s.trim())
-      .filter((s) => SEED_TOOLS.some((t) => t.slug === s))
-  }, [searchParams])
+      .filter((s) => allowed.has(s))
+  }, [toolsQuery, hubTools])
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -61,6 +65,16 @@ export function ArticleNewPage() {
   }, [navigate, location.pathname, location.search])
 
   useEffect(() => {
+    let cancelled = false
+    loadHubTools().then((list) => {
+      if (!cancelled) setHubTools(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     if (presetTools.length > 0) {
       form.setFieldsValue({ relatedToolSlugs: presetTools })
     }
@@ -68,11 +82,11 @@ export function ArticleNewPage() {
 
   const toolOptions = useMemo(
     () =>
-      SEED_TOOLS.map((t) => ({
+      hubTools.map((t) => ({
         value: t.slug,
         label: `${t.name}（${t.category}）`,
       })),
-    [],
+    [hubTools],
   )
 
   async function onFinish(values: FormValues) {

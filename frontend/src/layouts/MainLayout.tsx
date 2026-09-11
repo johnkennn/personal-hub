@@ -1,24 +1,24 @@
-import { Outlet } from 'react-router-dom'
-import { Layout } from 'antd'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { FloatingDock } from '../components/FloatingDock'
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
 import styles from './MainLayout.module.css'
 
-const { Content } = Layout
-
 export function MainLayout() {
+  const { pathname } = useLocation()
+  const fillViewport = pathname === '/' || pathname === '/chat'
+
   return (
-    <Layout className={styles.layout}>
+    <div className={styles.layout}>
       <Header />
-      <Content className={styles.main}>
-        <div className={styles.mainInner}>
+      <main className={`${fillViewport ? styles.mainFill : styles.main} ph-scroll`}>
+        <div className={fillViewport ? styles.mainInnerFill : styles.mainInner}>
           <Outlet />
         </div>
-      </Content>
+      </main>
       <Footer />
       {import.meta.env.DEV ? <FloatingDock /> : null}
-    </Layout>
+    </div>
   )
 }

@@ -231,25 +231,24 @@
 
 .catalogBody {
   flex: 1 1 auto;
-  /* 单列卡片约高；断点与 Col xs/sm/lg/xl 列数一致 */
-  min-height: calc(var(--catalog-rows-xs, 8) * 262px);
+  min-height: 0;
 }
 
 @media (min-width: 576px) {
   .catalogBody {
-    min-height: calc(var(--catalog-rows-sm, 4) * 262px);
+    min-height: 0;
   }
 }
 
 @media (min-width: 992px) {
   .catalogBody {
-    min-height: calc(var(--catalog-rows-lg, 3) * 262px);
+    min-height: 0;
   }
 }
 
 @media (min-width: 1200px) {
   .catalogBody {
-    min-height: calc(var(--catalog-rows-xl, 2) * 262px);
+    min-height: 0;
   }
 }
 
@@ -280,13 +279,12 @@
 .adminTableShell {
   display: flex;
   flex-direction: column;
-  /* 表体按当前每页条数预留高度，分页器始终在壳层底部 */
-  min-height: calc(var(--admin-rows, 10) * 55px + 56px + 64px);
+  min-height: 0;
 }
 
 .adminTableBody {
   flex: 1 1 auto;
-  min-height: calc(var(--admin-rows, 10) * 55px + 56px);
+  min-height: 0;
 }
 
 .adminPager {

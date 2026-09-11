@@ -2,16 +2,20 @@
   display: flex;
   gap: 0.75rem;
   align-items: stretch;
-  height: calc(100vh - 64px - 4.5rem);
-  min-height: 440px;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
   max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
   position: relative;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 200px;
-  flex-shrink: 0;
+  flex: 0 0 200px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -20,7 +24,9 @@
   background: rgba(8, 12, 24, 0.88);
   border: 1px solid rgba(100, 140, 200, 0.22);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   z-index: 2;
 }
 
@@ -96,8 +102,9 @@
 }
 
 .shell {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -178,9 +185,11 @@
 }
 
 .list {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.75rem 1rem 1rem;
   display: flex;
   flex-direction: column;
@@ -369,10 +378,6 @@
 }
 
 @media (max-width: 575px) {
-  .layout {
-    height: calc(100vh - 64px - 5.5rem);
-  }
-
   .shell {
     border-radius: 14px;
   }

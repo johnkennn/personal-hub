@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Alert, Button, Spin, Typography } from 'antd'
 import {
+  AppstoreOutlined,
   CrownOutlined,
   DeleteOutlined,
   FileTextOutlined,
@@ -93,6 +94,13 @@ export function AdminHomePage() {
   }
 
   const modules: AdminModule[] = [
+    {
+      title: 'AI导航管理',
+      desc: '维护分类与 AI 产品，上架后前台导航 / 检索可见。',
+      to: ROUTES.ADMIN_TOOLS,
+      icon: <AppstoreOutlined />,
+      metrics: [],
+    },
     {
       title: '用户管理',
       desc: '查看用户列表，启用 / 禁用普通账号。',

@@ -19,6 +19,15 @@ app:
     retain-days: 30
     purge-enabled: true
     purge-cron: "0 0 3 * * *"
+  ai:
+    # mock：本地演示文案；openai-compatible：接 OpenAI / DeepSeek 等兼容接口
+    provider: ${AI_PROVIDER:mock}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:gpt-4o-mini}
+    guest-daily-quota: 5
+    user-daily-quota: 30
+    timeout-ms: 45000
 spring:
   application:
     name: personal-hub

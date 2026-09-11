@@ -18,7 +18,7 @@ export const appTheme: ThemeConfig = {
     borderRadius: 14,
     fontFamily:
       '"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif',
-    fontSize: 15,
+    fontSize: 13,
     wireframe: false,
   },
   components: {

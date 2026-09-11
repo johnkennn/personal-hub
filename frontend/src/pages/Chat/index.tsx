@@ -4,6 +4,7 @@ import { Button, Input, Space, Typography } from 'antd'
 import { ClearOutlined, MenuOutlined, SendOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
+import { runAiTool } from '../../api/aiTools'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   articleDetailPath,
@@ -203,10 +204,10 @@ async function replyInChatMode(input: string): Promise<IntentResult> {
   }
 }
 
-function draftCopywriting(raw: string): string {
+function draftCopywritingFallback(raw: string): string {
   const brief = raw.replace(/\s+/g, ' ').trim()
   return [
-    '【商品描述草稿】（演示稿，接入模型后会按你的原文生成）',
+    '【商品描述草稿】（本地兜底稿，后端暂不可用）',
     '',
     `根据你提供的信息：「${brief.slice(0, 180)}${brief.length > 180 ? '…' : ''}」`,
     '',
@@ -215,16 +216,11 @@ function draftCopywriting(raw: string): string {
     '正文：',
     '它把核心卖点说清楚——好用、好懂、好下手。无论你是日常自用还是送礼，都能快速看懂亮点与适用场景。',
     '',
-    '卖点速览：',
-    '· 突出你提到的关键优势，减少选择成本',
-    '· 语气可按你的偏好再调得更专业或更亲切',
-    '· 适合详情页首屏与短视频口播提纲',
-    '',
     '需要我改成更短/更正式/更口语，直接继续说即可。',
   ].join('\n')
 }
 
-function replyInSkillMode(mode: ChatModeId, input: string): IntentResult {
+async function replyInSkillMode(mode: ChatModeId, input: string): Promise<IntentResult> {
   const m = getChatMode(mode)
   const raw = input.trim()
   if (!raw) {
@@ -238,7 +234,23 @@ function replyInSkillMode(mode: ChatModeId, input: string): IntentResult {
   }
 
   if (mode === 'copywriting') {
-    return { text: draftCopywriting(raw) }
+    try {
+      const res = await runAiTool('copywriting', raw)
+      const data = res.data.data
+      const quotaHint =
+        data.remainingQuota >= 0
+          ? `\n\n（今日剩余额度 ${data.remainingQuota}/${data.dailyQuota}）`
+          : ''
+      return { text: `${data.text}${quotaHint}` }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        ''
+      if (msg) {
+        return { text: msg }
+      }
+      return { text: draftCopywritingFallback(raw) }
+    }
   }
 
   return { text: '已收到。' }
@@ -297,25 +309,28 @@ export function ChatPage() {
     setMessages((prev) => [...prev, { id: uid(), role: 'user', text: content }])
     setBusy(true)
 
-    await new Promise((r) => setTimeout(r, 280 + Math.random() * 200))
+    try {
+      const intent =
+        mode === 'chat'
+          ? await replyInChatMode(content)
+          : await replyInSkillMode(mode, content)
 
-    const intent =
-      mode === 'chat' ? await replyInChatMode(content) : replyInSkillMode(mode, content)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          role: 'assistant',
+          text: intent.text,
+          actions: intent.actions,
+          hits: intent.hits,
+        },
+      ])
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: uid(),
-        role: 'assistant',
-        text: intent.text,
-        actions: intent.actions,
-        hits: intent.hits,
-      },
-    ])
-    setBusy(false)
-
-    if (intent.autoNavigate) {
-      window.setTimeout(() => navigate(intent.autoNavigate!), 650)
+      if (intent.autoNavigate) {
+        window.setTimeout(() => navigate(intent.autoNavigate!), 650)
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -328,7 +343,7 @@ export function ChatPage() {
 
   return (
     <div className={styles.layout}>
-      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
+      <aside className={`${styles.sidebar} ph-scroll ${sidebarOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHead}>
           <Typography.Text className={styles.sidebarTitle}>模式</Typography.Text>
         </div>
@@ -394,7 +409,7 @@ export function ChatPage() {
           </div>
         </header>
 
-        <div className={styles.list} ref={listRef}>
+        <div className={`${styles.list} ph-scroll`} ref={listRef}>
           {messages.map((m) => (
             <motion.div
               key={m.id}

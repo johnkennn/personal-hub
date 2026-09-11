@@ -1,10 +1,9 @@
 import { fetchSearch } from '../api/search'
-import { SEED_TOOLS, seedToolToCatalogHit } from '../data/seedTools'
+import { hubToolToCatalogHit, loadHubTools } from './toolCatalog'
 import { loadPublicArticles } from './publicContent'
 
 /** 目录检索：AI 产品（导航库）+ AI 评测；由「聊天检索」模式调用 */
 export type CatalogToolHit = {
-  /** 稳定键；有真实 id 后可改用数字 */
   key: string
   title: string
   category: string
@@ -53,21 +52,8 @@ function match(text: string, q: string) {
   return text.toLowerCase().includes(q)
 }
 
-function searchSeedTools(q: string): CatalogToolHit[] {
-  return SEED_TOOLS.filter(
-    (t) =>
-      match(t.name, q) ||
-      match(t.category, q) ||
-      match(t.summary, q) ||
-      t.keywords.some((k) => match(k, q) || q.includes(k.toLowerCase())) ||
-      t.tags.some((tag) => match(tag, q)),
-  )
-    .slice(0, LIMIT_PER_TYPE)
-    .map(seedToolToCatalogHit)
-}
-
 /**
- * 目录检索（关键词）。预留同一返回结构，便于日后换成语义检索 API。
+ * 目录检索（关键词）。工具优先读 API 缓存，评测走搜索接口/本地索引。
  */
 export async function searchCatalog(query: string): Promise<CatalogSearchResult> {
   const raw = query.trim()
@@ -76,7 +62,20 @@ export async function searchCatalog(query: string): Promise<CatalogSearchResult>
     return { tools: [], reviews: [] }
   }
 
-  const tools = searchSeedTools(q)
+  const hubTools = await loadHubTools()
+  const tools = hubTools
+    .filter(
+      (t) =>
+        match(t.name, q) ||
+        match(t.category, q) ||
+        match(t.summary, q) ||
+        match(t.intro, q) ||
+        t.keywords.some((k) => match(k, q) || q.includes(k.toLowerCase())) ||
+        t.tags.some((tag) => match(tag, q)),
+    )
+    .slice(0, LIMIT_PER_TYPE)
+    .map(hubToolToCatalogHit)
+
   const reviewIndex = await ensureReviewIndex()
 
   try {
