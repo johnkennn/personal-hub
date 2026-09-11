@@ -15,7 +15,7 @@ const MODULES = [
     desc: '热门产品与精选评测一站浏览。',
   },
   {
-    title: 'AI导航',
+    title: 'AI导览',
     desc: '市面成熟 AI 产品按分类汇总，少花时间到处搜。',
   },
   {

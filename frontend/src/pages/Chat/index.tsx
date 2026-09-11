@@ -9,7 +9,7 @@ import {
 import { motion } from 'framer-motion'
 import type { UploadFile } from 'antd/es/upload/interface'
 
-import { runAiToolStream } from '../../api/aiTools'
+import { runSkillStream } from '../../api/aiTools'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   articleDetailPath,
@@ -201,7 +201,7 @@ async function streamSkillReply(
   }
 
   try {
-    await runAiToolStream(slug, content, {
+    await runSkillStream(slug, content, {
       onDelta: (chunk) => {
         setMessages((prev) =>
           prev.map((m) =>
@@ -352,9 +352,9 @@ export function ChatPage() {
             label: '打开AI评测',
           },
           tools: {
-            text: '可以去「AI导航」按分类浏览。',
+            text: '可以去「AI导览」按分类浏览。',
             to: ROUTES.TOOLS,
-            label: '打开AI导航',
+            label: '打开AI导览',
           },
           discover: {
             text: '发现页汇总了热门产品与精选评测。',
@@ -397,7 +397,7 @@ export function ChatPage() {
               text: `找到与「${route.query}」相关的 ${parts.join('、')}，点击下方条目可打开：`,
               hits: hitsFromCatalog(result),
               actions: [
-                { label: '打开AI导航', to: ROUTES.TOOLS },
+                { label: '打开AI导览', to: ROUTES.TOOLS },
                 { label: '打开AI评测', to: ROUTES.ARTICLES },
               ],
             },
@@ -410,7 +410,7 @@ export function ChatPage() {
               role: 'assistant',
               text: `没有找到与「${route.query}」匹配的产品或评测。可以换个词，或说明你是要翻译 / 写文案等。`,
               actions: [
-                { label: '打开AI导航', to: ROUTES.TOOLS },
+                { label: '打开AI导览', to: ROUTES.TOOLS },
                 { label: '打开AI评测', to: ROUTES.ARTICLES },
               ],
               options: [

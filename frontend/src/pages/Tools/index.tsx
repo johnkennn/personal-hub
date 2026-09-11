@@ -21,7 +21,7 @@ export function ToolsPage() {
   const [loading, setLoading] = useState(true)
 
   usePageMeta({
-    title: 'AI导航',
+    title: 'AI导览',
     description: '按写作、绘画、视频、编程等分类浏览成熟的 AI 产品。',
   })
 
@@ -52,7 +52,7 @@ export function ToolsPage() {
       <div className={ui.pageHead}>
         <div>
           <Typography.Title level={2} className={ui.pageTitle}>
-            AI导航
+            AI导览
           </Typography.Title>
           <Typography.Paragraph className={ui.pageDesc}>
             汇集市面成熟 AI 产品，按场景分类整理。点进详情可看简介并前往官网。

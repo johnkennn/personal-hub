@@ -241,7 +241,7 @@ export function AdminToolsPage() {
   function handleUnpublish(row: ToolDto) {
     modal.confirm({
       title: `下架「${row.name}」？`,
-      content: '下架后前台 AI导航与检索将不再显示。',
+      content: '下架后前台 AI导览与检索将不再显示。',
       onOk: async () => {
         try {
           await unpublishAdminTool(row.id)
@@ -419,10 +419,10 @@ export function AdminToolsPage() {
         <div>
           <BackNavButton fallback={ROUTES.ADMIN} className={styles.pageBack} />
           <Typography.Title level={2} className={styles.pageTitle}>
-            AI导航管理
+            AI导览管理
           </Typography.Title>
           <Typography.Paragraph className={styles.pageDesc}>
-            维护分类与 AI 产品：上架后会出现在 AI导航、发现页与聊天检索中。
+            维护分类与 AI 产品：上架后会出现在 AI导览、发现页与聊天检索中。
           </Typography.Paragraph>
         </div>
         <Button onClick={() => void load()}>刷新</Button>

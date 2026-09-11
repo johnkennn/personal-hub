@@ -40,7 +40,7 @@ export function ProductDescPage() {
           <Button>返回技能列表</Button>
         </Link>
         <Link to={ROUTES.TOOLS}>
-          <Button type="primary">去 AI导航</Button>
+          <Button type="primary">去 AI导览</Button>
         </Link>
       </Space>
     </motion.div>

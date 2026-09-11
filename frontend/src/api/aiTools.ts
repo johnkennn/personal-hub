@@ -1,11 +1,5 @@
 import { getToken } from '../utils/authStorage'
 
-export type AiRunResponse = {
-  text: string
-  remainingQuota: number
-  dailyQuota: number
-}
-
 export type AiStreamHandlers = {
   onDelta: (text: string) => void
   onDone?: (info: { remainingQuota: number; dailyQuota: number }) => void
@@ -14,40 +8,11 @@ export type AiStreamHandlers = {
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
-/**
- * 文案等技能的流式调用：POST + SSE（EventSource 只支持 GET，故用 fetch 自己拆包）。
- */
-export async function runAiToolStream(
-  slug: string,
-  prompt: string,
+/** 解析 POST SSE 响应体（delta / done / error） */
+export async function consumeSseResponse(
+  res: Response,
   handlers: AiStreamHandlers,
 ): Promise<void> {
-  const token = getToken()
-  const res = await fetch(
-    `${baseURL}/api/ai-tools/${encodeURIComponent(slug)}/run/stream`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ prompt }),
-      signal: handlers.signal,
-    },
-  )
-
-  if (!res.ok) {
-    let message = `请求失败（HTTP ${res.status}）`
-    try {
-      const body = (await res.json()) as { message?: string }
-      if (body?.message) message = body.message
-    } catch {
-      /* ignore */
-    }
-    throw new Error(message)
-  }
-
   if (!res.body) {
     throw new Error('浏览器不支持流式响应')
   }
@@ -62,7 +27,6 @@ export async function runAiToolStream(
     if (done) break
     buffer += decoder.decode(value, { stream: true })
 
-    // SSE 事件块以空行分隔
     let sep
     while ((sep = buffer.indexOf('\n\n')) >= 0) {
       const rawEvent = buffer.slice(0, sep)
@@ -105,5 +69,87 @@ function parseSseBlock(block: string): { event: string; data: Record<string, unk
     return { event, data }
   } catch {
     return null
+  }
+}
+
+async function postStream(
+  path: string,
+  body: unknown,
+  handlers: AiStreamHandlers,
+): Promise<void> {
+  const token = getToken()
+  const res = await fetch(`${baseURL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+    signal: handlers.signal,
+  })
+
+  if (!res.ok) {
+    let message = `请求失败（HTTP ${res.status}）`
+    try {
+      const errBody = (await res.json()) as { message?: string }
+      if (errBody?.message) message = errBody.message
+    } catch {
+      /* ignore */
+    }
+    const err = new Error(message) as Error & { status?: number }
+    err.status = res.status
+    throw err
+  }
+
+  await consumeSseResponse(res, handlers)
+}
+
+/**
+ * 统一聊天门面（推荐）：意图由前端规则路由后传入 intent。
+ * 后端未部署门面时返回 404，调用方可回退到 runAiToolStream。
+ */
+export async function runChatStream(
+  intent: string,
+  message: string,
+  handlers: AiStreamHandlers,
+): Promise<void> {
+  await postStream(
+    '/api/chat/stream',
+    { intent, message },
+    handlers,
+  )
+}
+
+/** 旧路径：按技能 slug 流式（门面回退用） */
+export async function runAiToolStream(
+  slug: string,
+  prompt: string,
+  handlers: AiStreamHandlers,
+): Promise<void> {
+  await postStream(
+    `/api/ai-tools/${encodeURIComponent(slug)}/run/stream`,
+    { prompt },
+    handlers,
+  )
+}
+
+/**
+ * 优先走聊天门面，404/网络失败再回退旧技能接口。
+ */
+export async function runSkillStream(
+  slug: string,
+  prompt: string,
+  handlers: AiStreamHandlers,
+): Promise<void> {
+  try {
+    await runChatStream(slug, prompt, handlers)
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 404 || status === 405) {
+      await runAiToolStream(slug, prompt, handlers)
+      return
+    }
+    throw err
   }
 }

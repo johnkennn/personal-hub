@@ -117,7 +117,7 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
   if (/^(打开|去)?(ai)?(评测|测评)$/.test(q)) {
     return { kind: 'section', section: 'articles' }
   }
-  if (/^(打开|去)?(ai)?导航$/.test(q) || /^分类浏览$/.test(q)) {
+  if (/^(打开|去)?(ai)?(导航|导览)$/.test(q) || /^分类浏览$/.test(q)) {
     return { kind: 'section', section: 'tools' }
   }
   if (/^(去)?发现$/.test(q) || (/发现|热门|精选/.test(q) && q.length < 10)) {

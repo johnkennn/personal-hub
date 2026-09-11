@@ -4,7 +4,7 @@ export const ROUTES = {
   /** 发现页 */
   DISCOVER: '/discover',
   ABOUT: '/about',
-  /** AI 导航（分类产品库） */
+  /** AI 导览（分类产品库） */
   TOOLS: '/tools',
   TOOL_DETAIL: '/tools/:slug',
   /** 限时优惠 */
@@ -56,11 +56,11 @@ export const ROUTES = {
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
-/** 顶栏：聊天检索为统一入口（含模糊搜）；实用技能在聊天侧栏 */
+/** 顶栏：聊天为统一入口；产品库称「AI导览」 */
 export const NAV_ITEMS = [
   { path: ROUTES.CHAT, label: '聊天' },
   { path: ROUTES.DISCOVER, label: '发现' },
-  { path: ROUTES.TOOLS, label: 'AI导航' },
+  { path: ROUTES.TOOLS, label: 'AI导览' },
   { path: ROUTES.ARTICLES, label: 'AI评测' },
   { path: ROUTES.DEALS, label: '限时优惠' },
   { path: ROUTES.ABOUT, label: '关于' },

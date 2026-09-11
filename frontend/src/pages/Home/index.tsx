@@ -109,7 +109,7 @@ export function HomePage() {
             </Typography.Paragraph>
           </div>
           <Link to={ROUTES.TOOLS}>
-            <Button type="link">AI导航</Button>
+            <Button type="link">AI导览</Button>
           </Link>
         </div>
         <Row gutter={[14, 14]}>

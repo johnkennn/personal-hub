@@ -83,6 +83,7 @@ public class SecurityConfig {
                     // —— Tools（AI导航）——
                     .requestMatchers(HttpMethod.GET, "/api/tool-categories", "/api/tool-categories/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/*").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/chat/stream").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/ai-tools/*/run", "/api/ai-tools/*/run/stream").permitAll()
 
                     // —— Comments（独立资源）——

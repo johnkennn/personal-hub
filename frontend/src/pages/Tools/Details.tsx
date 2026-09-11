@@ -175,7 +175,7 @@ export function ToolDetailPage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <Empty description="没有找到这个产品" style={{ marginTop: 48 }}>
           <Link to={ROUTES.TOOLS}>
-            <Button type="primary">返回 AI导航</Button>
+            <Button type="primary">返回 AI导览</Button>
           </Link>
         </Empty>
       </motion.div>
@@ -191,7 +191,7 @@ export function ToolDetailPage() {
       animate={{ opacity: 1, y: 0 }}
     >
       <Link to={ROUTES.TOOLS} className={styles.back}>
-        <ArrowLeftOutlined /> 返回 AI导航
+        <ArrowLeftOutlined /> 返回 AI导览
       </Link>
 
       <header className={styles.detailHead}>

@@ -69,7 +69,7 @@ export function FloatingDock() {
           <Typography.Text code>?</Typography.Text> 打开本帮助
         </Typography.Paragraph>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          建议演示路径：聊天检索（搜产品/评测）→ 左侧技能 → AI导航 / AI评测 → 个人中心。
+          建议演示路径：统一聊天（搜产品/办事）→ AI导览 / AI评测 → 个人中心。
         </Typography.Paragraph>
       </Modal>
     </>

@@ -95,8 +95,8 @@ export function AdminHomePage() {
 
   const modules: AdminModule[] = [
     {
-      title: 'AI导航管理',
-      desc: '维护分类与 AI 产品，上架后前台导航 / 检索可见。',
+      title: 'AI导览管理',
+      desc: '维护分类与 AI 产品，上架后前台导览 / 检索可见。',
       to: ROUTES.ADMIN_TOOLS,
       icon: <AppstoreOutlined />,
       metrics: [],

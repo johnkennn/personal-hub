@@ -84,7 +84,7 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 |------|------|------|
 | `/` | 统一聊天 | **默认落地**；无侧栏；搜产品/评测 + 办事；`/chat` → `/` |
 | `/discover` | 发现 | 热门、精选评测 |
-| `/tools` | AI导航 | 分类产品库 |
+| `/tools` | AI导览 | 分类产品库 |
 | `/tools/:slug` | 工具详情 | |
 | `/ai-tools/**` | （历史） | 兼容可留，非主路径 |
 | `/articles` | AI评测 | |
@@ -94,7 +94,7 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 | `/studio/**` | 个人中心 | |
 | `/admin/**` | 治理 | Tool 等 |
 
-顶栏顺序：`聊天 | 发现 | AI导航 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
+顶栏顺序：`聊天 | 发现 | AI导览 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
 
 **统一聊天（前端）：**
 
@@ -133,9 +133,9 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 
 | 项 | 约定 |
 |----|------|
-| 双轨 | Tool = AI导航；聊天内办事 = 意图路由 + `AiClient`（slug 仅内部） |
+| 双轨 | Tool = AI导览；聊天内办事 = 意图路由 + `AiClient`（slug 仅内部） |
 | LLM | `AiClient` 可插拔（mock / openai-compatible）；密钥仅环境变量 |
-| 运行 API | `POST /api/ai-tools/{slug}/run` 与 `/run/stream`（SSE）；预留 `/api/chat` 门面 |
+| 运行 API | 优先 `POST /api/chat/stream`（门面：`intent`+`message`）；回退 `POST /api/ai-tools/{slug}/run/stream` |
 | 配额 | `app.ai.quota-enabled`；关闭时不拦请求；`AiRunLog` 仍可记 |
 | 文档 / 附件 | 前端白名单；服务端临时文件 + TTL（待加深）；不默认长期存原文 |
 | 聊天意图 | 前端 `RuleChatRouter`；低置信 clarify；搜优先于模糊办事；P2+ 可 LLM |
@@ -162,7 +162,7 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 
 ## 7. 新增 / 演进领域模型
 
-### 7.1 Tool（AI导航）
+### 7.1 Tool（AI导览）
 
 ```text
 tools
