@@ -139,11 +139,16 @@
   z-index: 1;
 }
 
-.listWrap {
+.listPane {
   flex: 1 1 0;
   min-height: 0;
   position: relative;
   z-index: 1;
+}
+
+.listWrap {
+  height: 100%;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -182,12 +187,17 @@
 
 .jumpStack {
   position: absolute;
-  right: 0.35rem;
-  bottom: 0.7rem;
-  z-index: 2;
+  right: 0.45rem;
+  bottom: 0.85rem;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  pointer-events: none;
+}
+
+.jumpStack :global(.ant-btn) {
+  pointer-events: auto;
 }
 
 .jumpBtn {
@@ -243,20 +253,27 @@
 .rowUser {
   display: flex;
   justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .rowAssistant {
   display: flex;
   justify-content: flex-start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .bubbleUser,
 .bubbleAssistant {
   max-width: min(92%, 560px);
+  min-width: 0;
   padding: 0.8rem 1rem;
   border-radius: 18px;
   line-height: 1.55;
   backdrop-filter: blur(8px);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bubbleUser {
@@ -276,6 +293,9 @@
 .bubbleText {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
   color: var(--ph-text);
 }
 
@@ -538,5 +558,28 @@
 
   .composerTip {
     font-size: 0.68rem;
+  }
+
+  .list {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .bubbleUser,
+  .bubbleAssistant {
+    max-width: 100%;
+  }
+
+  .jumpStack {
+    right: 0.55rem;
+    bottom: 0.65rem;
+  }
+
+  .jumpBtn {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    color: rgba(190, 210, 230, 0.75) !important;
+    background: rgba(14, 20, 34, 0.72) !important;
   }
 }

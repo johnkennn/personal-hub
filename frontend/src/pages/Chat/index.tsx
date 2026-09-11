@@ -295,17 +295,22 @@ export function ChatPage() {
 
   useEffect(() => {
     const el = listRef.current
-    if (!el || !stickToBottomRef.current) return
-    el.scrollTop = el.scrollHeight
+    if (!el) return
+    if (stickToBottomRef.current) {
+      el.scrollTop = el.scrollHeight
+    }
+    // 程序化滚底不一定触发 onScroll，这里补一次按钮显隐
+    syncJumpButtons(el)
   }, [messages, busy])
 
   function syncJumpButtons(el: HTMLDivElement) {
+    const canScroll = el.scrollHeight > el.clientHeight + 8
     const dist = el.scrollHeight - el.scrollTop - el.clientHeight
-    const nearTop = el.scrollTop < 48
-    const nearBottom = dist < 96
-    stickToBottomRef.current = nearBottom
-    setShowJumpTop(!nearTop)
-    setShowJumpBottom(!nearBottom)
+    const nearTop = el.scrollTop < 40
+    const nearBottom = dist < 80
+    stickToBottomRef.current = !canScroll || nearBottom
+    setShowJumpTop(canScroll && !nearTop)
+    setShowJumpBottom(canScroll && !nearBottom)
   }
 
   function onListScroll() {
@@ -318,16 +323,20 @@ export function ChatPage() {
     const el = listRef.current
     if (!el) return
     stickToBottomRef.current = true
-    setShowJumpBottom(false)
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    window.setTimeout(() => {
+      if (listRef.current) syncJumpButtons(listRef.current)
+    }, 320)
   }
 
   function jumpToTop() {
     const el = listRef.current
     if (!el) return
     stickToBottomRef.current = false
-    setShowJumpTop(false)
     el.scrollTo({ top: 0, behavior: 'smooth' })
+    window.setTimeout(() => {
+      if (listRef.current) syncJumpButtons(listRef.current)
+    }, 320)
   }
 
   function resetChat() {
@@ -803,108 +812,110 @@ export function ChatPage() {
           </div>
         ) : (
           <>
-            <div
-              className={styles.listWrap}
-              ref={listRef}
-              onScroll={onListScroll}
-            >
-              <div className={styles.list}>
-                {messages.map((m) => (
-                  <motion.div
-                    key={m.id}
-                    className={m.role === 'user' ? styles.rowUser : styles.rowAssistant}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div
-                      className={
-                        m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant
-                      }
+            <div className={styles.listPane}>
+              <div
+                className={styles.listWrap}
+                ref={listRef}
+                onScroll={onListScroll}
+              >
+                <div className={styles.list}>
+                  {messages.map((m) => (
+                    <motion.div
+                      key={m.id}
+                      className={m.role === 'user' ? styles.rowUser : styles.rowAssistant}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <p className={styles.bubbleText}>{m.text}</p>
-                      {m.hits?.length ? (
-                        <ul className={styles.hitList}>
-                          {m.hits.map((h) => (
-                            <li key={`${h.kind}-${h.to}-${h.title}`}>
-                              <Link to={h.to} className={styles.hitLink}>
-                                <span className={styles.hitKind}>
-                                  {h.kind === 'tool' ? '产品' : '评测'}
-                                </span>
-                                <span className={styles.hitTitle}>{h.title}</span>
-                                {h.meta ? (
-                                  <span className={styles.hitMeta}>{h.meta}</span>
-                                ) : null}
+                      <div
+                        className={
+                          m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant
+                        }
+                      >
+                        <p className={styles.bubbleText}>{m.text}</p>
+                        {m.hits?.length ? (
+                          <ul className={styles.hitList}>
+                            {m.hits.map((h) => (
+                              <li key={`${h.kind}-${h.to}-${h.title}`}>
+                                <Link to={h.to} className={styles.hitLink}>
+                                  <span className={styles.hitKind}>
+                                    {h.kind === 'tool' ? '产品' : '评测'}
+                                  </span>
+                                  <span className={styles.hitTitle}>{h.title}</span>
+                                  {h.meta ? (
+                                    <span className={styles.hitMeta}>{h.meta}</span>
+                                  ) : null}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {m.options?.length ? (
+                          <Space wrap size={[8, 8]} className={styles.actions}>
+                            {m.options.map((o) => (
+                              <Button
+                                key={o.id}
+                                size="small"
+                                type="default"
+                                disabled={busy}
+                                onClick={() => onPickOption(o.id)}
+                              >
+                                {o.label}
+                              </Button>
+                            ))}
+                          </Space>
+                        ) : null}
+                        {m.actions?.length ? (
+                          <Space wrap size={[8, 8]} className={styles.actions}>
+                            {m.actions.map((a) => (
+                              <Link key={a.to + a.label} to={a.to}>
+                                <Button size="small">{a.label}</Button>
                               </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                      {m.options?.length ? (
-                        <Space wrap size={[8, 8]} className={styles.actions}>
-                          {m.options.map((o) => (
-                            <Button
-                              key={o.id}
-                              size="small"
-                              type="default"
-                              disabled={busy}
-                              onClick={() => onPickOption(o.id)}
-                            >
-                              {o.label}
-                            </Button>
-                          ))}
-                        </Space>
-                      ) : null}
-                      {m.actions?.length ? (
-                        <Space wrap size={[8, 8]} className={styles.actions}>
-                          {m.actions.map((a) => (
-                            <Link key={a.to + a.label} to={a.to}>
-                              <Button size="small">{a.label}</Button>
-                            </Link>
-                          ))}
-                        </Space>
-                      ) : null}
-                      {m.text.trim() ? (
-                        <div
-                          className={
-                            m.role === 'user'
-                              ? styles.msgToolsUser
-                              : styles.msgToolsAssistant
-                          }
-                        >
-                          <Tooltip title="复制">
-                            <Button
-                              type="text"
-                              size="small"
-                              icon={<CopyOutlined />}
-                              aria-label="复制"
-                              onClick={() => void copyText(m.text)}
-                            />
-                          </Tooltip>
-                          {m.role === 'assistant' ? (
-                            <Tooltip title="重新生成">
+                            ))}
+                          </Space>
+                        ) : null}
+                        {m.text.trim() ? (
+                          <div
+                            className={
+                              m.role === 'user'
+                                ? styles.msgToolsUser
+                                : styles.msgToolsAssistant
+                            }
+                          >
+                            <Tooltip title="复制">
                               <Button
                                 type="text"
                                 size="small"
-                                icon={<RedoOutlined />}
-                                aria-label="重新生成"
-                                disabled={busy}
-                                onClick={() => onRetry(m.id)}
+                                icon={<CopyOutlined />}
+                                aria-label="复制"
+                                onClick={() => void copyText(m.text)}
                               />
                             </Tooltip>
-                          ) : null}
-                        </div>
-                      ) : null}
+                            {m.role === 'assistant' ? (
+                              <Tooltip title="重新生成">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<RedoOutlined />}
+                                  aria-label="重新生成"
+                                  disabled={busy}
+                                  onClick={() => onRetry(m.id)}
+                                />
+                              </Tooltip>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
+                    <div className={styles.rowAssistant}>
+                      <div className={styles.bubbleAssistant}>
+                        <p className={styles.typing}>处理中…</p>
+                      </div>
                     </div>
-                  </motion.div>
-                ))}
-                {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
-                  <div className={styles.rowAssistant}>
-                    <div className={styles.bubbleAssistant}>
-                      <p className={styles.typing}>处理中…</p>
-                    </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
               {showJumpTop || showJumpBottom ? (
                 <div className={styles.jumpStack}>
