@@ -95,6 +95,15 @@
   color: var(--ph-muted) !important;
 }
 
+.listWrap {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .list {
   flex: 1 1 0;
   min-height: 0;
@@ -105,8 +114,66 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  position: relative;
-  z-index: 1;
+}
+
+.jumpStack {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.jumpBtn {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  padding: 0 !important;
+  font-size: 11px !important;
+  color: rgba(160, 180, 205, 0.55) !important;
+  background: rgba(14, 20, 34, 0.55) !important;
+  border: 1px solid rgba(100, 140, 200, 0.16) !important;
+  box-shadow: none !important;
+}
+
+.jumpBtn:hover {
+  color: rgba(190, 210, 230, 0.85) !important;
+  background: rgba(20, 28, 44, 0.72) !important;
+  border-color: rgba(100, 140, 200, 0.28) !important;
+}
+
+.msgToolsUser,
+.msgToolsAssistant {
+  display: flex;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.msgToolsUser {
+  justify-content: flex-end;
+}
+
+.msgToolsAssistant {
+  justify-content: flex-start;
+}
+
+.bubbleUser:hover .msgToolsUser,
+.bubbleAssistant:hover .msgToolsAssistant {
+  opacity: 1;
+}
+
+.msgToolsUser :global(.ant-btn),
+.msgToolsAssistant :global(.ant-btn) {
+  color: var(--ph-muted) !important;
+}
+
+.msgToolsUser :global(.ant-btn:hover),
+.msgToolsAssistant :global(.ant-btn:hover) {
+  color: #2ee6a6 !important;
 }
 
 .rowUser {
@@ -234,12 +301,11 @@
 .composer {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.45rem;
   margin: 0 0.75rem 0.75rem;
-  padding: 0.75rem;
-  border-radius: 16px;
+  padding: 0.55rem 0.65rem;
+  border-radius: 18px;
   border: 1px solid rgba(100, 140, 200, 0.28);
   background: rgba(8, 12, 24, 0.85);
   box-shadow:
@@ -249,21 +315,152 @@
   z-index: 1;
 }
 
-.composer :global(.ant-upload-wrapper) {
-  flex: 0 0 auto;
+.attachChips {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.composer :global(.ant-upload-list) {
-  width: 100%;
-  order: 10;
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  padding: 0.2rem 0.35rem 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 140, 200, 0.22);
+  background: rgba(61, 158, 255, 0.08);
+  font-size: 0.75rem;
+  color: var(--ph-muted);
+}
+
+.attachChipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+
+.attachChipRemove {
+  flex: 0 0 auto;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(160, 180, 205, 0.7);
+  cursor: pointer;
+  line-height: 1;
+  font-size: 0.95rem;
+}
+
+.attachChipRemove:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.attachChipRemove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.composerBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.composerBar :global(.ant-upload-wrapper) {
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.composerIconBtn,
+.composerSendBtn {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+}
+
+.composerIconBtn {
+  color: rgba(170, 190, 215, 0.8) !important;
+}
+
+.composerIconBtn:hover:not(:disabled) {
+  color: #2ee6a6 !important;
+  background: transparent !important;
+}
+
+.composerSendBtn {
+  color: #2ee6a6 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.composerSendBtn:hover:not(:disabled) {
+  color: #7ff0c8 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.composerSendBtn:disabled {
+  color: rgba(140, 160, 185, 0.35) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.composerSendBtn:global(.ant-btn-dangerous) {
+  color: #ff7875 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.composerSendBtn:global(.ant-btn-dangerous):hover {
+  color: #ffa39e !important;
+  background: transparent !important;
+}
+
+.composerInput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.composerBar :global(.ant-input-textarea-affix-wrapper),
+.composerBar :global(.ant-input-affix-wrapper),
+.composer :global(.ant-input-textarea) {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 .composer :global(textarea.ant-input) {
-  flex: 1 1 12rem;
+  padding: 0.45rem 0.35rem !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   color: var(--ph-text) !important;
+  resize: none;
+}
+
+.composer :global(.ant-input-clear-icon) {
+  color: rgba(160, 180, 205, 0.45);
+}
+
+.composer :global(.ant-input-clear-icon:hover) {
+  color: rgba(190, 210, 230, 0.8);
 }
 
 @media (max-width: 575px) {

@@ -7,6 +7,7 @@ import com.zzh.personal_hub.ai.entity.AiRunLog;
 import com.zzh.personal_hub.ai.repository.AiRunLogRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.security.CurrentUserService;
+import com.zzh.personal_hub.media.ChatTempTextExtractor;
 import com.zzh.personal_hub.user.entity.User;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +33,6 @@ import java.util.concurrent.Executors;
 public class AiToolRunService {
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
-
     private static final Map<String, String> SYSTEM_PROMPTS = Map.of(
         "copywriting",
         "你是电商与营销文案助手。根据用户给出的卖点、受众与语气，生成可直接使用的商品描述草稿。"
@@ -42,7 +42,10 @@ public class AiToolRunService {
                 + "只输出译文（必要时可加一行极短的语言说明），不要扩写、不要评论原文。",
         "resume",
         "你是简历优化助手。在保留事实的前提下润色结构与措辞，给出可直接粘贴的改写建议。"
-        + "不要编造经历；可简短免责：仅供参考、非求职保证。"
+        + "不要编造经历；可简短免责：仅供参考、非求职保证。",
+        "summary",
+        "你是文档总结助手。根据用户说明与提供的正文，提炼条理清晰的要点摘要。"
+        + "不要编造原文没有的信息；若材料过短，如实说明。"
     );
 
     private static final ExecutorService STREAM_EXECUTOR = Executors.newFixedThreadPool(8, r -> {
@@ -51,6 +54,7 @@ public class AiToolRunService {
         return t;
     });
 
+    private final ChatTempTextExtractor chatTempTextExtractor;
     private final AiClient aiClient;
     private final AiRunLogRepository aiRunLogRepository;
     private final AiProperties aiProperties;
@@ -67,8 +71,9 @@ public class AiToolRunService {
      * SSE 流式：先校验配额，再异步推送 delta / done / error。
      * 事件名：delta（text）、done（remainingQuota/dailyQuota）、error（message）
      */
-    public SseEmitter runStream(String slug, String prompt, HttpServletRequest request) {
-        RunContext ctx = prepare(slug, prompt, request);
+    public SseEmitter runStream(String slug, String prompt, java.util.List<String> attachmentUrls, HttpServletRequest request) {
+        String fullPrompt = buildPrompt(prompt, attachmentUrls);
+        RunContext ctx = prepare(slug, fullPrompt, request);
         long timeout = Math.max(30_000L, aiProperties.getTimeoutMs() + 15_000L);
         SseEmitter emitter = new SseEmitter(timeout);
 
@@ -140,6 +145,18 @@ public class AiToolRunService {
         log.setClientKey(ctx.clientKey());
         log.setCreatedAt(Instant.now());
         aiRunLogRepository.save(log);
+    }
+
+    private String buildPrompt(String prompt, java.util.List<String> attachmentUrls) {
+        String base = prompt == null ? "" : prompt.trim();
+        if (attachmentUrls == null || attachmentUrls.isEmpty()) {
+            return base;
+        }
+        String extracted = chatTempTextExtractor.extractAll(attachmentUrls);
+        if (!StringUtils.hasText(extracted)) {
+            return base;
+        }
+        return "用户说明：\n" + base + "\n\n【附件内容】\n" + extracted;
     }
 
     private int remainingAfterUse(RunContext ctx) {

@@ -27,6 +27,11 @@ public class ChatController {
     public SseEmitter stream(
             @Valid @RequestBody ChatStreamRequest body,
             HttpServletRequest request) {
-        return aiToolRunService.runStream(body.getIntent(), body.getMessage(), request);
+        return aiToolRunService.runStream(
+            body.getIntent(), 
+            body.getMessage(), 
+            body.getAttachmentUrls(),
+            request
+        );
     }
 }

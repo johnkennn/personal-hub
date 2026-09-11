@@ -29,7 +29,7 @@ const LEGACY_MODE_KEY = 'ai-hub-chat-mode-v1'
 export const UNIFIED_WELCOME: ChatMessage = {
   id: 'welcome-unified-v3',
   role: 'assistant',
-  text: '你好。搜产品、翻译、写文案，直接说即可。附件仅本会话有效。',
+  text: '你好。搜产品、翻译、写文案、总结，直接说即可。附件仅本会话有效。',
 }
 
 function isHit(value: unknown): value is ChatHit {

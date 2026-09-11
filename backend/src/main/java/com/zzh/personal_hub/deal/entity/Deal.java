@@ -33,7 +33,7 @@ public class Deal {
     @Column(name = "promo_code", length = 64)
     private String promoCode;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 500)
     private String url;
 
     @Column(name = "starts_at", nullable = false)

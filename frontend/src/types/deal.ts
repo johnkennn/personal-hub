@@ -6,7 +6,8 @@ export type DealDto = {
   title: string
   description: string
   promoCode: string | null
-  url: string
+  /** 活动链接；空则前台不展示 */
+  url: string | null
   startsAt: string
   endsAt: string
   status: DealStatus
@@ -21,7 +22,7 @@ export type DealUpsertBody = {
   title: string
   description: string
   promoCode?: string | null
-  url: string
+  url?: string | null
   startsAt: string
   endsAt: string
   status: DealStatus

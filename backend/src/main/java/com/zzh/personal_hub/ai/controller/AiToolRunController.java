@@ -36,6 +36,6 @@ public class AiToolRunController {
             @PathVariable String slug,
             @Valid @RequestBody AiRunRequest body,
             HttpServletRequest request) {
-        return aiToolRunService.runStream(slug, body.getPrompt(), request);
+        return aiToolRunService.runStream(slug, body.getPrompt(),null, request);
     }
 }

@@ -93,7 +93,7 @@ export function AdminDealsPage() {
       title: '',
       description: '',
       promoCode: '',
-      url: 'https://',
+      url: '',
       range: [dayjs(), dayjs().add(14, 'day')],
       status: 'ACTIVE',
       toolId: undefined,
@@ -121,7 +121,11 @@ export function AdminDealsPage() {
       title: v.title.trim(),
       description: v.description.trim(),
       promoCode: v.promoCode?.trim() || null,
-      url: v.url.trim(),
+      url: (() => {
+        const u = v.url?.trim() || ''
+        if (!u || u === 'https://' || u === 'http://') return null
+        return u
+      })(),
       startsAt: v.range[0].toISOString(),
       endsAt: v.range[1].toISOString(),
       status: v.status,
@@ -214,7 +218,7 @@ export function AdminDealsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <BackNavButton to={ROUTES.ADMIN} />
+      <BackNavButton fallback={ROUTES.ADMIN} className={styles.pageBack} />
       <div className={styles.pageHead}>
         <div>
           <Typography.Title level={3} className={styles.pageTitle}>
@@ -261,8 +265,12 @@ export function AdminDealsPage() {
           <Form.Item name="description" label="说明" rules={[{ required: true }]}>
             <Input.TextArea rows={3} maxLength={1000} />
           </Form.Item>
-          <Form.Item name="url" label="活动链接" rules={[{ required: true, type: 'url' }]}>
-            <Input />
+          <Form.Item
+            name="url"
+            label="活动链接（可选）"
+            rules={[{ type: 'url', message: '请输入合法链接' }]}
+          >
+            <Input placeholder="有则前台展示；无则不显示" />
           </Form.Item>
           <Form.Item name="promoCode" label="优惠码（可选）">
             <Input maxLength={64} />

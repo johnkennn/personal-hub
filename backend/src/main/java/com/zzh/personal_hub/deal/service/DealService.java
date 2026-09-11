@@ -91,7 +91,7 @@ public class DealService {
         row.setPromoCode(StringUtils.hasText(request.getPromoCode())
                 ? request.getPromoCode().trim()
                 : null);
-        row.setUrl(request.getUrl().trim());
+        row.setUrl(StringUtils.hasText(request.getUrl()) ? request.getUrl().trim() : null);
         row.setStartsAt(request.getStartsAt());
         row.setEndsAt(request.getEndsAt());
         row.setStatus(status);

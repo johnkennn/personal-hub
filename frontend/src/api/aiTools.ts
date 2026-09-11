@@ -107,16 +107,21 @@ async function postStream(
 
 /**
  * 统一聊天门面（推荐）：意图由前端规则路由后传入 intent。
- * 后端未部署门面时返回 404，调用方可回退到 runAiToolStream。
+ * attachmentUrls：临时附件的 /media/chat-temp/... 路径（可选）。
  */
 export async function runChatStream(
   intent: string,
   message: string,
   handlers: AiStreamHandlers,
+  attachmentUrls?: string[],
 ): Promise<void> {
   await postStream(
     '/api/chat/stream',
-    { intent, message },
+    {
+      intent,
+      message,
+      ...(attachmentUrls?.length ? { attachmentUrls } : {}),
+    },
     handlers,
   )
 }
@@ -141,9 +146,10 @@ export async function runSkillStream(
   slug: string,
   prompt: string,
   handlers: AiStreamHandlers,
+  attachmentUrls?: string[],
 ): Promise<void> {
   try {
-    await runChatStream(slug, prompt, handlers)
+    await runChatStream(slug, prompt, handlers, attachmentUrls)
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
     if (status === 404 || status === 405) {

@@ -21,7 +21,7 @@ public class DealUpsertRequest {
     @Size(max = 64)
     private String promoCode;
 
-    @NotBlank(message = "请填写活动链接")
+    /** 可选；空则前台不展示活动入口 */
     @Size(max = 500)
     private String url;
 

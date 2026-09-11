@@ -13,4 +13,6 @@ public class MediaProperties {
     private String rootDir = "./data/media";
     // 对外url前缀
     private String publicPrefix = "/media";
+    // 聊天临时文件过期时间（小时）
+    private int chatTempTtlHours = 24;
 }

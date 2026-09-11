@@ -31,17 +31,22 @@ public class MockAiClient implements AiClient {
 
     private String buildDraft(String systemPrompt, String userPrompt) {
         String brief = userPrompt == null ? "" : userPrompt.replaceAll("\\s+", " ").trim();
+        String sys = systemPrompt == null ? "" : systemPrompt;
+
         if (!StringUtils.hasText(brief)) {
-            if (systemPrompt != null && systemPrompt.contains("翻译")) {
+            if (sys.contains("翻译")) {
                 return "请粘贴要翻译的文本，并说明目标语言（例如：译成英文）。";
             }
-            if (systemPrompt != null && systemPrompt.contains("简历")) {
+            if (sys.contains("简历")) {
                 return "请粘贴简历片段或说明目标岗位，我再帮你润色（仅供参考）。";
+            }
+            if (sys.contains("总结")) {
+                return "请粘贴要总结的文字，或上传 .txt / .md 临时附件后再试。";
             }
             return "请先描述卖点、受众与语气，我再帮你写文案。";
         }
 
-        if (systemPrompt != null && systemPrompt.contains("简历")) {
+        if (sys.contains("简历")) {
             String clipped = brief.length() > 220 ? brief.substring(0, 220) + "…" : brief;
             return """
                     【简历优化演示】（mock，未调真模型）
@@ -51,13 +56,27 @@ public class MockAiClient implements AiClient {
                     """.formatted(clipped);
         }
 
-        if (systemPrompt != null && systemPrompt.contains("翻译")) {
+        if (sys.contains("翻译")) {
             String clipped = brief.length() > 220 ? brief.substring(0, 220) + "…" : brief;
             return """
                     【译文演示】
                     （检测到翻译请求；当前为 mock，未调用真模型）
                     原文摘要：%s
                     演示译文：This is a demo translation of your text. Configure app.ai.provider=openai-compatible and set an API key for real results.
+                    """.formatted(clipped);
+        }
+
+        if (sys.contains("总结")) {
+            String clipped = brief.length() > 400 ? brief.substring(0, 400) + "…" : brief;
+            return """
+                    【内容总结演示】（mock，未调真模型）
+
+                    材料摘要：
+                    %s
+
+                    要点：
+                    · 已根据你提供的正文做了粗提炼（演示）
+                    · 配置 app.ai.provider=openai-compatible 并设置 API Key 后可接真模型出正式摘要
                     """.formatted(clipped);
         }
 
