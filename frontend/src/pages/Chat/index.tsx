@@ -675,254 +675,275 @@ export function ChatPage() {
     status: p.uploadStatus === 'uploading' ? 'uploading' : 'done',
   }))
 
+  const isEmptyChat = messages.length === 0
+
+  const composer = (
+    <form
+      className={styles.composer}
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (busy) return
+        void send(draft)
+      }}
+    >
+      {pending.length > 0 ? (
+        <ul className={styles.attachChips}>
+          {pending.map((p) => (
+            <li key={p.id} className={styles.attachChip}>
+              <span className={styles.attachChipName}>
+                {p.uploadStatus === 'uploading'
+                  ? `${p.file.name}（上传中…）`
+                  : p.uploadStatus === 'ready'
+                    ? `${p.file.name}（已暂存）`
+                    : p.uploadStatus === 'failed'
+                      ? `${p.file.name}（失败）`
+                      : p.file.name}
+              </span>
+              <button
+                type="button"
+                className={styles.attachChipRemove}
+                aria-label={`移除 ${p.file.name}`}
+                disabled={busy}
+                onClick={() =>
+                  setPending((prev) => prev.filter((x) => x.id !== p.id))
+                }
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className={styles.composerBar}>
+        <Upload
+          beforeUpload={onPickFile}
+          fileList={uploadFileList}
+          showUploadList={false}
+          accept={ACCEPT_EXT.join(',')}
+          multiple
+          maxCount={5}
+        >
+          <Tooltip title="添加附件">
+            <Button
+              type="text"
+              className={styles.composerIconBtn}
+              icon={<PlusOutlined />}
+              disabled={busy}
+              aria-label="添加附件"
+            />
+          </Tooltip>
+        </Upload>
+        <Input.TextArea
+          className={styles.composerInput}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="说需求，或上传文件…"
+          autoSize={{ minRows: 1, maxRows: 4 }}
+          allowClear
+          disabled={busy}
+          onPressEnter={(e) => {
+            if (!e.shiftKey) {
+              e.preventDefault()
+              if (!busy) void send(draft)
+            }
+          }}
+        />
+        {busy ? (
+          <Tooltip title="停止生成">
+            <Button
+              type="text"
+              danger
+              className={styles.composerSendBtn}
+              icon={<StopOutlined />}
+              aria-label="停止生成"
+              onClick={stopGenerating}
+            />
+          </Tooltip>
+        ) : (
+          <Tooltip title="发送">
+            <Button
+              type="text"
+              htmlType="submit"
+              className={styles.composerSendBtn}
+              icon={<SendOutlined />}
+              aria-label="发送"
+              disabled={!draft.trim() && pending.length === 0}
+            />
+          </Tooltip>
+        )}
+      </div>
+    </form>
+  )
+
   return (
     <div className={styles.layout}>
       <div className={styles.shell}>
         <header className={styles.top}>
           <div className={styles.topRow}>
             <div className={styles.topLeft}>
-              <div>
-                <Typography.Title level={4} className={styles.title}>
-                  聊天
-                </Typography.Title>
-                <Typography.Paragraph className={styles.sub} type="secondary">
-                  搜产品 · 翻译 · 写文案 · 总结
-                </Typography.Paragraph>
-              </div>
+              <Typography.Title level={4} className={styles.title}>
+                聊天
+              </Typography.Title>
             </div>
             <Button
               type="text"
               icon={<ClearOutlined />}
               onClick={resetChat}
-              disabled={busy || messages.length <= 1}
+              disabled={busy || isEmptyChat}
             >
               清空
             </Button>
           </div>
         </header>
 
-        <div className={styles.listWrap}>
-          <div
-            className={`${styles.list} ph-scroll`}
-            ref={listRef}
-            onScroll={onListScroll}
-          >
-            {messages.map((m, index) => (
-              <motion.div
-                key={m.id}
-                className={m.role === 'user' ? styles.rowUser : styles.rowAssistant}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
+        {isEmptyChat ? (
+          <div className={styles.emptyStage}>
+            <p className={styles.emptyHint}>请尽情咨询吩咐我～</p>
+            {composer}
+          </div>
+        ) : (
+          <>
+            <div className={styles.listWrap}>
+              <div
+                className={`${styles.list} ph-scroll`}
+                ref={listRef}
+                onScroll={onListScroll}
               >
-                <div className={m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}>
-                  <p className={styles.bubbleText}>{m.text}</p>
-                  {m.hits?.length ? (
-                    <ul className={styles.hitList}>
-                      {m.hits.map((h) => (
-                        <li key={`${h.kind}-${h.to}-${h.title}`}>
-                          <Link to={h.to} className={styles.hitLink}>
-                            <span className={styles.hitKind}>
-                              {h.kind === 'tool' ? '产品' : '评测'}
-                            </span>
-                            <span className={styles.hitTitle}>{h.title}</span>
-                            {h.meta ? <span className={styles.hitMeta}>{h.meta}</span> : null}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {m.options?.length ? (
-                    <Space wrap size={[8, 8]} className={styles.actions}>
-                      {m.options.map((o) => (
-                        <Button
-                          key={o.id}
-                          size="small"
-                          type="default"
-                          disabled={busy}
-                          onClick={() => onPickOption(o.id)}
-                        >
-                          {o.label}
-                        </Button>
-                      ))}
-                    </Space>
-                  ) : null}
-                  {m.actions?.length ? (
-                    <Space wrap size={[8, 8]} className={styles.actions}>
-                      {m.actions.map((a) => (
-                        <Link key={a.to + a.label} to={a.to}>
-                          <Button size="small">{a.label}</Button>
-                        </Link>
-                      ))}
-                    </Space>
-                  ) : null}
-                  {m.text.trim() ? (
+                {messages.map((m) => (
+                  <motion.div
+                    key={m.id}
+                    className={m.role === 'user' ? styles.rowUser : styles.rowAssistant}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <div
                       className={
-                        m.role === 'user' ? styles.msgToolsUser : styles.msgToolsAssistant
+                        m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant
                       }
                     >
-                      <Tooltip title="复制">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<CopyOutlined />}
-                          aria-label="复制"
-                          onClick={() => void copyText(m.text)}
-                        />
-                      </Tooltip>
-                      {m.role === 'assistant' && index > 0 ? (
-                        <Tooltip title="重新生成">
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<RedoOutlined />}
-                            aria-label="重新生成"
-                            disabled={busy}
-                            onClick={() => onRetry(m.id)}
-                          />
-                        </Tooltip>
+                      <p className={styles.bubbleText}>{m.text}</p>
+                      {m.hits?.length ? (
+                        <ul className={styles.hitList}>
+                          {m.hits.map((h) => (
+                            <li key={`${h.kind}-${h.to}-${h.title}`}>
+                              <Link to={h.to} className={styles.hitLink}>
+                                <span className={styles.hitKind}>
+                                  {h.kind === 'tool' ? '产品' : '评测'}
+                                </span>
+                                <span className={styles.hitTitle}>{h.title}</span>
+                                {h.meta ? (
+                                  <span className={styles.hitMeta}>{h.meta}</span>
+                                ) : null}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {m.options?.length ? (
+                        <Space wrap size={[8, 8]} className={styles.actions}>
+                          {m.options.map((o) => (
+                            <Button
+                              key={o.id}
+                              size="small"
+                              type="default"
+                              disabled={busy}
+                              onClick={() => onPickOption(o.id)}
+                            >
+                              {o.label}
+                            </Button>
+                          ))}
+                        </Space>
+                      ) : null}
+                      {m.actions?.length ? (
+                        <Space wrap size={[8, 8]} className={styles.actions}>
+                          {m.actions.map((a) => (
+                            <Link key={a.to + a.label} to={a.to}>
+                              <Button size="small">{a.label}</Button>
+                            </Link>
+                          ))}
+                        </Space>
+                      ) : null}
+                      {m.text.trim() ? (
+                        <div
+                          className={
+                            m.role === 'user'
+                              ? styles.msgToolsUser
+                              : styles.msgToolsAssistant
+                          }
+                        >
+                          <Tooltip title="复制">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<CopyOutlined />}
+                              aria-label="复制"
+                              onClick={() => void copyText(m.text)}
+                            />
+                          </Tooltip>
+                          {m.role === 'assistant' ? (
+                            <Tooltip title="重新生成">
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<RedoOutlined />}
+                                aria-label="重新生成"
+                                disabled={busy}
+                                onClick={() => onRetry(m.id)}
+                              />
+                            </Tooltip>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
+                  </motion.div>
+                ))}
+                {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
+                  <div className={styles.rowAssistant}>
+                    <div className={styles.bubbleAssistant}>
+                      <p className={styles.typing}>处理中…</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              {showJumpTop || showJumpBottom ? (
+                <div className={styles.jumpStack}>
+                  {showJumpTop ? (
+                    <Tooltip title="回到顶部">
+                      <Button
+                        className={styles.jumpBtn}
+                        type="text"
+                        shape="circle"
+                        size="small"
+                        icon={<UpOutlined />}
+                        aria-label="回到顶部"
+                        onClick={jumpToTop}
+                      />
+                    </Tooltip>
+                  ) : null}
+                  {showJumpBottom ? (
+                    <Tooltip title="回到底部">
+                      <Button
+                        className={styles.jumpBtn}
+                        type="text"
+                        shape="circle"
+                        size="small"
+                        icon={<DownOutlined />}
+                        aria-label="回到底部"
+                        onClick={jumpToBottom}
+                      />
+                    </Tooltip>
                   ) : null}
                 </div>
-              </motion.div>
-            ))}
-            {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
-              <div className={styles.rowAssistant}>
-                <div className={styles.bubbleAssistant}>
-                  <p className={styles.typing}>处理中…</p>
-                </div>
-              </div>
-            ) : null}
-          </div>
-          {showJumpTop || showJumpBottom ? (
-            <div className={styles.jumpStack}>
-              {showJumpTop ? (
-                <Tooltip title="回到顶部">
-                  <Button
-                    className={styles.jumpBtn}
-                    type="text"
-                    shape="circle"
-                    size="small"
-                    icon={<UpOutlined />}
-                    aria-label="回到顶部"
-                    onClick={jumpToTop}
-                  />
-                </Tooltip>
-              ) : null}
-              {showJumpBottom ? (
-                <Tooltip title="回到底部">
-                  <Button
-                    className={styles.jumpBtn}
-                    type="text"
-                    shape="circle"
-                    size="small"
-                    icon={<DownOutlined />}
-                    aria-label="回到底部"
-                    onClick={jumpToBottom}
-                  />
-                </Tooltip>
               ) : null}
             </div>
-          ) : null}
-        </div>
 
-        <form
-          className={styles.composer}
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (busy) return
-            void send(draft)
-          }}
-        >
-          {pending.length > 0 ? (
-            <ul className={styles.attachChips}>
-              {pending.map((p) => (
-                <li key={p.id} className={styles.attachChip}>
-                  <span className={styles.attachChipName}>
-                    {p.uploadStatus === 'uploading'
-                      ? `${p.file.name}（上传中…）`
-                      : p.uploadStatus === 'ready'
-                        ? `${p.file.name}（已暂存）`
-                        : p.uploadStatus === 'failed'
-                          ? `${p.file.name}（失败）`
-                          : p.file.name}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.attachChipRemove}
-                    aria-label={`移除 ${p.file.name}`}
-                    disabled={busy}
-                    onClick={() =>
-                      setPending((prev) => prev.filter((x) => x.id !== p.id))
-                    }
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className={styles.composerBar}>
-            <Upload
-              beforeUpload={onPickFile}
-              fileList={uploadFileList}
-              showUploadList={false}
-              accept={ACCEPT_EXT.join(',')}
-              multiple
-              maxCount={5}
-            >
-              <Tooltip title="添加附件">
-                <Button
-                  type="text"
-                  className={styles.composerIconBtn}
-                  icon={<PlusOutlined />}
-                  disabled={busy}
-                  aria-label="添加附件"
-                />
-              </Tooltip>
-            </Upload>
-            <Input.TextArea
-              className={styles.composerInput}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="说需求，或上传文件…"
-              autoSize={{ minRows: 1, maxRows: 4 }}
-              allowClear
-              disabled={busy}
-              onPressEnter={(e) => {
-                if (!e.shiftKey) {
-                  e.preventDefault()
-                  if (!busy) void send(draft)
-                }
-              }}
-            />
-            {busy ? (
-              <Tooltip title="停止生成">
-                <Button
-                  type="text"
-                  danger
-                  className={styles.composerSendBtn}
-                  icon={<StopOutlined />}
-                  aria-label="停止生成"
-                  onClick={stopGenerating}
-                />
-              </Tooltip>
-            ) : (
-              <Tooltip title="发送">
-                <Button
-                  type="text"
-                  htmlType="submit"
-                  className={styles.composerSendBtn}
-                  icon={<SendOutlined />}
-                  aria-label="发送"
-                  disabled={!draft.trim() && pending.length === 0}
-                />
-              </Tooltip>
-            )}
-          </div>
-        </form>
+            <p className={styles.composerTip}>
+              我也可能会犯错哦，重要信息请务必自行核查，也可以去AI导览寻找或在这里搜索专业AI工具～
+            </p>
+            {composer}
+          </>
+        )}
       </div>
     </div>
   )

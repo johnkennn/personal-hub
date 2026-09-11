@@ -26,12 +26,6 @@ export type ChatMessage = {
 const MESSAGES_KEY = 'ai-hub-chat-messages-v2'
 const LEGACY_MODE_KEY = 'ai-hub-chat-mode-v1'
 
-export const UNIFIED_WELCOME: ChatMessage = {
-  id: 'welcome-unified-v3',
-  role: 'assistant',
-  text: '你好。搜产品、翻译、写文案、总结，直接说即可。附件仅本会话有效。',
-}
-
 function isHit(value: unknown): value is ChatHit {
   if (!value || typeof value !== 'object') return false
   const h = value as ChatHit
@@ -67,26 +61,18 @@ function isMessage(value: unknown): value is ChatMessage {
   return true
 }
 
-/** 读取本标签页会话；关闭标签即消失（sessionStorage） */
+/** 读取本标签页会话；关闭标签即消失（sessionStorage）。空数组 = 无会话。 */
 export function loadChatMessages(): ChatMessage[] {
-  const fallback = [UNIFIED_WELCOME]
   try {
     const raw = sessionStorage.getItem(MESSAGES_KEY)
-    if (!raw) return fallback
+    if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed) || parsed.length === 0) return fallback
+    if (!Array.isArray(parsed) || parsed.length === 0) return []
     const list = parsed.filter(isMessage)
-    if (list.length === 0) return fallback
-    // 仅欢迎语时换成最新短文案；有真实对话则保留历史
-    if (list.length === 1 && list[0].id.startsWith('welcome-unified')) {
-      return fallback
-    }
-    if (list[0]?.id.startsWith('welcome-unified')) {
-      return [UNIFIED_WELCOME, ...list.slice(1)]
-    }
-    return list
+    // 去掉历史欢迎气泡，空态改由页面居中输入框承接
+    return list.filter((m) => !m.id.startsWith('welcome-unified'))
   } catch {
-    return fallback
+    return []
   }
 }
 

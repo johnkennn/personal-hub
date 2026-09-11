@@ -58,6 +58,7 @@ export function AdminDealsPage() {
   const [tools, setTools] = useState<ToolDto[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [keyword, setKeyword] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DealDto | null>(null)
   const [form] = Form.useForm<FormValues>()
@@ -107,7 +108,7 @@ export function AdminDealsPage() {
       title: row.title,
       description: row.description,
       promoCode: row.promoCode ?? '',
-      url: row.url,
+      url: row.url ?? '',
       range: [dayjs(row.startsAt), dayjs(row.endsAt)],
       status: row.status,
       toolId: row.toolId ?? undefined,
@@ -162,7 +163,16 @@ export function AdminDealsPage() {
     })
   }
 
-  const pageRows = sliceAdminPage(rows, page, ADMIN_PAGE_SIZE)
+  const filtered = rows.filter((r) => {
+    const q = keyword.trim().toLowerCase()
+    if (!q) return true
+    return (
+      r.title.toLowerCase().includes(q) ||
+      (r.toolName ?? '').toLowerCase().includes(q) ||
+      (r.promoCode ?? '').toLowerCase().includes(q)
+    )
+  })
+  const pageRows = sliceAdminPage(filtered, page, ADMIN_PAGE_SIZE)
 
   const columns: ColumnsType<DealDto> = [
     {
@@ -233,7 +243,23 @@ export function AdminDealsPage() {
         </Button>
       </div>
 
-      <AdminListShell>
+      <AdminListShell
+        searchPlaceholder="按标题 / 产品 / 优惠码搜索"
+        keyword={keyword}
+        onKeywordChange={(value) => {
+          setKeyword(value)
+          setPage(1)
+        }}
+        pageSize={ADMIN_PAGE_SIZE}
+        pager={
+          <AdminPager
+            current={page}
+            pageSize={ADMIN_PAGE_SIZE}
+            total={filtered.length}
+            onChange={(p) => setPage(p)}
+          />
+        }
+      >
         <Table
           rowKey="id"
           loading={loading}
@@ -241,12 +267,6 @@ export function AdminDealsPage() {
           dataSource={pageRows}
           pagination={false}
           size="middle"
-        />
-        <AdminPager
-          page={page}
-          pageSize={ADMIN_PAGE_SIZE}
-          total={rows.length}
-          onChange={setPage}
         />
       </AdminListShell>
 
