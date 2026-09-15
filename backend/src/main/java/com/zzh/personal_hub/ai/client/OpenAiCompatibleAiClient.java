@@ -45,7 +45,7 @@ public class OpenAiCompatibleAiClient implements AiClient {
         ensureApiKey();
         try {
             HttpResponse<String> response = httpClient.send(
-                    buildRequest(systemPrompt, userPrompt, false),
+                    buildRequest(systemPrompt, userPrompt, List.of(), false),
                     HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BusinessException(502, "模型服务暂不可用（HTTP " + response.statusCode() + "）");
@@ -66,10 +66,16 @@ public class OpenAiCompatibleAiClient implements AiClient {
 
     @Override
     public void stream(String systemPrompt, String userPrompt, Consumer<String> onDelta) {
-        ensureApiKey();
+        stream(systemPrompt, userPrompt, List.of(), onDelta);
+    }
+
+    @Override
+    public void stream(String systemPrompt, String userPrompt, List<String> imageDataUrls, Consumer<String> onDelta) {
+        boolean vision = imageDataUrls != null && !imageDataUrls.isEmpty();
+        ensureApiKey(vision);
         try {
             HttpResponse<java.io.InputStream> response = httpClient.send(
-                    buildRequest(systemPrompt, userPrompt, true),
+                    buildRequest(systemPrompt, userPrompt, imageDataUrls, true),
                     HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BusinessException(502, "模型服务暂不可用（HTTP " + response.statusCode() + "）");
@@ -110,27 +116,72 @@ public class OpenAiCompatibleAiClient implements AiClient {
     }
 
     private void ensureApiKey() {
+        ensureApiKey(false);
+    }
+
+    private void ensureApiKey(boolean vision) {
+        if (vision) {
+            boolean hasVisionKey = StringUtils.hasText(aiProperties.getVisionApiKey());
+            boolean hasApiKey = StringUtils.hasText(aiProperties.getApiKey());
+            if (!hasVisionKey && !hasApiKey) {
+                throw new BusinessException(503, "未配置识图 API Key，请设置 app.ai.vision-api-key 或 app.ai.api-key");
+            }
+            return;
+        }
         if (!StringUtils.hasText(aiProperties.getApiKey())) {
             throw new BusinessException(503, "未配置 AI API Key，请使用 mock 或设置 app.ai.api-key");
         }
     }
 
-    private HttpRequest buildRequest(String systemPrompt, String userPrompt, boolean stream) throws Exception {
+    private HttpRequest buildRequest(
+            String systemPrompt, String userPrompt, List<String> imageDataUrls, boolean stream) throws Exception {
+        boolean vision = imageDataUrls != null && !imageDataUrls.isEmpty();
+        String model = vision
+                ? (StringUtils.hasText(aiProperties.getVisionModel())
+                    ? aiProperties.getVisionModel()
+                    : aiProperties.getModel())
+                : aiProperties.getModel();
+        if (vision && !StringUtils.hasText(model)) {
+            throw new BusinessException(503, "未配置识图模型，请设置 app.ai.vision-model 或 app.ai.model");
+        }
+
+        String base = vision && StringUtils.hasText(aiProperties.getVisionBaseUrl())
+                ? aiProperties.getVisionBaseUrl()
+                : aiProperties.getBaseUrl();
+        String key = vision && StringUtils.hasText(aiProperties.getVisionApiKey())
+                ? aiProperties.getVisionApiKey()
+                : aiProperties.getApiKey();
+
+        Object userContent;
+        if (!vision) {
+            userContent = userPrompt;
+        } else {
+            List<Map<String, Object>> parts = new java.util.ArrayList<>();
+            parts.add(Map.of("type", "text", "text", userPrompt));
+            for (String dataUrl : imageDataUrls) {
+                parts.add(Map.of(
+                        "type", "image_url",
+                        "image_url", Map.of("url", dataUrl)
+                ));
+            }
+            userContent = parts;
+        }
+
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", aiProperties.getModel());
+        body.put("model", model);
         body.put("messages", List.of(
                 Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userPrompt)
+                Map.of("role", "user", "content", userContent)
         ));
         body.put("temperature", 0.7);
         body.put("stream", stream);
 
         String json = jsonMapper.writeValueAsString(body);
-        String url = trimSlash(aiProperties.getBaseUrl()) + "/chat/completions";
+        String url = trimSlash(base) + "/chat/completions";
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofMillis(Math.max(5000, aiProperties.getTimeoutMs())))
-                .header("Authorization", "Bearer " + aiProperties.getApiKey())
+                .header("Authorization", "Bearer " + key)
                 .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                 .header("Accept", stream ? "text/event-stream" : MediaType.APPLICATION_JSON_VALUE)
                 .POST(HttpRequest.BodyPublishers.ofString(json))

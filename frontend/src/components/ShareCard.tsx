@@ -3,6 +3,7 @@ import { App, Button, Typography } from 'antd'
 import { CopyOutlined, ShareAltOutlined } from '@ant-design/icons'
 
 import { PAGE_META_DEFAULTS } from '../hooks/usePageMeta'
+import { copyToClipboard } from '../utils/clipboard'
 import { excerpt } from '../utils/format'
 import styles from './ShareCard.module.css'
 
@@ -25,10 +26,10 @@ export function ShareCard({ title, description, mediaStyle, url }: ShareCardProp
     typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(shareUrl)
+    const ok = await copyToClipboard(shareUrl)
+    if (ok) {
       message.success('链接已复制，可以粘贴分享')
-    } catch {
+    } else {
       message.error('复制失败，请手动复制地址栏链接')
     }
   }

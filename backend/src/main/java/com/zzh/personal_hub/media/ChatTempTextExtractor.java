@@ -128,7 +128,12 @@ public class ChatTempTextExtractor {
                 throw new BusinessException(500, "读取 Excel 失败：" + file.getFileName());
             }
         }
-        // 图片 / 旧版 Office / PPT：本步不解析正文
+        // 图片交给识图链路；此处跳过，避免污染文档抽字
+        if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
+                || name.endsWith(".webp") || name.endsWith(".gif")) {
+            return "";
+        }
+        // 旧版 Office / PPT：本步不解析正文
         return "【" + file.getFileName() + "】暂不支持自动解析该格式，请粘贴文字或上传 .txt / .md / .pdf / .docx / .xlsx。";
     }
 

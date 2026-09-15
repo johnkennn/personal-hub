@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { PageHero, pageHeroStyles, SectionHead } from '../../components/PageHero'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { ROUTES, SITE_BRAND } from '../../router/paths'
+import { copyToClipboard } from '../../utils/clipboard'
 import styles from './About.module.css'
 
 const CONTACT_PHONE = '13476270359'
@@ -44,10 +45,10 @@ export function AboutPage() {
   })
 
   async function copyText(value: string, okMsg: string) {
-    try {
-      await navigator.clipboard.writeText(value)
+    const ok = await copyToClipboard(value)
+    if (ok) {
       message.success(okMsg)
-    } catch {
+    } else {
       message.error('复制失败，请手动选中')
     }
   }

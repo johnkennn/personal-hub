@@ -30,6 +30,10 @@ app:
     user-daily-quota: 30
     timeout-ms: 45000
     quota-enabled: ${AI_QUOTA_ENABLED:false}
+    # 识图：空则回退到 model；另配 vision-* 可换一家识图服务
+    vision-model: ${AI_VISION_MODEL:}
+    vision-base-url: ${AI_VISION_BASE_URL:}
+    vision-api-key: ${AI_VISION_API_KEY:}
 spring:
   application:
     name: personal-hub

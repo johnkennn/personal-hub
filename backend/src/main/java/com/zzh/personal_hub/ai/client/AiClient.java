@@ -1,6 +1,7 @@
 package com.zzh.personal_hub.ai.client;
 
 import java.util.function.Consumer;
+import java.util.List;
 
 /**
  * 大模型调用的统一出口。
@@ -19,4 +20,10 @@ public interface AiClient {
      * 约定：实现可在当前线程阻塞直到结束；调用方负责线程与超时。
      */
     void stream(String systemPrompt, String userPrompt, Consumer<String> onDelta);
+
+    /** imageDataUrls：data:image/...;base64,... ；空列表等同纯文本 */
+    default void stream(String systemPrompt, String userPrompt,
+                        List<String> imageDataUrls, Consumer<String> onDelta) {
+        stream(systemPrompt, userPrompt, onDelta);
+    }
 }

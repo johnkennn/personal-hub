@@ -56,3 +56,8 @@ app:
     timeout-ms: ${AI_TIMEOUT_MS:60000}
     # 生产建议打开，避免额度被刷爆
     quota-enabled: ${AI_QUOTA_ENABLED:true}
+    # 默认与文字同一模型（DeepSeek-Flash 原生多模态）；也可单独设 AI_VISION_MODEL
+    vision-model: ${AI_VISION_MODEL:deepseek-flash}
+    # 留空则复用 base-url / api-key（同一家 DeepSeek）
+    vision-base-url: ${AI_VISION_BASE_URL:}
+    vision-api-key: ${AI_VISION_API_KEY:}

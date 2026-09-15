@@ -13,6 +13,7 @@ import com.zzh.personal_hub.user.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
+import com.zzh.personal_hub.media.ChatTempImageLoader;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +34,7 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 public class AiToolRunService {
 
+    private final ChatTempImageLoader chatTempImageLoader;
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
     private static final Map<String, String> SYSTEM_PROMPTS = Map.of(
         "chat",
@@ -76,14 +79,26 @@ public class AiToolRunService {
      * 事件名：delta（text）、done（remainingQuota/dailyQuota）、error（message）
      */
     public SseEmitter runStream(String slug, String prompt, java.util.List<String> attachmentUrls, HttpServletRequest request) {
+        var images = chatTempImageLoader.loadImages(attachmentUrls);
+        List<String> dataUrls = images.stream().map(ChatTempImageLoader.ImagePart::dataUrl).toList();
         String fullPrompt = buildPrompt(prompt, attachmentUrls);
+        if (!dataUrls.isEmpty()) {
+            String base = prompt == null ? "" : prompt.trim();
+            if (!StringUtils.hasText(base)) {
+                base = "请描述这张图片的主要内容。";
+            }
+            String textPart = chatTempTextExtractor.extractAll(attachmentUrls);
+            fullPrompt = StringUtils.hasText(textPart)
+                    ? "用户说明：\n" + base + "\n\n【附件文字】\n" + textPart
+                    : base;
+        }
         RunContext ctx = prepare(slug, fullPrompt, request);
         long timeout = Math.max(30_000L, aiProperties.getTimeoutMs() + 15_000L);
         SseEmitter emitter = new SseEmitter(timeout);
 
         STREAM_EXECUTOR.execute(() -> {
             try {
-                aiClient.stream(SYSTEM_PROMPTS.get(ctx.slug()), ctx.prompt(), delta -> {
+                aiClient.stream(SYSTEM_PROMPTS.get(ctx.slug()), ctx.prompt(), dataUrls, delta -> {
                     try {
                         sendJson(emitter, "delta", Map.of("text", delta));
                     } catch (IOException e) {

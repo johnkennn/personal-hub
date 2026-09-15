@@ -318,6 +318,7 @@ AI_PROVIDER=openai-compatible
 AI_BASE_URL=https://api.deepseek.com/v1
 AI_API_KEY=YOUR_DEEPSEEK_API_KEY
 AI_MODEL=deepseek-flash
+AI_VISION_MODEL=deepseek-flash
 AI_QUOTA_ENABLED=true
 EOF
 chmod 600 /opt/personal-hub/personal-hub.env
@@ -344,7 +345,9 @@ echo "AI_PROVIDER=$AI_PROVIDER"
 | `AI_PROVIDER` | 生产用 `openai-compatible`（勿用 `mock`） |
 | `AI_BASE_URL` | DeepSeek：`https://api.deepseek.com/v1`（本项目会再拼 `/chat/completions`） |
 | `AI_API_KEY` | DeepSeek Key；只放服务器 env，勿提交 Git |
-| `AI_MODEL` | 推荐便宜的 `deepseek-flash`；更强可用 `deepseek-v4-pro`（按量计费） |
+| `AI_MODEL` | 推荐 `deepseek-flash`（文字 + 原生识图） |
+| `AI_VISION_MODEL` | 默认与文字相同即可；留空时代码也会回退到 `AI_MODEL` |
+| `AI_VISION_BASE_URL` / `AI_VISION_API_KEY` | 一般不设（复用 DeepSeek）；仅换另一家识图服务时才填 |
 | `AI_QUOTA_ENABLED` | 建议 `true`，限制访客/登录日调用次数 |
 
 ### 8.3 首次启动（建表）
@@ -555,6 +558,7 @@ AI_PROVIDER=openai-compatible
 AI_BASE_URL=https://api.deepseek.com/v1
 AI_API_KEY=YOUR_DEEPSEEK_API_KEY
 AI_MODEL=deepseek-flash
+AI_VISION_MODEL=deepseek-flash
 AI_QUOTA_ENABLED=true
 ```
 

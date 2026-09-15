@@ -31,7 +31,16 @@ function hasSearchCue(q: string): boolean {
 }
 
 function hasSkillCue(q: string): boolean {
-  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图/.test(q)
+  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图|图中|图片里|这张图|看图|图里/.test(
+    q,
+  )
+}
+
+/** 用户在问「图里是什么」一类（配合附件走总结/识图） */
+export function looksLikeImageQuestion(q: string): boolean {
+  return /图中|图片里|图片中|这张图|照片里|图里|看图|识图|识别图片|描述.*(图|照片)|图.*(什么|内容|描述)|照片.*(什么|内容)/.test(
+    q,
+  )
 }
 
 function looksLikeQuestion(q: string): boolean {
@@ -124,6 +133,9 @@ export function routeChatIntentConfident(
     return { kind: 'skill', slug: 'contract', prompt: raw }
   }
   if (/总结|摘要|提炼要点|归纳一下/.test(q) && !hasSearchCue(q)) {
+    return { kind: 'skill', slug: 'summary', prompt: raw }
+  }
+  if (looksLikeImageQuestion(q)) {
     return { kind: 'skill', slug: 'summary', prompt: raw }
   }
   if (/商品描述|写文案|生成描述|卖点文案|营销文案|帮我写.*文案/.test(q)) {

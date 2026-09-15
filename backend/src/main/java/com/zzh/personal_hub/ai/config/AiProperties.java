@@ -18,4 +18,10 @@ public class AiProperties {
     private int timeoutMs = 45000;
     /** false：暂不限额（演示期）；接真模型后改 true */
     private boolean quotaEnabled = false;
+    /** 识图模型；空则回退到 model（DeepSeek-Flash 等可兼用文字+识图） */
+    private String visionModel = "";
+    /** 识图接口根；空则复用 baseUrl */
+    private String visionBaseUrl = "";
+    /** 识图 Key；空则复用 apiKey */
+    private String visionApiKey = "";
 }

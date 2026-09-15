@@ -30,6 +30,7 @@ import {
 import {
   DISCLAIMERS,
   chatRouteFromLlm,
+  looksLikeImageQuestion,
   routeChatIntent,
   routeChatIntentConfident,
   type RouteOverride,
@@ -43,6 +44,7 @@ import {
   type ChatHit,
   type ChatMessage,
 } from '../../utils/chatStorage'
+import { copyToClipboard } from '../../utils/clipboard'
 import styles from './Chat.module.css'
 
 /** 附件白名单（轻量：前端先拦；后端上传落地后再双检） */
@@ -103,7 +105,7 @@ function classifyFile(file: File): PendingFile['kind'] | 'reject' {
 function validateFile(file: File): string | null {
   const kind = classifyFile(file)
   if (kind === 'reject') {
-    return '暂不支持该文件类型。可用：图片、PDF、Office、文本；视频即将支持处理。'
+    return '暂不支持该文件类型。可用：图片（需识图模型）、PDF、Office、文本；视频即将支持。'
   }
   if (kind === 'image' && file.size > MAX_IMAGE_BYTES) return '图片请不超过 5MB'
   if (kind === 'doc' && file.size > MAX_DOC_BYTES) return '文档请不超过 10MB'
@@ -173,7 +175,8 @@ function draftSummaryFallback(raw: string): string {
   return [
     '【内容总结·本地兜底】',
     '当前未能连上模型服务。请检查后端 app.ai 配置，或稍后再试。',
-    '支持从临时附件提炼：.txt / .md / .pdf / .docx / .xlsx。',
+    '文档可抽字：.txt / .md / .pdf / .docx / .xlsx。',
+    '图片需后端配置识图模型（vision-model）后才能描述画面。',
     '',
     '要点：',
     `· ${raw.slice(0, 120)}${raw.length > 120 ? '…' : ''}`,
@@ -284,36 +287,23 @@ function stripAttachmentNote(text: string) {
   return text.replace(/\n\n（[\s\S]*$/, '').trim()
 }
 
+/** 从气泡文案里还原 /media/chat-temp/...（重新生成时 ref 可能已空） */
+function extractAttachmentUrlsFromUserText(text: string): string[] {
+  const found = text.match(/\/media\/chat-temp\/[^\s）)\]]+/g)
+  if (!found?.length) return []
+  return [...new Set(found.map((u) => u.replace(/[，,。.]+$/, '')))]
+}
+
 async function copyText(text: string) {
   const value = text.trim()
   if (!value) {
     antMessage.warning('没有可复制的内容')
     return
   }
-  try {
-    if (navigator.clipboard?.writeText && window.isSecureContext) {
-      await navigator.clipboard.writeText(value)
-      antMessage.success('已复制')
-      return
-    }
-  } catch {
-    /* 走下方兼容复制 */
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = value
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.left = '-9999px'
-    ta.style.top = '0'
-    document.body.appendChild(ta)
-    ta.focus()
-    ta.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    if (!ok) throw new Error('execCommand failed')
+  const ok = await copyToClipboard(value)
+  if (ok) {
     antMessage.success('已复制')
-  } catch {
+  } else {
     antMessage.error('复制失败：请手动长按选择文本')
   }
 }
@@ -455,7 +445,7 @@ export function ChatPage() {
   async function send(
     text: string,
     override?: RouteOverride,
-    opts?: { regenerate?: boolean },
+    opts?: { regenerate?: boolean; attachmentUrls?: string[] },
   ) {
     const content = text.trim()
     if ((!content && pending.length === 0 && !opts?.regenerate) || busy) return
@@ -489,12 +479,15 @@ export function ChatPage() {
       setDraft('')
     }
     const filesSnapshot = opts?.regenerate ? [] : pending
+    const fromPending = filesSnapshot
+      .filter((p) => p.uploadStatus === 'ready' && p.serverUrl)
+      .map((p) => p.serverUrl as string)
     const attachmentUrls = opts?.regenerate
-      ? lastAttachmentUrlsRef.current
-      : filesSnapshot
-          .filter((p) => p.uploadStatus === 'ready' && p.serverUrl)
-          .map((p) => p.serverUrl as string)
-    if (!opts?.regenerate && attachmentUrls.length > 0) {
+      ? opts.attachmentUrls?.length
+        ? opts.attachmentUrls
+        : lastAttachmentUrlsRef.current
+      : fromPending
+    if (attachmentUrls.length > 0) {
       lastAttachmentUrlsRef.current = attachmentUrls
     }
     if (!opts?.regenerate) {
@@ -559,6 +552,19 @@ export function ChatPage() {
         }
       }
       if (aborted()) return
+
+      // 已上传图片：问「图里是什么」或模型仍返回 clarify → 直接识图总结，不弹选项
+      const hasReadyImage =
+        filesSnapshot.some((f) => f.kind === 'image' && f.uploadStatus === 'ready') ||
+        (opts?.regenerate === true &&
+          lastAttachmentUrlsRef.current.some((u) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(u)))
+      if (
+        hasReadyImage &&
+        content &&
+        (route.kind === 'clarify' || looksLikeImageQuestion(content))
+      ) {
+        route = { kind: 'skill', slug: 'summary', prompt: content }
+      }
 
       if (route.kind === 'clarify') {
         setMessages((prev) => [
@@ -680,17 +686,19 @@ export function ChatPage() {
                     ? draftChatFallback
                     : draftSummaryFallback
         const urlsForSkill =
-          route.slug === 'summary'
-            ? attachmentUrls.length > 0
-              ? attachmentUrls
-              : lastAttachmentUrlsRef.current
-            : undefined
+          attachmentUrls.length > 0
+            ? attachmentUrls
+            : lastAttachmentUrlsRef.current.length > 0
+              ? lastAttachmentUrlsRef.current
+              : undefined
         const prompt =
-          route.slug === 'summary' &&
+          (route.slug === 'summary' || route.slug === 'chat' || route.slug === 'copywriting') &&
           (!route.prompt.trim() || route.prompt === '请根据我刚才的说明继续') &&
           urlsForSkill &&
           urlsForSkill.length > 0
-            ? '请总结附件要点'
+            ? route.slug === 'copywriting'
+              ? '请根据附件图片写商品/营销文案'
+              : '请描述或总结附件要点'
             : route.prompt
         await streamSkillReply(
           route.slug,
@@ -722,15 +730,46 @@ export function ChatPage() {
       antMessage.info('这条没有可重试的文字内容，请重新说明需求')
       return
     }
+    const urlsFromBubble = extractAttachmentUrlsFromUserText(userRaw)
+    if (urlsFromBubble.length > 0) {
+      lastAttachmentUrlsRef.current = urlsFromBubble
+    }
     setMessages((prev) => prev.slice(0, idx))
-    void send(prompt, undefined, { regenerate: true })
+    void send(prompt, undefined, {
+      regenerate: true,
+      attachmentUrls:
+        urlsFromBubble.length > 0 ? urlsFromBubble : lastAttachmentUrlsRef.current,
+    })
   }
 
   function onPickOption(optionId: string) {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user')
     const fromLast = stripAttachmentNote(lastUser?.text || '')
     const prompt = draft.trim() || fromLast || '请根据我刚才的说明继续'
-    void send(prompt, optionId as RouteOverride)
+    const urlsFromBubble = lastUser
+      ? extractAttachmentUrlsFromUserText(lastUser.text)
+      : []
+    if (urlsFromBubble.length > 0) {
+      lastAttachmentUrlsRef.current = urlsFromBubble
+    }
+    const reuseAttachments =
+      urlsFromBubble.length > 0 || lastAttachmentUrlsRef.current.length > 0
+    // 去掉「请选择方向」那条助手消息，避免堆在对话里
+    setMessages((prev) => {
+      const last = prev[prev.length - 1]
+      if (last?.role === 'assistant' && last.options && last.options.length > 0) {
+        return prev.slice(0, -1)
+      }
+      return prev
+    })
+    void send(prompt, optionId as RouteOverride, {
+      regenerate: reuseAttachments,
+      attachmentUrls: reuseAttachments
+        ? urlsFromBubble.length > 0
+          ? urlsFromBubble
+          : lastAttachmentUrlsRef.current
+        : undefined,
+    })
   }
 
   const uploadFileList: UploadFile[] = pending.map((p) => ({
