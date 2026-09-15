@@ -1,7 +1,13 @@
 package com.zzh.personal_hub.ai.controller;
 
+import com.zzh.personal_hub.common.response.ApiResponse;
+
+import java.util.Map;
+
+import com.zzh.personal_hub.ai.dto.ChatRouteRequest;
 import com.zzh.personal_hub.ai.dto.ChatStreamRequest;
 import com.zzh.personal_hub.ai.service.AiToolRunService;
+import com.zzh.personal_hub.ai.service.ChatIntentRouterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class ChatController {
 
     private final AiToolRunService aiToolRunService;
+    private final ChatIntentRouterService chatIntentRouterService;
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(
@@ -33,5 +40,10 @@ public class ChatController {
             body.getAttachmentUrls(),
             request
         );
+    }
+
+    @PostMapping("/route")
+    public ApiResponse<Map<String, Object>> route(@Valid @RequestBody ChatRouteRequest body) {
+        return ApiResponse.success(chatIntentRouterService.route(body.getMessage()));
     }
 }

@@ -29,10 +29,13 @@ import {
 } from '../../services/globalSearch'
 import {
   DISCLAIMERS,
+  chatRouteFromLlm,
   routeChatIntent,
+  routeChatIntentConfident,
   type RouteOverride,
   type SkillSlug,
 } from '../../services/chatRouter'
+import { fetchChatRoute } from '../../api/chatRoute'
 import {
   clearChatMessages,
   loadChatMessages,
@@ -176,6 +179,15 @@ function draftSummaryFallback(raw: string): string {
   ].join('\n')
 }
 
+function draftChatFallback(raw: string): string {
+  return [
+    '【通用问答·本地兜底】',
+    '当前未能连上模型服务。请检查后端 app.ai 配置，或稍后再试。',
+    '',
+    `你的问题：${raw.slice(0, 200)}${raw.length > 200 ? '…' : ''}`,
+  ].join('\n')
+}
+
 async function streamSkillReply(
   slug: SkillSlug,
   content: string,
@@ -191,6 +203,7 @@ async function streamSkillReply(
   ])
 
   const useApi =
+    slug === 'chat' ||
     slug === 'copywriting' ||
     slug === 'translate' ||
     slug === 'resume' ||
@@ -499,7 +512,17 @@ export function ChatPage() {
         return
       }
 
-      const route = routeChatIntent(content, override)
+      let route = routeChatIntentConfident(content, override)
+      if (!route) {
+        try {
+          const llm = await fetchChatRoute(content, controller.signal)
+          if (aborted()) return
+          route = chatRouteFromLlm(llm, content)
+        } catch {
+          if (aborted()) return
+          route = routeChatIntent(content, override)
+        }
+      }
       if (aborted()) return
 
       if (route.kind === 'clarify') {
@@ -618,7 +641,9 @@ export function ChatPage() {
                 ? draftResumeFallback
                 : route.slug === 'contract'
                   ? draftContractFallback
-                  : draftSummaryFallback
+                  : route.slug === 'chat'
+                    ? draftChatFallback
+                    : draftSummaryFallback
         const urlsForSkill =
           route.slug === 'summary'
             ? attachmentUrls.length > 0

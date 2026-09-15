@@ -44,3 +44,14 @@ app:
     login-per-minute: 5
     register-per-minute: 3
     upload-per-minute: 10
+  ai:
+    # 生产默认走 OpenAI 兼容协议（OpenRouter / DeepSeek 等）；密钥必须用环境变量注入
+    provider: ${AI_PROVIDER:openai-compatible}
+    base-url: ${AI_BASE_URL:https://openrouter.ai/api/v1}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:inclusionai/ling-3.0-flash-vl:free}
+    guest-daily-quota: ${AI_GUEST_DAILY_QUOTA:5}
+    user-daily-quota: ${AI_USER_DAILY_QUOTA:30}
+    timeout-ms: ${AI_TIMEOUT_MS:60000}
+    # 生产建议打开，避免免费额度被刷爆
+    quota-enabled: ${AI_QUOTA_ENABLED:true}

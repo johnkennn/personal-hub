@@ -1,9 +1,10 @@
 /**
- * 轻量规则意图路由（可升级为后端 / LLM Router）。
- * 原则：搜产品优先于模糊办事；冲突或低置信 → clarify，不瞎跑。
+ * 轻量规则意图路由 + 可选 LLM 路由回退。
+ * - routeChatIntentConfident：高置信才返回，否则 null（交给模型）
+ * - routeChatIntent：完整规则（含启发式），作模型失败时的兜底
  */
 
-export type SkillSlug = 'copywriting' | 'translate' | 'resume' | 'contract' | 'summary'
+export type SkillSlug = 'chat' | 'copywriting' | 'translate' | 'resume' | 'contract' | 'summary'
 
 export type ChatRouteResult =
   | { kind: 'search'; query: string }
@@ -18,8 +19,13 @@ export type ChatRouteResult =
 
 export type RouteOverride = SkillSlug | 'search' | null
 
+export type LlmRouteDto = {
+  intent: string
+  query?: string | null
+}
+
 function hasSearchCue(q: string): boolean {
-  return /搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索|有没有|相关|哪个好|有哪些/.test(
+  return /搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索|有没有.*?(工具|产品|评测|模型)|哪个好|有哪些.*?(工具|产品|ai)/.test(
     q,
   )
 }
@@ -28,10 +34,28 @@ function hasSkillCue(q: string): boolean {
   return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图/.test(q)
 }
 
+function looksLikeQuestion(q: string): boolean {
+  return /[？?]|(什么|怎么|怎样|为何|为什么|多少|几号|日期|今天|明天|昨天|是否|能否|可以吗|吗$|呢$|嘛$)/.test(
+    q,
+  )
+}
+
+const CLARIFY_OPTIONS = [
+  { id: 'search', label: '搜产品 / 评测' },
+  { id: 'copywriting', label: '写文案' },
+  { id: 'translate', label: '翻译' },
+  { id: 'resume', label: '简历优化' },
+  { id: 'summary', label: '总结提炼' },
+  { id: 'contract', label: '合同风险提示' },
+] as const
+
 /**
- * @param override 用户点了追问选项时强制走某意图
+ * 高置信规则：命中则无需调模型；拿不准返回 null。
  */
-export function routeChatIntent(rawInput: string, override?: RouteOverride): ChatRouteResult {
+export function routeChatIntentConfident(
+  rawInput: string,
+  override?: RouteOverride,
+): ChatRouteResult | null {
   const raw = rawInput.trim()
   const q = raw.toLowerCase()
 
@@ -40,13 +64,18 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
     return { kind: 'search', query }
   }
   if (
+    override === 'chat' ||
     override === 'copywriting' ||
     override === 'translate' ||
     override === 'resume' ||
     override === 'contract' ||
     override === 'summary'
   ) {
-    return { kind: 'skill', slug: override, prompt: raw }
+    return {
+      kind: 'skill',
+      slug: override,
+      prompt: override === 'chat' ? withLocalDateHint(raw) : raw,
+    }
   }
 
   if (!raw) {
@@ -64,7 +93,7 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
   if (/你好|您好|嗨|hi\b|hello|早上好|晚上好|下午好/.test(q)) {
     return {
       kind: 'smalltalk',
-      text: '你好！直接说「搜 + 关键词」找产品，或说明要翻译 / 写文案 / 润色简历。拿不准时我会先问你。',
+      text: '你好！可以直接提问，或说「搜 + 关键词」找产品，也可说明要翻译 / 写文案 / 总结。',
     }
   }
   if (/谢谢|感谢|多谢/.test(q)) {
@@ -73,27 +102,18 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
   if (/你是谁|你叫什么|介绍一下你|什么助手/.test(q)) {
     return {
       kind: 'smalltalk',
-      text: '我是 AI Tools Hub 统一聊天助手：可搜站内产品与评测，也可在对话里做翻译、文案、简历润色等。关闭本标签页后，对话不会保留在服务器。',
+      text: '我是 AI Tools Hub 统一聊天助手：可搜站内产品与评测，也可问答、翻译、文案、总结等。关闭本标签页后，对话不会保留在服务器。',
     }
   }
 
-  // —— 搜 vs 办事冲突：同时像搜又像办事 → 追问（搜产品优先级在选项顺序上体现）——
   if (hasSearchCue(q) && hasSkillCue(q)) {
     return {
       kind: 'clarify',
       text: '这句话既像「搜产品」又像「办事」。请选一个，我按你的选择来：',
-      options: [
-        { id: 'search', label: '搜产品 / 评测' },
-        { id: 'translate', label: '翻译' },
-        { id: 'copywriting', label: '写文案' },
-        { id: 'resume', label: '简历优化' },
-        { id: 'summary', label: '总结提炼' },
-        { id: 'contract', label: '合同风险提示' },
-      ],
+      options: [...CLARIFY_OPTIONS],
     }
   }
 
-  // —— 明确技能（无搜冲突时）——
   if (/译成|翻译成|翻译成|翻译为|请翻译|帮我翻译|translate/.test(q) || /^译[:：]/.test(raw)) {
     return { kind: 'skill', slug: 'translate', prompt: raw }
   }
@@ -110,7 +130,6 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
     return { kind: 'skill', slug: 'copywriting', prompt: raw }
   }
 
-  // —— 站点板块（短指令）——
   if (/^(打开|去|看看)?(限时)?(优惠|折扣|促销)$/.test(q) || (/优惠|折扣|促销|限时/.test(q) && q.length < 12)) {
     return { kind: 'section', section: 'deals' }
   }
@@ -127,46 +146,105 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
     return { kind: 'section', section: 'about' }
   }
 
-  // —— 搜索优先：显式搜，或像产品名 ——
   const searchQuery = extractSearchQuery(raw)
   if (hasSearchCue(q) && searchQuery.length >= 1) {
     return { kind: 'search', query: searchQuery }
   }
 
-  // 模糊办事词但材料不足 → 追问
-  if (/帮我|弄一下|处理一下|看一下这份|优化一下|改一下/.test(q) && !hasSearchCue(q)) {
+  if (
+    /帮我|弄一下|处理一下|看一下这份|优化一下|改一下/.test(q) &&
+    !hasSearchCue(q) &&
+    !looksLikeQuestion(q)
+  ) {
     return {
       kind: 'clarify',
       text: '想让我具体做什么？选一项（也可再发一段更完整的说明）：',
-      options: [
-        { id: 'search', label: '搜产品 / 评测' },
-        { id: 'copywriting', label: '写文案' },
-        { id: 'translate', label: '翻译' },
-        { id: 'resume', label: '简历优化' },
-        { id: 'summary', label: '总结提炼' },
-        { id: 'contract', label: '合同风险提示' },
-      ],
+      options: [...CLARIFY_OPTIONS],
     }
   }
 
-  // 默认：当关键词去搜；搜不到由调用方兜底说明
-  if (searchQuery.length >= 2) {
+  // 短词「豆包」、普通问句等 → 交给模型判断
+  return null
+}
+
+/** 完整规则兜底（模型不可用时） */
+export function routeChatIntent(rawInput: string, override?: RouteOverride): ChatRouteResult {
+  const hit = routeChatIntentConfident(rawInput, override)
+  if (hit) return hit
+
+  const raw = rawInput.trim()
+  const q = raw.toLowerCase()
+  const searchQuery = extractSearchQuery(raw)
+
+  if (
+    searchQuery.length >= 2 &&
+    searchQuery.length <= 16 &&
+    !looksLikeQuestion(q) &&
+    !/[，。！？、]/.test(raw)
+  ) {
     return { kind: 'search', query: searchQuery }
   }
 
-  return {
-    kind: 'clarify',
-    text: '还不太确定你的意图。请选一个方向：',
-    options: [
-      { id: 'search', label: '搜产品 / 评测' },
-      { id: 'copywriting', label: '写文案' },
-      { id: 'translate', label: '翻译' },
-      { id: 'resume', label: '简历优化' },
-    ],
+  return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+}
+
+/** 把后端 LLM 路由结果转成前端统一结构 */
+export function chatRouteFromLlm(data: LlmRouteDto, rawInput: string): ChatRouteResult {
+  const raw = rawInput.trim()
+  const intent = (data.intent || '').trim().toLowerCase()
+  const query = (data.query || '').trim() || extractSearchQuery(raw) || raw
+
+  switch (intent) {
+    case 'search':
+      return { kind: 'search', query }
+    case 'translate':
+      return { kind: 'skill', slug: 'translate', prompt: raw }
+    case 'copywriting':
+      return { kind: 'skill', slug: 'copywriting', prompt: raw }
+    case 'resume':
+      return { kind: 'skill', slug: 'resume', prompt: raw }
+    case 'summary':
+      return { kind: 'skill', slug: 'summary', prompt: raw }
+    case 'contract':
+      return { kind: 'skill', slug: 'contract', prompt: raw }
+    case 'chat':
+      return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+    case 'deals':
+    case 'section_deals':
+      return { kind: 'section', section: 'deals' }
+    case 'articles':
+    case 'section_articles':
+      return { kind: 'section', section: 'articles' }
+    case 'tools':
+    case 'section_tools':
+      return { kind: 'section', section: 'tools' }
+    case 'discover':
+    case 'section_discover':
+      return { kind: 'section', section: 'discover' }
+    case 'about':
+    case 'section_about':
+      return { kind: 'section', section: 'about' }
+    case 'clarify':
+      return {
+        kind: 'clarify',
+        text: '还不太确定你的意图。请选一个方向：',
+        options: [...CLARIFY_OPTIONS],
+      }
+    default:
+      return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
   }
 }
 
-/** 去掉「搜索/找一下」等口语，留下关键词 */
+export function withLocalDateHint(raw: string): string {
+  const today = new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+  return `${raw}\n\n（参考信息：用户本地日期为 ${today}）`
+}
+
 export function extractSearchQuery(raw: string): string {
   let s = raw.trim()
   s = s.replace(

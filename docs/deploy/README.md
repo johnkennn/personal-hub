@@ -304,6 +304,12 @@ JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
 CORS_ALLOWED_ORIGINS=http://YOUR_PUBLIC_IP
 PUBLIC_BASE_URL=http://YOUR_PUBLIC_IP
 ADMIN_BOOTSTRAP_PASSWORD=YOUR_FIRST_ADMIN_PASSWORD
+# —— AI（OpenRouter 等 OpenAI 兼容接口）——
+AI_PROVIDER=openai-compatible
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_API_KEY=YOUR_OPENROUTER_API_KEY
+AI_MODEL=inclusionai/ling-3.0-flash-vl:free
+AI_QUOTA_ENABLED=true
 EOF
 chmod 600 /opt/personal-hub/personal-hub.env
 ```
@@ -313,6 +319,8 @@ chmod 600 /opt/personal-hub/personal-hub.env
 ```bash
 set -a && source /opt/personal-hub/personal-hub.env && set +a
 echo "DB_URL=$DB_URL"
+echo "AI_PROVIDER=$AI_PROVIDER"
+# 不要 echo AI_API_KEY
 ```
 
 | 变量 | 说明 |
@@ -324,6 +332,11 @@ echo "DB_URL=$DB_URL"
 | `PUBLIC_BASE_URL` | 站点根 URL（无尾斜杠），写入 `sitemap.xml` / `robots.txt` |
 | `ADMIN_BOOTSTRAP_PASSWORD` | 仅库中尚无管理员时用于初始化；有管理员后可留空 |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
+| `AI_PROVIDER` | 生产用 `openai-compatible`（勿用 `mock`） |
+| `AI_BASE_URL` | OpenRouter：`https://openrouter.ai/api/v1` |
+| `AI_API_KEY` | OpenRouter Key；只放服务器 env，勿提交 Git |
+| `AI_MODEL` | 免费模型需带 `:free` 后缀；以 OpenRouter 控制台当前 ID 为准 |
+| `AI_QUOTA_ENABLED` | 建议 `true`，限制访客/登录日调用次数 |
 
 ### 8.3 首次启动（建表）
 
@@ -515,6 +528,7 @@ journalctl -u personal-hub -n 80 --no-pager | grep -i flyway
 | JWT | 环境变量 `JWT_SECRET`（至少 32 位随机串） |
 | CORS | `CORS_ALLOWED_ORIGINS`，例如 `https://你的域名`；前端若同源反代可收紧 |
 | 限流 | 配置在 `app.ratelimit.*`（登录/注册/上传/忘记密码） |
+| AI | `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`；生产走 OpenRouter 时见第 8.2 节 |
 
 `/opt/personal-hub/personal-hub.env` 建议字段：
 
@@ -528,6 +542,11 @@ CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN
 PUBLIC_BASE_URL=https://YOUR_DOMAIN
 ADMIN_BOOTSTRAP_PASSWORD=
 MEDIA_ROOT=/opt/personal-hub/data/media
+AI_PROVIDER=openai-compatible
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_API_KEY=YOUR_OPENROUTER_API_KEY
+AI_MODEL=inclusionai/ling-3.0-flash-vl:free
+AI_QUOTA_ENABLED=true
 ```
 
 头像等上传目录要可写（与 `MEDIA_ROOT` 一致）。未设置时默认是 jar 工作目录下的 `./data/media`（当前生产即 `/opt/personal-hub/data/media`）：

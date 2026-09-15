@@ -85,6 +85,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/deals").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/chat/stream").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/chat/route").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/chat/attachments").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/ai-tools/*/run", "/api/ai-tools/*/run/stream").permitAll()
 
