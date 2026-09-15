@@ -171,8 +171,9 @@ function draftContractFallback(raw: string): string {
 
 function draftSummaryFallback(raw: string): string {
   return [
-    '【内容总结·演示】',
-    '（后端接入文档解析后，将优先总结临时附件；当前按文字提炼）',
+    '【内容总结·本地兜底】',
+    '当前未能连上模型服务。请检查后端 app.ai 配置，或稍后再试。',
+    '支持从临时附件提炼：.txt / .md / .pdf / .docx / .xlsx。',
     '',
     '要点：',
     `· ${raw.slice(0, 120)}${raw.length > 120 ? '…' : ''}`,

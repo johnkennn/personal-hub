@@ -7,7 +7,12 @@ import org.springframework.util.StringUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.xssf.extractor.XSSFExcelExtractor;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
+import java.io.InputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,7 +22,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 从聊天临时目录读取可解析文本（第一期：txt / md）。
+ * 从聊天临时目录读取可解析文本（txt / md / pdf / docx / xlsx）。
  * 严格限制只能读 chat-temp/，防止任意路径读取。
  */
 @Service
@@ -95,8 +100,36 @@ public class ChatTempTextExtractor {
                 throw new BusinessException(500, "读取 PDF 失败：" + file.getFileName());
             }
         }
-        // 图片 / Office：第一期不解析正文
-        return "【" + file.getFileName() + "】暂不支持自动解析该格式，请粘贴文字或上传 .txt / .md / .pdf。";
+        if (name.endsWith(".docx")) {
+            try (InputStream in = Files.newInputStream(file);
+                 XWPFDocument doc = new XWPFDocument(in);
+                 XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {
+                String text = normalizeOfficeText(extractor.getText());
+                if (!StringUtils.hasText(text)) {
+                    return "【" + file.getFileName() + "】未能提取到文字（可能是空文档或几乎全是图片），请改用可复制文本的 Word 或 .txt。";
+                }
+                return "【" + file.getFileName() + "】\n" + text;
+            } catch (IOException e) {
+                throw new BusinessException(500, "读取 Word 失败：" + file.getFileName());
+            }
+        }
+        if (name.endsWith(".xlsx")) {
+            try (InputStream in = Files.newInputStream(file);
+                 XSSFWorkbook workbook = new XSSFWorkbook(in);
+                 XSSFExcelExtractor extractor = new XSSFExcelExtractor(workbook)) {
+                extractor.setFormulasNotResults(false);
+                extractor.setIncludeSheetNames(true);
+                String text = normalizeOfficeText(extractor.getText());
+                if (!StringUtils.hasText(text)) {
+                    return "【" + file.getFileName() + "】未能提取到文字（可能是空表），请改用有内容的 Excel 或 .txt。";
+                }
+                return "【" + file.getFileName() + "】\n" + text;
+            } catch (IOException e) {
+                throw new BusinessException(500, "读取 Excel 失败：" + file.getFileName());
+            }
+        }
+        // 图片 / 旧版 Office / PPT：本步不解析正文
+        return "【" + file.getFileName() + "】暂不支持自动解析该格式，请粘贴文字或上传 .txt / .md / .pdf / .docx / .xlsx。";
     }
 
     /**
@@ -126,5 +159,14 @@ public class ChatTempTextExtractor {
             throw new BusinessException(400, "附件不存在或已过期");
         }
         return dest;
+    }
+
+    private static String normalizeOfficeText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
     }
 }
