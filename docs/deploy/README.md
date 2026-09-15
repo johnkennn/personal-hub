@@ -233,11 +233,20 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 聊天 SSE 流式：关缓冲 + 拉长超时，否则易 504（默认约 60s）
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 }
 EOF
 ```
 
+> 若站点已在跑，只需把上面 `location /api/` 里多出来的 SSE 几行补进现有 conf，然后 `nginx -t && systemctl reload nginx`。
 ### 6.2 关掉主配置里默认的 `listen 80`
 
 Alibaba Cloud Linux 的 `/etc/nginx/nginx.conf` 里常自带一个 `server { listen 80; ... }`，会与上面冲突（`conflicting server name "_"`）。
@@ -304,11 +313,11 @@ JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
 CORS_ALLOWED_ORIGINS=http://YOUR_PUBLIC_IP
 PUBLIC_BASE_URL=http://YOUR_PUBLIC_IP
 ADMIN_BOOTSTRAP_PASSWORD=YOUR_FIRST_ADMIN_PASSWORD
-# —— AI（OpenRouter 等 OpenAI 兼容接口）——
+# —— AI（DeepSeek OpenAI 兼容；国内机房一般可达）——
 AI_PROVIDER=openai-compatible
-AI_BASE_URL=https://openrouter.ai/api/v1
-AI_API_KEY=YOUR_OPENROUTER_API_KEY
-AI_MODEL=inclusionai/ling-3.0-flash-vl:free
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=YOUR_DEEPSEEK_API_KEY
+AI_MODEL=deepseek-flash
 AI_QUOTA_ENABLED=true
 EOF
 chmod 600 /opt/personal-hub/personal-hub.env
@@ -333,9 +342,9 @@ echo "AI_PROVIDER=$AI_PROVIDER"
 | `ADMIN_BOOTSTRAP_PASSWORD` | 仅库中尚无管理员时用于初始化；有管理员后可留空 |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 | `AI_PROVIDER` | 生产用 `openai-compatible`（勿用 `mock`） |
-| `AI_BASE_URL` | OpenRouter：`https://openrouter.ai/api/v1` |
-| `AI_API_KEY` | OpenRouter Key；只放服务器 env，勿提交 Git |
-| `AI_MODEL` | 免费模型需带 `:free` 后缀；以 OpenRouter 控制台当前 ID 为准 |
+| `AI_BASE_URL` | DeepSeek：`https://api.deepseek.com/v1`（本项目会再拼 `/chat/completions`） |
+| `AI_API_KEY` | DeepSeek Key；只放服务器 env，勿提交 Git |
+| `AI_MODEL` | 推荐便宜的 `deepseek-flash`；更强可用 `deepseek-v4-pro`（按量计费） |
 | `AI_QUOTA_ENABLED` | 建议 `true`，限制访客/登录日调用次数 |
 
 ### 8.3 首次启动（建表）
@@ -543,9 +552,9 @@ PUBLIC_BASE_URL=https://YOUR_DOMAIN
 ADMIN_BOOTSTRAP_PASSWORD=
 MEDIA_ROOT=/opt/personal-hub/data/media
 AI_PROVIDER=openai-compatible
-AI_BASE_URL=https://openrouter.ai/api/v1
-AI_API_KEY=YOUR_OPENROUTER_API_KEY
-AI_MODEL=inclusionai/ling-3.0-flash-vl:free
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=YOUR_DEEPSEEK_API_KEY
+AI_MODEL=deepseek-flash
 AI_QUOTA_ENABLED=true
 ```
 

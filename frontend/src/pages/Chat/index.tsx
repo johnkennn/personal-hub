@@ -258,10 +258,24 @@ async function streamSkillReply(
       )
       return
     }
+    const reason =
+      err instanceof Error && err.message.trim()
+        ? err.message.trim()
+        : '调用模型失败，请稍后重试'
+    // 线上勿再静默本地兜底，否则像「翻译成功」其实没调到模型
     setMessages((prev) =>
-      prev.map((m) => (m.id === assistantId ? { ...m, text: '' } : m)),
+      prev.map((m) =>
+        m.id === assistantId
+          ? {
+              ...m,
+              text: m.text.trim()
+                ? `${m.text}\n\n（生成中断：${reason}）`
+                : `生成失败：${reason}`,
+            }
+          : m,
+      ),
     )
-    await typeLocal(fallback(content))
+    antMessage.error(reason)
   }
 }
 
@@ -276,10 +290,30 @@ async function copyText(text: string) {
     return
   }
   try {
-    await navigator.clipboard.writeText(value)
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(value)
+      antMessage.success('已复制')
+      return
+    }
+  } catch {
+    /* 走下方兼容复制 */
+  }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = value
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.left = '-9999px'
+    ta.style.top = '0'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    if (!ok) throw new Error('execCommand failed')
     antMessage.success('已复制')
   } catch {
-    antMessage.error('复制失败')
+    antMessage.error('复制失败：请手动长按选择文本')
   }
 }
 

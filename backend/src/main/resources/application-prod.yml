@@ -45,13 +45,14 @@ app:
     register-per-minute: 3
     upload-per-minute: 10
   ai:
-    # 生产默认走 OpenAI 兼容协议（OpenRouter / DeepSeek 等）；密钥必须用环境变量注入
+    # 生产默认走国内可达的 DeepSeek（OpenAI 兼容）；密钥必须用环境变量注入
+    # 说明：多数国内云主机访问 openrouter.ai 会 SSL 失败，不宜作为生产默认
     provider: ${AI_PROVIDER:openai-compatible}
-    base-url: ${AI_BASE_URL:https://openrouter.ai/api/v1}
+    base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
     api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:inclusionai/ling-3.0-flash-vl:free}
+    model: ${AI_MODEL:deepseek-flash}
     guest-daily-quota: ${AI_GUEST_DAILY_QUOTA:5}
     user-daily-quota: ${AI_USER_DAILY_QUOTA:30}
     timeout-ms: ${AI_TIMEOUT_MS:60000}
-    # 生产建议打开，避免免费额度被刷爆
+    # 生产建议打开，避免额度被刷爆
     quota-enabled: ${AI_QUOTA_ENABLED:true}
