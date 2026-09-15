@@ -41,10 +41,12 @@ import {
   clearChatMessages,
   loadChatMessages,
   saveChatMessages,
+  type ChatAttachment,
   type ChatHit,
   type ChatMessage,
 } from '../../utils/chatStorage'
 import { copyToClipboard } from '../../utils/clipboard'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from './Chat.module.css'
 
 /** 附件白名单（轻量：前端先拦；后端上传落地后再双检） */
@@ -287,11 +289,52 @@ function stripAttachmentNote(text: string) {
   return text.replace(/\n\n（[\s\S]*$/, '').trim()
 }
 
-/** 从气泡文案里还原 /media/chat-temp/...（重新生成时 ref 可能已空） */
+/** 从气泡文案里还原 /media/chat-temp/...（旧消息 / 重新生成） */
 function extractAttachmentUrlsFromUserText(text: string): string[] {
   const found = text.match(/\/media\/chat-temp\/[^\s）)\]]+/g)
   if (!found?.length) return []
   return [...new Set(found.map((u) => u.replace(/[，,。.]+$/, '')))]
+}
+
+function kindFromFileName(name: string): ChatAttachment['kind'] {
+  const n = name.toLowerCase()
+  if (/\.(jpe?g|png|webp|gif)$/.test(n)) return 'image'
+  if (/\.(mp4|webm|mov)$/.test(n)) return 'video'
+  if (/\.(txt|md)$/.test(n)) return 'text'
+  return 'doc'
+}
+
+/** 优先用结构化 attachments；旧气泡从文案解析文件名+路径 */
+function resolveMessageAttachments(m: ChatMessage): ChatAttachment[] {
+  if (m.attachments?.length) return m.attachments
+  const note = m.text.match(/\n\n（([\s\S]*)）\s*$/)
+  if (!note) return []
+  const body = note[1]
+  const out: ChatAttachment[] = []
+  const re = /([^（、；]+?)\s*（(\/media\/chat-temp\/[^）]+)）/g
+  let match: RegExpExecArray | null
+  while ((match = re.exec(body)) !== null) {
+    const name = match[1].replace(/^临时附件\s*\d+\s*个：/, '').replace(/^本会话附件\s*\d+\s*个：/, '').trim()
+    const url = match[2].trim()
+    if (name && url) {
+      out.push({ name, url, kind: kindFromFileName(name) })
+    }
+  }
+  if (out.length) return out
+  // 仅有路径时
+  for (const url of extractAttachmentUrlsFromUserText(m.text)) {
+    const name = url.split('/').pop() || '附件'
+    out.push({ name, url, kind: kindFromFileName(name) })
+  }
+  return out
+}
+
+function getMessageAttachmentUrls(m: ChatMessage): string[] {
+  const fromStruct = (m.attachments ?? [])
+    .map((a) => a.url)
+    .filter((u): u is string => Boolean(u && u.startsWith('/media/')))
+  if (fromStruct.length) return [...new Set(fromStruct)]
+  return extractAttachmentUrlsFromUserText(m.text)
 }
 
 async function copyText(text: string) {
@@ -454,27 +497,15 @@ export function ChatPage() {
       return
     }
 
-    const uploaded = pending.filter((p) => p.uploadStatus === 'ready' && p.serverUrl)
-    const localOnly = pending.filter((p) => p.uploadStatus !== 'ready')
-    let fileNote = ''
-    if (!opts?.regenerate && pending.length > 0) {
-      const parts: string[] = []
-      if (uploaded.length > 0) {
-        parts.push(
-          `临时附件 ${uploaded.length} 个：${uploaded
-            .map((p) => `${p.file.name}（${p.serverUrl}）`)
-            .join('、')}`,
-        )
-      }
-      if (localOnly.length > 0) {
-        parts.push(
-          `本会话附件 ${localOnly.length} 个：${localOnly.map((p) => p.file.name).join('、')}（关闭标签即消失）`,
-        )
-      }
-      fileNote = `\n\n（${parts.join('；')}）`
-    }
+    const messageAttachments: ChatAttachment[] = opts?.regenerate
+      ? []
+      : pending.map((p) => ({
+          name: p.file.name,
+          url: p.serverUrl ?? null,
+          kind: p.kind,
+        }))
 
-    const displayUser = (content || '（仅发送了附件）') + fileNote
+    const displayUser = content || (messageAttachments.length > 0 ? '（仅发送了附件）' : '')
     if (!opts?.regenerate) {
       setDraft('')
     }
@@ -492,7 +523,15 @@ export function ChatPage() {
     }
     if (!opts?.regenerate) {
       setPending([])
-      setMessages((prev) => [...prev, { id: uid(), role: 'user', text: displayUser }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          role: 'user',
+          text: displayUser,
+          ...(messageAttachments.length > 0 ? { attachments: messageAttachments } : {}),
+        },
+      ])
     }
 
     const controller = new AbortController()
@@ -725,12 +764,19 @@ export function ChatPage() {
     while (userIdx >= 0 && messages[userIdx].role !== 'user') userIdx -= 1
     if (userIdx < 0) return
     const userRaw = messages[userIdx].text
-    const prompt = stripAttachmentNote(userRaw) || userRaw
-    if (!prompt.trim() || prompt.startsWith('（仅发送了附件）')) {
+    const userMsg = messages[userIdx]
+    const urlsFromBubble = getMessageAttachmentUrls(userMsg)
+    const stripped = stripAttachmentNote(userRaw) || userRaw
+    const prompt =
+      !stripped.trim() || stripped.startsWith('（仅发送了附件）')
+        ? urlsFromBubble.length > 0
+          ? '请描述或总结附件要点'
+          : ''
+        : stripped
+    if (!prompt.trim()) {
       antMessage.info('这条没有可重试的文字内容，请重新说明需求')
       return
     }
-    const urlsFromBubble = extractAttachmentUrlsFromUserText(userRaw)
     if (urlsFromBubble.length > 0) {
       lastAttachmentUrlsRef.current = urlsFromBubble
     }
@@ -746,9 +792,7 @@ export function ChatPage() {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user')
     const fromLast = stripAttachmentNote(lastUser?.text || '')
     const prompt = draft.trim() || fromLast || '请根据我刚才的说明继续'
-    const urlsFromBubble = lastUser
-      ? extractAttachmentUrlsFromUserText(lastUser.text)
-      : []
+    const urlsFromBubble = lastUser ? getMessageAttachmentUrls(lastUser) : []
     if (urlsFromBubble.length > 0) {
       lastAttachmentUrlsRef.current = urlsFromBubble
     }
@@ -931,7 +975,50 @@ export function ChatPage() {
                           m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant
                         }
                       >
-                        <p className={styles.bubbleText}>{m.text}</p>
+                        {(() => {
+                          const visibleText = stripAttachmentNote(m.text)
+                          const atts = resolveMessageAttachments(m)
+                          return (
+                            <>
+                              {visibleText ? (
+                                <p className={styles.bubbleText}>{visibleText}</p>
+                              ) : null}
+                              {atts.length > 0 ? (
+                                <ul className={styles.msgAttachList} aria-label="附件">
+                                  {atts.map((a, i) => {
+                                    const src = resolveMediaUrl(a.url ?? undefined)
+                                    const key = `${a.name}-${a.url ?? i}`
+                                    if (a.kind === 'image' && src) {
+                                      return (
+                                        <li key={key} className={styles.msgAttachImage}>
+                                          <a href={src} target="_blank" rel="noreferrer">
+                                            <img src={src} alt={a.name} loading="lazy" />
+                                          </a>
+                                          <span className={styles.msgAttachName}>{a.name}</span>
+                                        </li>
+                                      )
+                                    }
+                                    return (
+                                      <li key={key} className={styles.msgAttachFile}>
+                                        <span className={styles.msgAttachKind}>
+                                          {a.kind === 'video'
+                                            ? '视频'
+                                            : a.kind === 'text'
+                                              ? '文本'
+                                              : '文档'}
+                                        </span>
+                                        <span className={styles.msgAttachName}>{a.name}</span>
+                                        {!a.url ? (
+                                          <span className={styles.msgAttachHint}>仅本页</span>
+                                        ) : null}
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : null}
+                            </>
+                          )
+                        })()}
                         {m.hits?.length ? (
                           <ul className={styles.hitList}>
                             {m.hits.map((h) => (
@@ -973,7 +1060,8 @@ export function ChatPage() {
                             ))}
                           </Space>
                         ) : null}
-                        {m.text.trim() ? (
+                        {(stripAttachmentNote(m.text).trim() ||
+                          resolveMessageAttachments(m).length > 0) ? (
                           <div
                             className={
                               m.role === 'user'
@@ -987,7 +1075,9 @@ export function ChatPage() {
                                 size="small"
                                 icon={<CopyOutlined />}
                                 aria-label="复制"
-                                onClick={() => void copyText(m.text)}
+                                onClick={() =>
+                                  void copyText(stripAttachmentNote(m.text) || m.text)
+                                }
                               />
                             </Tooltip>
                             {m.role === 'assistant' ? (

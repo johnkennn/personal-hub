@@ -11,6 +11,13 @@ export type ChatOption = {
   label: string
 }
 
+/** 用户消息里的附件（气泡展示用；url 供重试/识图） */
+export type ChatAttachment = {
+  name: string
+  url?: string | null
+  kind: 'image' | 'doc' | 'video' | 'text'
+}
+
 export type ChatRole = 'user' | 'assistant'
 
 export type ChatMessage = {
@@ -21,6 +28,7 @@ export type ChatMessage = {
   hits?: ChatHit[]
   /** 意图不清时的追问选项 */
   options?: ChatOption[]
+  attachments?: ChatAttachment[]
 }
 
 const MESSAGES_KEY = 'ai-hub-chat-messages-v2'
@@ -42,6 +50,15 @@ function isOption(value: unknown): value is ChatOption {
   return typeof o.id === 'string' && typeof o.label === 'string'
 }
 
+function isAttachment(value: unknown): value is ChatAttachment {
+  if (!value || typeof value !== 'object') return false
+  const a = value as ChatAttachment
+  return (
+    typeof a.name === 'string' &&
+    (a.kind === 'image' || a.kind === 'doc' || a.kind === 'video' || a.kind === 'text')
+  )
+}
+
 function isMessage(value: unknown): value is ChatMessage {
   if (!value || typeof value !== 'object') return false
   const m = value as ChatMessage
@@ -56,6 +73,12 @@ function isMessage(value: unknown): value is ChatMessage {
     return false
   }
   if (m.options != null && (!Array.isArray(m.options) || !m.options.every(isOption))) {
+    return false
+  }
+  if (
+    m.attachments != null &&
+    (!Array.isArray(m.attachments) || !m.attachments.every(isAttachment))
+  ) {
     return false
   }
   return true
