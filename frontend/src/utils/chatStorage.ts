@@ -24,6 +24,8 @@ export type ChatMessage = {
   id: string
   role: ChatRole
   text: string
+  /** 消息时间（毫秒时间戳），气泡下方简要展示 */
+  createdAt?: number
   actions?: { label: string; to: string }[]
   hits?: ChatHit[]
   /** 意图不清时的追问选项 */

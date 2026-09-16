@@ -59,8 +59,18 @@ public class OpenAiCompatibleAiClient implements AiClient {
             return text.trim();
         } catch (BusinessException e) {
             throw e;
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new BusinessException(502, "调用模型超时，请稍后重试");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(502, "调用模型被中断，请稍后重试");
         } catch (Exception e) {
-            throw new BusinessException(502, "调用模型失败，请稍后重试");
+            String detail = e.getMessage();
+            if (StringUtils.hasText(detail) && detail.length() > 160) {
+                detail = detail.substring(0, 160) + "…";
+            }
+            throw new BusinessException(502,
+                    StringUtils.hasText(detail) ? "调用模型失败：" + detail : "调用模型失败，请稍后重试");
         }
     }
 
@@ -110,8 +120,18 @@ public class OpenAiCompatibleAiClient implements AiClient {
             }
         } catch (BusinessException e) {
             throw e;
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new BusinessException(502, "调用模型超时，请稍后重试");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(502, "调用模型被中断，请稍后重试");
         } catch (Exception e) {
-            throw new BusinessException(502, "调用模型失败，请稍后重试");
+            String detail = e.getMessage();
+            if (StringUtils.hasText(detail) && detail.length() > 160) {
+                detail = detail.substring(0, 160) + "…";
+            }
+            throw new BusinessException(502,
+                    StringUtils.hasText(detail) ? "调用模型失败：" + detail : "调用模型失败，请稍后重试");
         }
     }
 

@@ -100,13 +100,23 @@ export function routeChatIntentConfident(
     }
   }
 
-  if (/你好|您好|嗨|hi\b|hello|早上好|晚上好|下午好/.test(q)) {
+  // 翻译/文案等优先于寒暄：避免「翻译：你好…」被当成打招呼
+  if (hasGenerativeCue(q) || looksLikeImageQuestion(q)) {
+    return toChatSkill(raw)
+  }
+
+  // 仅整句寒暄才走 smalltalk（不要用「包含你好」）
+  if (
+    /^(你好|您好|嗨|hi|hello|早上好|晚上好|下午好)([啊呀哇哦呢吗]?[.!！。～\s]*)$/i.test(
+      q.trim(),
+    )
+  ) {
     return {
       kind: 'smalltalk',
       text: '嗨～小智在呢！可以直接提问，或说「搜 + 关键词」找站内产品与评测。',
     }
   }
-  if (/谢谢|感谢|多谢/.test(q)) {
+  if (/^(谢谢|感谢|多谢)([啦了哦啊]?[.!！。～\s]*)$/i.test(q.trim())) {
     return { kind: 'smalltalk', text: '嘿嘿不客气，还有需要随时叫小智～' }
   }
   if (/你是谁|你叫什么|介绍一下你|什么助手/.test(q)) {

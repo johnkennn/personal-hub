@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input, Space, Tag, Tooltip, Typography, Upload, message as antMessage } from 'antd'
 import {
   ClearOutlined,
   CopyOutlined,
   DownOutlined,
+  MenuOutlined,
   PlusOutlined,
   RedoOutlined,
   SendOutlined,
@@ -38,17 +39,28 @@ import {
 } from '../../services/chatRouter'
 import { fetchChatRoute } from '../../api/chatRoute'
 import {
-  clearChatMessages,
-  loadChatMessages,
-  saveChatMessages,
   type ChatAttachment,
   type ChatHit,
   type ChatMessage,
 } from '../../utils/chatStorage'
+import {
+  clearActiveMessages,
+  createLocalConversation,
+  deleteLocalConversation,
+  getActiveConversationId,
+  getActiveMessages,
+  listLocalConversations,
+  renameLocalConversation,
+  saveActiveMessages,
+  setActiveConversationId,
+  titleFromMessages,
+  type ChatConversation,
+} from '../../utils/chatConversations'
 import { copyToClipboard } from '../../utils/clipboard'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
 import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { ensureLoggedIn } from '../../utils/requireLogin'
+import { ChatSidebar } from './ChatSidebar'
 import styles from './Chat.module.css'
 
 /** 附件白名单（轻量：前端先拦；后端上传落地后再双检） */
@@ -87,6 +99,39 @@ type PendingFile = {
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function formatMsgTime(ts?: number): string {
+  if (!ts || !Number.isFinite(ts)) return ''
+  const d = new Date(ts)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const today = new Date()
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  if (sameDay) return `${hh}:${mm}`
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`
+}
+
+/** 侧栏展示用：当前会话标题跟 messages 走，避免 effect 里 setState */
+function conversationsForSidebar(
+  activeId: string,
+  messages: ChatMessage[],
+  revision: number,
+): ChatConversation[] {
+  void revision
+  return listLocalConversations().map((c) => {
+    if (c.id !== activeId) return c
+    const title =
+      messages.length === 0
+        ? '新对话'
+        : c.title === '新对话' || c.title === '附件对话'
+          ? titleFromMessages(messages)
+          : c.title
+    return { ...c, title, messages }
+  })
 }
 
 function classifyFile(file: File): PendingFile['kind'] | 'reject' {
@@ -142,9 +187,10 @@ async function streamSkillReply(
   onQuota?: (info: { remainingQuota: number; dailyQuota: number }) => void,
 ) {
   const assistantId = uid()
+  const createdAt = Date.now()
   setMessages((prev) => [
     ...prev,
-    { id: assistantId, role: 'assistant', text: '' },
+    { id: assistantId, role: 'assistant', text: '', createdAt },
   ])
 
   try {
@@ -302,7 +348,11 @@ export function ChatPage() {
   const lastAttachmentUrlsRef = useRef<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const stickToBottomRef = useRef(true)
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChatMessages())
+  const [messages, setMessages] = useState<ChatMessage[]>(() => getActiveMessages())
+  const [activeConvId, setActiveConvId] = useState(() => getActiveConversationId())
+  /** 仅在重命名/删除非当前会话等「messages 不变」时递增，驱动侧栏重读 */
+  const [convRevision, setConvRevision] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<PendingFile[]>([])
@@ -311,6 +361,11 @@ export function ChatPage() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
   const [quota, setQuota] = useState<{ remaining: number; daily: number } | null>(
     null,
+  )
+
+  const conversations = useMemo(
+    () => conversationsForSidebar(activeConvId, messages, convRevision),
+    [activeConvId, messages, convRevision],
   )
 
   usePageMeta({
@@ -345,8 +400,9 @@ export function ChatPage() {
     return () => controller.abort()
   }, [loggedIn])
 
+  // 只同步到 localStorage，不在 effect 里 setState
   useEffect(() => {
-    saveChatMessages(messages)
+    saveActiveMessages(messages)
   }, [messages])
 
   useEffect(() => {
@@ -355,7 +411,6 @@ export function ChatPage() {
     if (stickToBottomRef.current) {
       el.scrollTop = el.scrollHeight
     }
-    // 程序化滚底不一定触发 onScroll，这里补一次按钮显隐
     syncJumpButtons(el)
   }, [messages, busy])
 
@@ -398,12 +453,78 @@ export function ChatPage() {
   function resetChat() {
     abortRef.current?.abort()
     abortRef.current = null
-    clearChatMessages()
-    setMessages(loadChatMessages())
-    setDraft('')
-    setPending([])
     lastAttachmentUrlsRef.current = []
+    setPending([])
+    setDraft('')
     setBusy(false)
+    setMessages(clearActiveMessages())
+  }
+
+  function onNewConversation() {
+    if (busy) {
+      antMessage.info('请先停止当前生成再新建')
+      return
+    }
+    abortRef.current?.abort()
+    abortRef.current = null
+    lastAttachmentUrlsRef.current = []
+    setPending([])
+    setDraft('')
+    const created = createLocalConversation()
+    if (created.reused) {
+      antMessage.info('已有未发送消息的新对话，已为你切换过去')
+    }
+    setActiveConvId(created.id)
+    setMessages(created.messages)
+    setConvRevision((n) => n + 1)
+    setSidebarOpen(false)
+  }
+
+  function onSelectConversation(id: string) {
+    if (id === activeConvId) {
+      setSidebarOpen(false)
+      return
+    }
+    if (busy) {
+      antMessage.info('请先停止当前生成再切换会话')
+      return
+    }
+    abortRef.current?.abort()
+    abortRef.current = null
+    lastAttachmentUrlsRef.current = []
+    setPending([])
+    setDraft('')
+    const nextMessages = setActiveConversationId(id)
+    setActiveConvId(id)
+    setMessages(nextMessages)
+    setSidebarOpen(false)
+  }
+
+  function onDeleteConversation(id: string) {
+    if (busy && id === activeConvId) {
+      antMessage.info('请先停止当前生成再删除')
+      return
+    }
+    const { activeId, messages: next } = deleteLocalConversation(id)
+    if (id === activeConvId) {
+      abortRef.current?.abort()
+      abortRef.current = null
+      lastAttachmentUrlsRef.current = []
+      setPending([])
+      setDraft('')
+      setBusy(false)
+    }
+    setActiveConvId(activeId)
+    setMessages(next)
+    setConvRevision((n) => n + 1)
+  }
+
+  function onRenameConversation(id: string) {
+    const current = conversations.find((c) => c.id === id)
+    const next = window.prompt('会话标题', current?.title ?? '')
+    if (next == null) return
+    renameLocalConversation(id, next)
+    setConvRevision((n) => n + 1)
   }
 
   function stopGenerating() {
@@ -504,6 +625,7 @@ export function ChatPage() {
           id: uid(),
           role: 'user',
           text: displayUser,
+          createdAt: Date.now(),
           ...(messageAttachments.length > 0 ? { attachments: messageAttachments } : {}),
         },
       ])
@@ -527,6 +649,7 @@ export function ChatPage() {
           {
             id: uid(),
             role: 'assistant',
+            createdAt: Date.now(),
             text: hasVideo
               ? '已收到视频（本会话暂存）。视频理解即将支持～若还有文档/图片，可说明用途；或补充文字需求。'
               : anyServer
@@ -572,6 +695,7 @@ export function ChatPage() {
           {
             id: uid(),
             role: 'assistant',
+            createdAt: Date.now(),
             text: route.text,
             options: route.options,
           },
@@ -582,7 +706,7 @@ export function ChatPage() {
       if (route.kind === 'smalltalk') {
         setMessages((prev) => [
           ...prev,
-          { id: uid(), role: 'assistant', text: route.text },
+          { id: uid(), role: 'assistant', text: route.text, createdAt: Date.now() },
         ])
         return
       }
@@ -620,6 +744,7 @@ export function ChatPage() {
           {
             id: uid(),
             role: 'assistant',
+            createdAt: Date.now(),
             text: map.text,
             actions: [{ label: map.label, to: map.to }],
           },
@@ -643,6 +768,7 @@ export function ChatPage() {
             {
               id: uid(),
               role: 'assistant',
+              createdAt: Date.now(),
               text: `找到与「${route.query}」相关的 ${parts.join('、')}，点击下方条目可打开：`,
               hits: hitsFromCatalog(result),
               actions: [
@@ -657,6 +783,7 @@ export function ChatPage() {
             {
               id: uid(),
               role: 'assistant',
+              createdAt: Date.now(),
               text: `没有找到与「${route.query}」匹配的产品或评测。可以换个词，或直接提问让小智帮你处理～`,
               actions: [
                 { label: '打开AI导览', to: ROUTES.TOOLS },
@@ -875,10 +1002,36 @@ export function ChatPage() {
 
   return (
     <div className={styles.layout}>
+      {sidebarOpen ? (
+        <button
+          type="button"
+          className={styles.sidebarScrim}
+          aria-label="关闭会话列表"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+      <ChatSidebar
+        conversations={conversations}
+        activeId={activeConvId}
+        loggedIn={loggedIn}
+        onSelect={onSelectConversation}
+        onNew={onNewConversation}
+        onDelete={onDeleteConversation}
+        onRename={onRenameConversation}
+        mobileOpen={sidebarOpen}
+        onCloseMobile={() => setSidebarOpen(false)}
+      />
       <div className={styles.shell}>
         <header className={styles.top}>
           <div className={styles.topRow}>
             <div className={styles.topLeft}>
+              <Button
+                type="text"
+                className={styles.menuBtn}
+                icon={<MenuOutlined />}
+                aria-label="会话列表"
+                onClick={() => setSidebarOpen(true)}
+              />
               <Typography.Title level={4} className={styles.title}>
                 小智
               </Typography.Title>
@@ -898,14 +1051,25 @@ export function ChatPage() {
                 </Tag>
               </Tooltip>
             </div>
-            <Button
-              type="text"
-              icon={<ClearOutlined />}
-              onClick={resetChat}
-              disabled={busy || isEmptyChat}
-            >
-              清空
-            </Button>
+            <Space size={4}>
+              <Tooltip title="新对话">
+                <Button
+                  type="text"
+                  icon={<PlusOutlined />}
+                  aria-label="新对话"
+                  disabled={busy}
+                  onClick={onNewConversation}
+                />
+              </Tooltip>
+              <Button
+                type="text"
+                icon={<ClearOutlined />}
+                onClick={resetChat}
+                disabled={busy || isEmptyChat}
+              >
+                清空
+              </Button>
+            </Space>
           </div>
         </header>
 
@@ -933,9 +1097,13 @@ export function ChatPage() {
                   {messages.map((m) => {
                     const visibleText = stripAttachmentNote(m.text)
                     const atts = resolveMessageAttachments(m)
-                    const showTools =
-                      Boolean(visibleText.trim()) || atts.length > 0
                     const isUser = m.role === 'user'
+                    const isLast = m.id === messages[messages.length - 1]?.id
+                    const isWaitingAssistant =
+                      !isUser && !visibleText.trim() && atts.length === 0 && busy && isLast
+                    const showTools =
+                      !isWaitingAssistant &&
+                      (Boolean(visibleText.trim()) || atts.length > 0)
                     return (
                     <motion.div
                       key={m.id}
@@ -950,9 +1118,12 @@ export function ChatPage() {
                         }
                       >
                       <div
-                        className={
-                          isUser ? styles.bubbleUser : styles.bubbleAssistant
-                        }
+                        className={[
+                          isUser ? styles.bubbleUser : styles.bubbleAssistant,
+                          isWaitingAssistant ? styles.bubbleWaiting : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                       >
                         {visibleText ? (
                           isUser ? (
@@ -963,6 +1134,8 @@ export function ChatPage() {
                               className={styles.mdInBubble}
                             />
                           )
+                        ) : isWaitingAssistant ? (
+                          <p className={styles.typing}>处理中…</p>
                         ) : null}
                         {atts.length > 0 ? (
                           <ul className={styles.msgAttachList} aria-label="附件">
@@ -1039,45 +1212,58 @@ export function ChatPage() {
                           </Space>
                         ) : null}
                       </div>
-                      {showTools ? (
-                        <div
-                          className={
-                            isUser ? styles.msgToolsUser : styles.msgToolsAssistant
-                          }
-                        >
-                          <Tooltip title="复制">
-                            <Button
-                              type="text"
-                              size="small"
-                              icon={<CopyOutlined />}
-                              aria-label="复制"
-                              onClick={() =>
-                                void copyText(visibleText || m.text)
-                              }
-                            />
-                          </Tooltip>
-                          {!isUser ? (
-                            <Tooltip title="重新生成">
+                      <div
+                        className={
+                          isUser ? styles.msgMetaUser : styles.msgMetaAssistant
+                        }
+                      >
+                        {!isWaitingAssistant && m.createdAt ? (
+                          <time className={styles.msgTime} dateTime={new Date(m.createdAt).toISOString()}>
+                            {formatMsgTime(m.createdAt)}
+                          </time>
+                        ) : (
+                          <span className={styles.msgTimeSpacer} />
+                        )}
+                        {showTools ? (
+                          <div className={styles.msgToolsInline}>
+                            <Tooltip title="复制">
                               <Button
                                 type="text"
                                 size="small"
-                                icon={<RedoOutlined />}
-                                aria-label="重新生成"
-                                disabled={busy}
-                                onClick={() => onRetry(m.id)}
+                                icon={<CopyOutlined />}
+                                aria-label="复制"
+                                onClick={() =>
+                                  void copyText(visibleText || m.text)
+                                }
                               />
                             </Tooltip>
-                          ) : null}
-                        </div>
-                      ) : null}
+                            {!isUser ? (
+                              <Tooltip title="重新生成">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<RedoOutlined />}
+                                  aria-label="重新生成"
+                                  disabled={busy}
+                                  onClick={() => onRetry(m.id)}
+                                />
+                              </Tooltip>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                       </div>
                     </motion.div>
                     )
                   })}
                   {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
                     <div className={styles.rowAssistant}>
-                      <div className={styles.bubbleAssistant}>
-                        <p className={styles.typing}>处理中…</p>
+                      <div className={styles.msgColAssistant}>
+                        <div
+                          className={`${styles.bubbleAssistant} ${styles.bubbleWaiting}`}
+                        >
+                          <p className={styles.typing}>处理中…</p>
+                        </div>
                       </div>
                     </div>
                   ) : null}

@@ -12,6 +12,126 @@
   overflow: hidden;
 }
 
+.sidebar {
+  flex: 0 0 220px;
+  width: 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.55rem;
+  border-right: 1px solid rgba(100, 140, 200, 0.18);
+  background: rgba(6, 10, 20, 0.55);
+  backdrop-filter: blur(10px);
+  z-index: 3;
+}
+
+.sidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0 0.25rem;
+}
+
+.sidebarTitle {
+  font-family: var(--ph-font-display);
+  color: rgba(200, 220, 240, 0.9) !important;
+}
+
+.sidebarHeadActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebarCloseMobile {
+  display: none !important;
+}
+
+.sidebarHint {
+  margin: 0;
+  padding: 0 0.35rem 0.35rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: rgba(140, 165, 195, 0.7);
+}
+
+.convList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.convList > li {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.convItem {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(190, 210, 230, 0.88);
+  border-radius: 10px;
+  padding: 0.55rem 2.4rem 0.55rem 0.65rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.convItem:hover {
+  background: rgba(61, 158, 255, 0.08);
+  border-color: rgba(61, 158, 255, 0.18);
+}
+
+.convItemActive {
+  background: rgba(46, 230, 166, 0.12);
+  border-color: rgba(46, 230, 166, 0.35);
+  color: #e8fff6;
+}
+
+.convTitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.convItemActions {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+}
+
+.convList > li:hover .convItemActions,
+.convItemActive + .convItemActions,
+.convList > li:focus-within .convItemActions {
+  display: inline-flex;
+}
+
+/* active item is sibling structure: button then actions - fix selector */
+.convList > li:hover .convItemActions,
+.convList > li:focus-within .convItemActions {
+  display: inline-flex;
+}
+
+.sidebarScrim {
+  display: none;
+}
+
 .shell {
   flex: 1 1 0;
   min-width: 0;
@@ -76,6 +196,7 @@
 
 .menuBtn {
   display: none !important;
+  flex-shrink: 0;
 }
 
 .title {
@@ -244,6 +365,48 @@
   transition: opacity 0.15s ease;
 }
 
+.msgMetaUser,
+.msgMetaAssistant {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  min-height: 1.4rem;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.msgMetaUser {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+}
+
+.msgMetaAssistant {
+  justify-content: flex-start;
+}
+
+.msgColUser:hover .msgMetaUser,
+.msgColAssistant:hover .msgMetaAssistant {
+  opacity: 1;
+}
+
+.msgTime {
+  font-size: 0.7rem;
+  color: rgba(140, 165, 195, 0.75);
+  white-space: nowrap;
+  padding: 0 0.15rem;
+}
+
+.msgTimeSpacer {
+  flex: 0 0 0;
+}
+
+.msgToolsInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+}
+
 .msgToolsUser {
   justify-content: flex-end;
 }
@@ -258,12 +421,14 @@
 }
 
 .msgToolsUser :global(.ant-btn),
-.msgToolsAssistant :global(.ant-btn) {
+.msgToolsAssistant :global(.ant-btn),
+.msgToolsInline :global(.ant-btn) {
   color: var(--ph-muted) !important;
 }
 
 .msgToolsUser :global(.ant-btn:hover),
-.msgToolsAssistant :global(.ant-btn:hover) {
+.msgToolsAssistant :global(.ant-btn:hover),
+.msgToolsInline :global(.ant-btn:hover) {
   color: #2ee6a6 !important;
 }
 
@@ -322,6 +487,14 @@
   border: 1px solid rgba(100, 140, 200, 0.28);
   border-bottom-left-radius: 6px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+/** 等待回复：按文字收窄，避免拉成整行空条 */
+.bubbleWaiting {
+  width: auto !important;
+  max-width: max-content !important;
+  min-width: 5.5rem;
+  padding: 0.65rem 1rem;
 }
 
 .bubbleText {
@@ -676,6 +849,43 @@
 
 .composer :global(.ant-input-clear-icon:hover) {
   color: rgba(190, 210, 230, 0.8);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.35);
+    background: rgba(6, 10, 20, 0.96);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .sidebarCloseMobile {
+    display: inline-flex !important;
+  }
+
+  .sidebarScrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
+
+  .menuBtn {
+    display: inline-flex !important;
+  }
 }
 
 @media (max-width: 575px) {

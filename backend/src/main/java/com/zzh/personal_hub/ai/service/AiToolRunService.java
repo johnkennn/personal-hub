@@ -123,8 +123,15 @@ public class AiToolRunService {
                     emitter.completeWithError(e);
                 }
             } catch (Exception e) {
+                String detail = e.getMessage();
+                if (detail != null && detail.length() > 160) {
+                    detail = detail.substring(0, 160) + "…";
+                }
+                String msg = (detail != null && !detail.isBlank())
+                        ? "生成失败：" + detail
+                        : "生成失败，请稍后重试";
                 try {
-                    sendJson(emitter, "error", Map.of("message", "生成失败，请稍后重试", "code", 502));
+                    sendJson(emitter, "error", Map.of("message", msg, "code", 502));
                     emitter.complete();
                 } catch (Exception ignored) {
                     emitter.completeWithError(e);
