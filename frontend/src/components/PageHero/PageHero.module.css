@@ -110,6 +110,33 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 640px) {
+  .hero {
+    padding: 0.45rem 0 0.75rem;
+  }
+
+  .heroRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .title {
+    font-size: clamp(1.55rem, 8vw, 2rem);
+    letter-spacing: 0.03em;
+  }
+
+  .tagline {
+    margin-top: 0.3rem;
+    font-size: 0.9rem;
+    max-width: none;
+  }
+
+  .extra {
+    width: 100%;
+  }
+}
+
 .body {
   position: relative;
   z-index: 1;

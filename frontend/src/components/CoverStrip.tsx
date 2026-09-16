@@ -43,7 +43,7 @@ type CoverStripProps = {
   compact?: boolean
 }
 
-/** 列表卡片顶栏：优先真实封面，否则色调渐变 + 短标题 */
+/** 列表卡片顶栏：优先真实封面，否则色调渐变；compact 不叠标题（下方已有标题） */
 export function CoverStrip({ title, tone = 'default', coverUrl, compact }: CoverStripProps) {
   const cover = resolveMediaUrl(coverUrl)
   const style: CSSProperties = cover
@@ -53,7 +53,7 @@ export function CoverStrip({ title, tone = 'default', coverUrl, compact }: Cover
   return (
     <div className={`${styles.cover} ${compact ? styles.compact : ''}`} style={style}>
       <span className={styles.glow} />
-      {!cover ? <span className={styles.label}>{title.slice(0, 18)}</span> : null}
+      {!cover && !compact ? <span className={styles.label}>{title.slice(0, 18)}</span> : null}
     </div>
   )
 }

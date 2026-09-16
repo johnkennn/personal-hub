@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Pagination } from 'antd'
 
 import { CATALOG_PAGE_SIZE_OPTIONS } from '../constants/catalog'
@@ -37,7 +38,22 @@ type CatalogPagerProps = {
   onChange: (page: number, pageSize: number) => void
 }
 
+function useNarrowScreen(maxWidth = 640) {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${maxWidth}px)`).matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`)
+    const onChange = () => setNarrow(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [maxWidth])
+  return narrow
+}
+
 export function CatalogPager({ current, pageSize, total, onChange }: CatalogPagerProps) {
+  const narrow = useNarrowScreen()
   return (
     <div className={styles.catalogPager}>
       <Pagination
@@ -46,9 +62,10 @@ export function CatalogPager({ current, pageSize, total, onChange }: CatalogPage
         total={total}
         onChange={onChange}
         onShowSizeChange={onChange}
-        showSizeChanger={{ showSearch: false }}
+        showSizeChanger={narrow ? false : { showSearch: false }}
         pageSizeOptions={[...CATALOG_PAGE_SIZE_OPTIONS].map(String)}
-        showTotal={(t) => `共 ${t} 条`}
+        showTotal={narrow ? undefined : (t) => `共 ${t} 条`}
+        simple={narrow}
         hideOnSinglePage={false}
       />
     </div>

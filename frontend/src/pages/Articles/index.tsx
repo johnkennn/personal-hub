@@ -128,28 +128,8 @@ export function ArticlesPage() {
     <PageHero
       title="AI评测"
       tagline="真实体验，帮你判断值不值得用"
-      fill
       extra={
         <Space wrap align="center" size="middle">
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="关联工具"
-            value={selectedTools}
-            onChange={(v) => patchSearchParams({ tools: v })}
-            options={toolOptions}
-            optionFilterProp="label"
-            maxTagCount="responsive"
-            style={{ minWidth: 180, maxWidth: 300 }}
-          />
-          <Input.Search
-            allowClear
-            placeholder="搜索作者 / 标题"
-            value={query}
-            onChange={(e) => patchSearchParams({ q: e.target.value })}
-            onSearch={(v) => patchSearchParams({ q: v })}
-            style={{ width: 200 }}
-          />
           <Segmented
             value={sort}
             onChange={(v) => {
@@ -178,6 +158,32 @@ export function ArticlesPage() {
         </Space>
       }
     >
+      <div className={styles.catalogToolbar}>
+        <div className={`${styles.catalogToolbarField} ${styles.catalogToolbarSelect}`}>
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="关联工具"
+            value={selectedTools}
+            onChange={(v) => patchSearchParams({ tools: v })}
+            options={toolOptions}
+            optionFilterProp="label"
+            maxTagCount="responsive"
+            style={{ width: '100%' }}
+          />
+        </div>
+        <div className={`${styles.catalogToolbarField} ${styles.catalogToolbarSearch}`}>
+          <Input.Search
+            allowClear
+            placeholder="搜索作者 / 标题"
+            value={query}
+            onChange={(e) => patchSearchParams({ q: e.target.value })}
+            onSearch={(v) => patchSearchParams({ q: v })}
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
+
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : articles.length === 0 ? (

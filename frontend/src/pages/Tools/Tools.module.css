@@ -1,7 +1,5 @@
 .filters {
-  overflow-x: auto;
-  max-width: min(100%, 720px);
-  padding-bottom: 0.15rem;
+  max-width: 100%;
 }
 
 .filters :global(.ant-segmented) {

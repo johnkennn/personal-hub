@@ -227,36 +227,11 @@
 .catalogShell {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
+  gap: 0.25rem;
 }
 
 .catalogBody {
-  flex: 1 1 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 2px;
-}
-
-@media (min-width: 576px) {
-  .catalogBody {
-    min-height: 0;
-  }
-}
-
-@media (min-width: 992px) {
-  .catalogBody {
-    min-height: 0;
-  }
-}
-
-@media (min-width: 1200px) {
-  .catalogBody {
-    min-height: 0;
-  }
 }
 
 .catalogPager {
@@ -264,11 +239,64 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 0;
-  padding-top: 12px;
-  padding-bottom: 2px;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
   border-top: 1px solid rgba(100, 140, 200, 0.16);
-  background: linear-gradient(180deg, transparent, rgba(5, 7, 15, 0.55) 30%);
+}
+
+/** 列表页筛选条：控件按内容宽度横排，不强制占满一行 */
+.catalogToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.catalogToolbarField {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.catalogToolbarSelect {
+  width: 220px;
+  max-width: 100%;
+}
+
+.catalogToolbarSearch {
+  width: 200px;
+  max-width: 100%;
+}
+
+.catalogToolbarScroll {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+@media (max-width: 640px) {
+  .catalogToolbar {
+    gap: 0.55rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .catalogToolbarSelect,
+  .catalogToolbarSearch {
+    width: min(48vw, 200px);
+  }
+
+  .catalogPager {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  .catalogPager :global(.ant-pagination) {
+    justify-content: center;
+  }
 }
 
 /** 治理后台表格列表 */

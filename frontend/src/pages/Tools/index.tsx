@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Empty, Input, Segmented, Skeleton, Space, Tag } from 'antd'
+import { Empty, Input, Segmented, Skeleton, Tag } from 'antd'
 import { motion } from 'framer-motion'
 
 import {
@@ -18,6 +18,7 @@ import {
   loadHubTools,
 } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
+import ui from '../../styles/ui.module.css'
 import styles from './Tools.module.css'
 
 function matchToolQuery(tool: HubTool, raw: string) {
@@ -79,12 +80,9 @@ export function ToolsPage() {
   }, [filtered, page, pageSize])
 
   return (
-    <PageHero
-      title="AI导览"
-      tagline="成熟产品，按场景分类"
-      fill
-      extra={
-        <Space wrap align="center" size="middle" className={styles.filters}>
+    <PageHero title="AI导览" tagline="成熟产品，按场景分类">
+      <div className={ui.catalogToolbar}>
+        <div className={`${ui.catalogToolbarField} ${ui.catalogToolbarSearch}`}>
           <Input.Search
             allowClear
             placeholder="搜索名称 / 标签"
@@ -97,8 +95,10 @@ export function ToolsPage() {
               setQuery(v)
               setPage(1)
             }}
-            style={{ width: 200 }}
+            style={{ width: '100%' }}
           />
+        </div>
+        <div className={`${ui.catalogToolbarScroll} ${styles.filters}`}>
           <Segmented
             value={category}
             onChange={(v) => {
@@ -107,9 +107,9 @@ export function ToolsPage() {
             }}
             options={categoryNames}
           />
-        </Space>
-      }
-    >
+        </div>
+      </div>
+
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : filtered.length === 0 ? (
