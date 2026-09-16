@@ -54,7 +54,7 @@ export function HomePage() {
   )
 
   return (
-    <PageHero title="发现" tagline="热门产品 · 小智助手 · 精选评测">
+    <PageHero title="发现" tagline="热门 AI · 问问小智 · 真实评测">
       <motion.section
         className={pageHeroStyles.section}
         initial={{ opacity: 0, y: 10 }}
@@ -62,7 +62,7 @@ export function HomePage() {
         transition={{ delay: 0.08 }}
       >
         <SectionHead
-          label="热门产品"
+          label="热门 AI"
           action={
             <Link to={ROUTES.TOOLS}>
               <Button type="link">AI导览</Button>
@@ -108,7 +108,7 @@ export function HomePage() {
               <Card className={ui.contentCard} variant="borderless" hoverable>
                 <Tag style={{ marginBottom: 8 }}>小智</Tag>
                 <Typography.Title level={4} style={{ marginTop: 0 }}>
-                  大模型助手
+                  找小智聊聊
                 </Typography.Title>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
                   问答、文案、翻译、总结，一句话吩咐小智
@@ -119,12 +119,12 @@ export function HomePage() {
           <Col xs={24} sm={12} lg={8}>
             <Link to={ROUTES.DEALS} className={ui.cardLink}>
               <Card className={ui.contentCard} variant="borderless" hoverable>
-                <Tag style={{ marginBottom: 8 }}>限时</Tag>
+                <Tag style={{ marginBottom: 8 }}>优惠</Tag>
                 <Typography.Title level={4} style={{ marginTop: 0 }}>
-                  限时优惠
+                  AI 优惠
                 </Typography.Title>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  折扣与活动一站看
+                  各家 AI 的折扣活动，一站看清
                 </Typography.Paragraph>
               </Card>
             </Link>
@@ -142,7 +142,7 @@ export function HomePage() {
           label="精选评测"
           action={
             <Link to={ROUTES.ARTICLES}>
-              <Button type="link">更多</Button>
+              <Button type="link">更多测评</Button>
             </Link>
           }
         />

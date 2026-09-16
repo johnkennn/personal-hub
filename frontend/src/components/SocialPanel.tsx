@@ -74,7 +74,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
   }, [refresh])
 
   async function onLike() {
-    if (!(await ensureLoggedIn({ content: '点赞需要登录。是否前往登录页？' }))) {
+    if (!(await ensureLoggedIn({ content: '点赞需要登录哦，要去登录吗？' }))) {
       return
     }
     try {
@@ -96,7 +96,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
   }
 
   async function onComment(values: { content: string }) {
-    if (!(await ensureLoggedIn({ content: '发表评论需要登录。是否前往登录页？' }))) {
+    if (!(await ensureLoggedIn({ content: '发表评论需要登录哦，要去登录吗？' }))) {
       return
     }
     try {

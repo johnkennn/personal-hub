@@ -31,7 +31,7 @@ export function RegisterPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('注册成功，已自动登录')
-      navigate(ROUTES.CHAT, { replace: true })
+      navigate(ROUTES.HOME, { replace: true })
     } catch {
       message.error('注册失败，用户名 / 邮箱 / 手机号可能已被占用')
     }

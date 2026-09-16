@@ -184,7 +184,7 @@ export function ToolDetailPage() {
     if (
       !(await ensureLoggedIn({
         title: '需要登录',
-        content: '写评测需要登录。是否前往登录页？',
+        content: '写评测需要登录哦，要去登录吗？',
       }))
     ) {
       return

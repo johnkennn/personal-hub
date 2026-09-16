@@ -1,4 +1,4 @@
-/** 限时优惠（与后端 DealResponse 对齐） */
+/** AI 优惠（与后端 DealResponse 对齐） */
 export type DealStatus = 'DRAFT' | 'ACTIVE' | 'ENDED' | 'OFFLINE'
 
 export type DealDto = {

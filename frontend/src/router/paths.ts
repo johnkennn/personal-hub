@@ -1,13 +1,13 @@
 export const ROUTES = {
-  /** 默认落地：AI 聊天 */
-  CHAT: '/',
-  /** 发现页 */
-  DISCOVER: '/discover',
+  /** 默认落地：发现页 */
+  DISCOVER: '/',
+  /** 小智聊天（Logo / ⌘K 入口） */
+  CHAT: '/chat',
   ABOUT: '/about',
   /** AI 导览（分类产品库） */
   TOOLS: '/tools',
   TOOL_DETAIL: '/tools/:slug',
-  /** 限时优惠 */
+  /** AI 优惠（第三方产品折扣/活动） */
   DEALS: '/deals',
   /** AI 实用工具 */
   AI_TOOLS: '/ai-tools',
@@ -51,19 +51,18 @@ export const ROUTES = {
   ADMIN_DEALS: '/admin/deals',
   /** @deprecated 兼容旧链接，路由层重定向到 /articles */
   BLOG: '/blog',
-  /** @deprecated 请用 CHAT；保留以免旧引用报错 */
+  /** 站点首页（发现） */
   HOME: '/',
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
-/** 顶栏：小智为统一入口；产品库称「AI导览」 */
+/** 顶栏：小智走左侧 Logo；发现为首页 */
 export const NAV_ITEMS = [
-  { path: ROUTES.CHAT, label: '小智' },
   { path: ROUTES.DISCOVER, label: '发现' },
   { path: ROUTES.TOOLS, label: 'AI导览' },
   { path: ROUTES.ARTICLES, label: 'AI评测' },
-  { path: ROUTES.DEALS, label: '限时优惠' },
+  { path: ROUTES.DEALS, label: 'AI 优惠' },
   { path: ROUTES.ABOUT, label: '关于' },
 ] as const
 

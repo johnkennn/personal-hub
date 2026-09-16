@@ -48,14 +48,6 @@
   display: none !important;
 }
 
-.sidebarHint {
-  margin: 0;
-  padding: 0 0.35rem 0.35rem;
-  font-size: 0.7rem;
-  line-height: 1.4;
-  color: rgba(140, 165, 195, 0.7);
-}
-
 .convList {
   list-style: none;
   margin: 0;
@@ -177,6 +169,13 @@
   padding: 0 1rem;
   position: relative;
   z-index: 1;
+}
+
+.guestSessionHint {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(140, 165, 195, 0.65);
 }
 
 .topRow {

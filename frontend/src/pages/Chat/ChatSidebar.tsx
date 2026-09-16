@@ -12,7 +12,6 @@ import styles from './Chat.module.css'
 type ChatSidebarProps = {
   conversations: ChatConversation[]
   activeId: string
-  loggedIn: boolean
   onSelect: (id: string) => void
   onNew: () => void
   onDelete: (id: string) => void
@@ -25,7 +24,6 @@ type ChatSidebarProps = {
 export function ChatSidebar({
   conversations,
   activeId,
-  loggedIn,
   onSelect,
   onNew,
   onDelete,
@@ -62,11 +60,6 @@ export function ChatSidebar({
           ) : null}
         </div>
       </div>
-      <p className={styles.sidebarHint}>
-        {loggedIn
-          ? '当前保存在本机；云端同步下一步上线'
-          : '保存在本机浏览器，关标签也不会丢'}
-      </p>
       <ul className={styles.convList}>
         {conversations.map((c) => {
           const active = c.id === activeId

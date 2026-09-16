@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input, Space, Tag, Tooltip, Typography, Upload, message as antMessage } from 'antd'
 import {
+  ArrowUpOutlined,
   ClearOutlined,
   CopyOutlined,
   DownOutlined,
   MenuOutlined,
   PlusOutlined,
   RedoOutlined,
-  SendOutlined,
   StopOutlined,
   UpOutlined,
 } from '@ant-design/icons'
@@ -39,29 +39,77 @@ import {
 } from '../../services/chatRouter'
 import { fetchChatRoute } from '../../api/chatRoute'
 import {
+  clearChatMessages,
+  loadChatMessages,
+  saveChatMessages,
   type ChatAttachment,
   type ChatHit,
   type ChatMessage,
 } from '../../utils/chatStorage'
 import {
-  clearActiveMessages,
-  createLocalConversation,
-  deleteLocalConversation,
-  getActiveConversationId,
-  getActiveMessages,
-  listLocalConversations,
-  renameLocalConversation,
-  saveActiveMessages,
-  setActiveConversationId,
   titleFromMessages,
   type ChatConversation,
 } from '../../utils/chatConversations'
+import {
+  createCloudConversation,
+  deleteCloudConversation,
+  getCloudConversation,
+  listCloudConversations,
+  renameCloudConversation,
+  replaceCloudMessages,
+  upsertCloudMessages,
+  type CloudConversationDetail,
+  type CloudConversationSummary,
+} from '../../api/chatConversations'
 import { copyToClipboard } from '../../utils/clipboard'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
 import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { ensureLoggedIn } from '../../utils/requireLogin'
 import { ChatSidebar } from './ChatSidebar'
 import styles from './Chat.module.css'
+
+const CLOUD_ACTIVE_KEY = 'ai-hub-chat-cloud-active-id'
+
+function cloudFromSummary(s: CloudConversationSummary): ChatConversation {
+  return {
+    id: String(s.id),
+    title: s.title,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    messages: [],
+  }
+}
+
+function cloudFromDetail(d: CloudConversationDetail): ChatConversation {
+  return {
+    id: String(d.id),
+    title: d.title,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+    messages: Array.isArray(d.messages) ? d.messages : [],
+  }
+}
+
+function readCloudActiveId(): string | null {
+  try {
+    return sessionStorage.getItem(CLOUD_ACTIVE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeCloudActiveId(id: string) {
+  try {
+    sessionStorage.setItem(CLOUD_ACTIVE_KEY, id)
+  } catch {
+    /* private mode */
+  }
+}
+
+/** 用于判断某条消息是否相对上次同步有改动 */
+function messageFingerprint(m: ChatMessage): string {
+  return JSON.stringify(m)
+}
 
 /** 附件白名单（轻量：前端先拦；后端上传落地后再双检） */
 const ACCEPT_EXT = [
@@ -117,12 +165,11 @@ function formatMsgTime(ts?: number): string {
 
 /** 侧栏展示用：当前会话标题跟 messages 走，避免 effect 里 setState */
 function conversationsForSidebar(
+  source: ChatConversation[],
   activeId: string,
   messages: ChatMessage[],
-  revision: number,
 ): ChatConversation[] {
-  void revision
-  return listLocalConversations().map((c) => {
+  return source.map((c) => {
     if (c.id !== activeId) return c
     const title =
       messages.length === 0
@@ -243,7 +290,7 @@ async function streamSkillReply(
       quotaExceeded && !isLoggedIn()
         ? '今日试用额度用完啦～登录后每天可聊 30 次哦'
         : quotaExceeded
-          ? '今日额度用完啦，明天再来找小智，或稍后再试～'
+          ? '今天的额度用完啦，明天再来找小智～'
           : reason
 
     setMessages((prev) =>
@@ -262,12 +309,11 @@ async function streamSkillReply(
     // 未登录额度：只弹确认框，避免再出一条 toast 叠两层
     if (quotaExceeded && !isLoggedIn()) {
       void ensureLoggedIn({
-        title: '今日试用额度已用完',
-        content:
-          '未登录每天可试用 3 次。登录后每日额度提升至 30 次，要去登录吗？',
+        title: '今天的试用次数用完啦',
+        content: '访客每天 3 次。登录后每天 30 次，要去登录吗？',
       })
     } else if (quotaExceeded && isLoggedIn()) {
-      antMessage.warning('今日登录额度已用完（每日 30 次），明天再来找小智～')
+      antMessage.warning('今天的 30 次用完啦，明天再来找小智～')
       onQuota?.({ remainingQuota: 0, dailyQuota: 30 })
     } else {
       antMessage.error(reason)
@@ -330,14 +376,14 @@ function getMessageAttachmentUrls(m: ChatMessage): string[] {
 async function copyText(text: string) {
   const value = text.trim()
   if (!value) {
-    antMessage.warning('没有可复制的内容')
+    antMessage.warning('没有可复制的内容哦')
     return
   }
   const ok = await copyToClipboard(value)
   if (ok) {
     antMessage.success('已复制')
   } else {
-    antMessage.error('复制失败：请手动长按选择文本')
+    antMessage.error('复制没成功，长按选中文字再试')
   }
 }
 
@@ -348,10 +394,21 @@ export function ChatPage() {
   const lastAttachmentUrlsRef = useRef<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const stickToBottomRef = useRef(true)
-  const [messages, setMessages] = useState<ChatMessage[]>(() => getActiveMessages())
-  const [activeConvId, setActiveConvId] = useState(() => getActiveConversationId())
-  /** 仅在重命名/删除非当前会话等「messages 不变」时递增，驱动侧栏重读 */
-  const [convRevision, setConvRevision] = useState(0)
+  /** 云端保存串行队列，避免并发写 */
+  const cloudSaveChainRef = useRef(Promise.resolve())
+  /** 已同步到云端的消息指纹 id → fingerprint */
+  const cloudSyncedRef = useRef<Map<string, string>>(new Map())
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    isLoggedIn() ? [] : loadChatMessages(),
+  )
+  const [activeConvId, setActiveConvId] = useState(() =>
+    isLoggedIn() ? '' : 'guest',
+  )
+  /** 登录态下的云端会话列表（摘要；当前会话消息以 messages 为准） */
+  const [cloudList, setCloudList] = useState<ChatConversation[]>([])
+  /** messageCount===0 的云端会话 id，用于「新建」时复用空会话 */
+  const [cloudEmptyIds, setCloudEmptyIds] = useState<Set<string>>(() => new Set())
+  const [cloudReady, setCloudReady] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
@@ -364,9 +421,24 @@ export function ChatPage() {
   )
 
   const conversations = useMemo(
-    () => conversationsForSidebar(activeConvId, messages, convRevision),
-    [activeConvId, messages, convRevision],
+    () =>
+      loggedIn
+        ? conversationsForSidebar(cloudList, activeConvId, messages)
+        : [],
+    [loggedIn, cloudList, activeConvId, messages],
   )
+
+  function markCloudSynced(list: ChatMessage[]) {
+    const next = new Map<string, string>()
+    for (const m of list) next.set(m.id, messageFingerprint(m))
+    cloudSyncedRef.current = next
+  }
+
+  function collectDirtyMessages(list: ChatMessage[]): ChatMessage[] {
+    return list.filter(
+      (m) => cloudSyncedRef.current.get(m.id) !== messageFingerprint(m),
+    )
+  }
 
   usePageMeta({
     title: '小智',
@@ -379,6 +451,81 @@ export function ChatPage() {
       setQuota(null)
     })
   }, [])
+
+  // 登录 ↔ 访客：切换存储来源（访客 session 单会话；登录云端多会话；互不迁移）
+  useEffect(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setBusy(false)
+    setPending([])
+    setDraft('')
+    setSidebarOpen(false)
+
+    if (!loggedIn) {
+      setCloudReady(false)
+      setCloudList([])
+      setCloudEmptyIds(new Set())
+      cloudSyncedRef.current = new Map()
+      setActiveConvId('guest')
+      setMessages(loadChatMessages())
+      return
+    }
+
+    const controller = new AbortController()
+    setCloudReady(false)
+    setMessages([])
+    setActiveConvId('')
+    cloudSyncedRef.current = new Map()
+
+    void (async () => {
+      try {
+        let summaries = await listCloudConversations(controller.signal)
+        if (controller.signal.aborted) return
+
+        if (summaries.length === 0) {
+          const created = await createCloudConversation()
+          if (controller.signal.aborted) return
+          const conv = cloudFromDetail(created)
+          setCloudList([conv])
+          setCloudEmptyIds(new Set(conv.messages.length === 0 ? [conv.id] : []))
+          setActiveConvId(conv.id)
+          writeCloudActiveId(conv.id)
+          setMessages(conv.messages)
+          markCloudSynced(conv.messages)
+          setCloudReady(true)
+          return
+        }
+
+        const preferred = readCloudActiveId()
+        const activeSummary =
+          summaries.find((s) => String(s.id) === preferred) ?? summaries[0]
+        const detail = await getCloudConversation(activeSummary.id, controller.signal)
+        if (controller.signal.aborted) return
+
+        const list = summaries.map(cloudFromSummary)
+        const active = cloudFromDetail(detail)
+        setCloudList(list.map((c) => (c.id === active.id ? { ...c, ...active } : c)))
+        setCloudEmptyIds(
+          new Set(
+            summaries
+              .filter((s) => s.messageCount === 0)
+              .map((s) => String(s.id)),
+          ),
+        )
+        setActiveConvId(active.id)
+        writeCloudActiveId(active.id)
+        setMessages(active.messages)
+        markCloudSynced(active.messages)
+        setCloudReady(true)
+      } catch {
+        if (controller.signal.aborted) return
+        antMessage.error('会话没加载出来，刷新一下试试')
+        setCloudReady(false)
+      }
+    })()
+
+    return () => controller.abort()
+  }, [loggedIn])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -400,10 +547,45 @@ export function ChatPage() {
     return () => controller.abort()
   }, [loggedIn])
 
-  // 只同步到 localStorage，不在 effect 里 setState
+  // 访客：sessionStorage 单会话；登录：增量 upsert（流式中不写）
   useEffect(() => {
-    saveActiveMessages(messages)
-  }, [messages])
+    if (!loggedIn) {
+      saveChatMessages(messages)
+      return
+    }
+    if (!cloudReady || !/^\d+$/.test(activeConvId) || busy) return
+
+    const dirty = collectDirtyMessages(messages)
+    if (dirty.length === 0) return
+
+    const convId = Number(activeConvId)
+    const snapshot = messages
+    const dirtySnapshot = dirty
+    const timer = window.setTimeout(() => {
+      cloudSaveChainRef.current = cloudSaveChainRef.current
+        .catch(() => {
+          /* 上一轮失败不影响本轮 */
+        })
+        .then(() => upsertCloudMessages(convId, dirtySnapshot))
+        .then((detail) => {
+          markCloudSynced(snapshot)
+          const next = cloudFromDetail(detail)
+          setCloudList((prev) =>
+            prev.map((c) => (c.id === next.id ? { ...c, title: next.title, updatedAt: next.updatedAt } : c)),
+          )
+          setCloudEmptyIds((prev) => {
+            const n = new Set(prev)
+            if (snapshot.length === 0) n.add(next.id)
+            else n.delete(next.id)
+            return n
+          })
+        })
+        .catch(() => {
+          /* 保存失败不打断聊天 */
+        })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [messages, loggedIn, cloudReady, activeConvId, busy])
 
   useEffect(() => {
     const el = listRef.current
@@ -457,12 +639,39 @@ export function ChatPage() {
     setPending([])
     setDraft('')
     setBusy(false)
-    setMessages(clearActiveMessages())
+    setMessages([])
+    if (!loggedIn) {
+      clearChatMessages()
+      return
+    }
+    if (cloudReady && /^\d+$/.test(activeConvId)) {
+      const convId = Number(activeConvId)
+      cloudSaveChainRef.current = cloudSaveChainRef.current
+        .catch(() => undefined)
+        .then(() => replaceCloudMessages(convId, []))
+        .then((detail) => {
+          markCloudSynced([])
+          setCloudList((prev) =>
+            prev.map((c) =>
+              c.id === String(detail.id)
+                ? { ...c, title: detail.title, updatedAt: detail.updatedAt, messages: [] }
+                : c,
+            ),
+          )
+          setCloudEmptyIds((prev) => new Set(prev).add(String(detail.id)))
+        })
+        .catch(() => {
+          antMessage.error('清空没成功，稍后再试')
+        })
+    } else {
+      markCloudSynced([])
+    }
   }
 
-  function onNewConversation() {
+  async function onNewConversation() {
+    if (!loggedIn) return
     if (busy) {
-      antMessage.info('请先停止当前生成再新建')
+      antMessage.info('先点停止，再新建哦')
       return
     }
     abortRef.current?.abort()
@@ -470,23 +679,72 @@ export function ChatPage() {
     lastAttachmentUrlsRef.current = []
     setPending([])
     setDraft('')
-    const created = createLocalConversation()
-    if (created.reused) {
-      antMessage.info('已有未发送消息的新对话，已为你切换过去')
+
+    if (!cloudReady) {
+      antMessage.info('会话同步中，稍等一下～')
+      return
     }
-    setActiveConvId(created.id)
-    setMessages(created.messages)
-    setConvRevision((n) => n + 1)
-    setSidebarOpen(false)
+
+    const emptyId =
+      messages.length === 0
+        ? activeConvId
+        : [...cloudEmptyIds].find((id) => id !== activeConvId) ?? null
+
+    if (emptyId) {
+      if (emptyId !== activeConvId) {
+        try {
+          const dirty = collectDirtyMessages(messages)
+          if (dirty.length > 0 && /^\d+$/.test(activeConvId)) {
+            await upsertCloudMessages(Number(activeConvId), dirty)
+            markCloudSynced(messages)
+          }
+          const detail = await getCloudConversation(Number(emptyId))
+          const conv = cloudFromDetail(detail)
+          setCloudList((prev) =>
+            prev.map((c) => (c.id === conv.id ? { ...c, ...conv } : c)),
+          )
+          setActiveConvId(conv.id)
+          writeCloudActiveId(conv.id)
+          setMessages(conv.messages)
+          markCloudSynced(conv.messages)
+        } catch {
+          antMessage.error('切换没成功，稍后再试')
+          return
+        }
+      }
+      antMessage.info('已经有一个空对话啦，帮你切过去了')
+      setSidebarOpen(false)
+      return
+    }
+
+    try {
+      const dirty = collectDirtyMessages(messages)
+      if (dirty.length > 0 && /^\d+$/.test(activeConvId)) {
+        await upsertCloudMessages(Number(activeConvId), dirty)
+        markCloudSynced(messages)
+      }
+      const created = await createCloudConversation()
+      const conv = cloudFromDetail(created)
+      setCloudList((prev) => [conv, ...prev])
+      setCloudEmptyIds((prev) => new Set(prev).add(conv.id))
+      setActiveConvId(conv.id)
+      writeCloudActiveId(conv.id)
+      setMessages([])
+      markCloudSynced([])
+      setSidebarOpen(false)
+    } catch {
+      antMessage.error('新建没成功，稍后再试')
+    }
   }
 
-  function onSelectConversation(id: string) {
+  async function onSelectConversation(id: string) {
+    if (!loggedIn) return
     if (id === activeConvId) {
       setSidebarOpen(false)
       return
     }
     if (busy) {
-      antMessage.info('请先停止当前生成再切换会话')
+      antMessage.info('先点停止，再切换哦')
       return
     }
     abortRef.current?.abort()
@@ -494,37 +752,118 @@ export function ChatPage() {
     lastAttachmentUrlsRef.current = []
     setPending([])
     setDraft('')
-    const nextMessages = setActiveConversationId(id)
-    setActiveConvId(id)
-    setMessages(nextMessages)
-    setSidebarOpen(false)
+
+    try {
+      const dirty = collectDirtyMessages(messages)
+      if (dirty.length > 0 && cloudReady && /^\d+$/.test(activeConvId)) {
+        try {
+          await upsertCloudMessages(Number(activeConvId), dirty)
+          markCloudSynced(messages)
+        } catch {
+          /* 仍尝试切换 */
+        }
+      }
+      const detail = await getCloudConversation(Number(id))
+      const conv = cloudFromDetail(detail)
+      setCloudList((prev) =>
+        prev.map((c) => (c.id === conv.id ? { ...c, ...conv } : c)),
+      )
+      setCloudEmptyIds((prev) => {
+        const n = new Set(prev)
+        if (conv.messages.length === 0) n.add(conv.id)
+        else n.delete(conv.id)
+        return n
+      })
+      setActiveConvId(conv.id)
+      writeCloudActiveId(conv.id)
+      setMessages(conv.messages)
+      markCloudSynced(conv.messages)
+      setSidebarOpen(false)
+    } catch {
+      antMessage.error('打不开这条会话，稍后再试')
+    }
   }
 
-  function onDeleteConversation(id: string) {
+  async function onDeleteConversation(id: string) {
+    if (!loggedIn) return
     if (busy && id === activeConvId) {
-      antMessage.info('请先停止当前生成再删除')
+      antMessage.info('先点停止，再删除哦')
       return
     }
-    const { activeId, messages: next } = deleteLocalConversation(id)
-    if (id === activeConvId) {
-      abortRef.current?.abort()
-      abortRef.current = null
-      lastAttachmentUrlsRef.current = []
-      setPending([])
-      setDraft('')
-      setBusy(false)
+
+    try {
+      await deleteCloudConversation(Number(id))
+      let nextList = cloudList.filter((c) => c.id !== id)
+      setCloudEmptyIds((prev) => {
+        const n = new Set(prev)
+        n.delete(id)
+        return n
+      })
+
+      if (nextList.length === 0) {
+        const created = await createCloudConversation()
+        const conv = cloudFromDetail(created)
+        nextList = [conv]
+        setCloudList(nextList)
+        setCloudEmptyIds(new Set([conv.id]))
+        if (id === activeConvId) {
+          abortRef.current?.abort()
+          abortRef.current = null
+          lastAttachmentUrlsRef.current = []
+          setPending([])
+          setDraft('')
+          setBusy(false)
+        }
+        setActiveConvId(conv.id)
+        writeCloudActiveId(conv.id)
+        setMessages([])
+        markCloudSynced([])
+        return
+      }
+
+      setCloudList(nextList)
+      if (id === activeConvId) {
+        abortRef.current?.abort()
+        abortRef.current = null
+        lastAttachmentUrlsRef.current = []
+        setPending([])
+        setDraft('')
+        setBusy(false)
+        const nextActive = [...nextList].sort((a, b) => b.createdAt - a.createdAt)[0]
+        const detail = await getCloudConversation(Number(nextActive.id))
+        const conv = cloudFromDetail(detail)
+        setCloudList((prev) =>
+          prev.map((c) => (c.id === conv.id ? { ...c, ...conv } : c)),
+        )
+        setActiveConvId(conv.id)
+        writeCloudActiveId(conv.id)
+        setMessages(conv.messages)
+        markCloudSynced(conv.messages)
+      }
+    } catch {
+      antMessage.error('删除没成功，稍后再试')
     }
-    setActiveConvId(activeId)
-    setMessages(next)
-    setConvRevision((n) => n + 1)
   }
 
-  function onRenameConversation(id: string) {
+  async function onRenameConversation(id: string) {
+    if (!loggedIn) return
     const current = conversations.find((c) => c.id === id)
     const next = window.prompt('会话标题', current?.title ?? '')
     if (next == null) return
-    renameLocalConversation(id, next)
-    setConvRevision((n) => n + 1)
+    const title = next.trim() || '新对话'
+
+    try {
+      const updated = await renameCloudConversation(Number(id), title)
+      setCloudList((prev) =>
+        prev.map((c) =>
+          c.id === String(updated.id)
+            ? { ...c, title: updated.title, updatedAt: updated.updatedAt }
+            : c,
+        ),
+      )
+    } catch {
+      antMessage.error('改名没成功，稍后再试')
+    }
   }
 
   function stopGenerating() {
@@ -542,7 +881,7 @@ export function ChatPage() {
     }
     const kind = classifyFile(file) as PendingFile['kind']
     if (kind === 'video') {
-      antMessage.info('已添加视频（仅本会话暂存，处理能力即将支持）。')
+      antMessage.info('已加上视频（本页暂存；视频能力马上就来）。')
     }
     const id = uid()
     // 视频暂不上传服务端；其它类型异步上传，失败则降级本会话
@@ -575,7 +914,7 @@ export function ChatPage() {
           setPending((prev) =>
             prev.map((p) => (p.id === id ? { ...p, uploadStatus: 'local' } : p)),
           )
-          antMessage.info(`${file.name} 暂存于本会话（临时上传接口未就绪或失败）`)
+          antMessage.info(`${file.name} 先留在本页啦（上传暂不可用）`)
         })
     }
     return false
@@ -588,6 +927,10 @@ export function ChatPage() {
   ) {
     const content = text.trim()
     if ((!content && pending.length === 0 && !opts?.regenerate) || busy) return
+    if (loggedIn && !cloudReady) {
+      antMessage.info('会话同步中，稍等一下再发～')
+      return
+    }
     if (pending.some((p) => p.uploadStatus === 'uploading')) {
       antMessage.warning('附件正在上传，请稍候再发送')
       return
@@ -653,8 +996,8 @@ export function ChatPage() {
             text: hasVideo
               ? '已收到视频（本会话暂存）。视频理解即将支持～若还有文档/图片，可说明用途；或补充文字需求。'
               : anyServer
-                ? '已收到附件（已暂存服务器，过期后自动删除）。想让小智做什么呢？'
-                : '已收到附件（仅存本标签页，关闭即消失）。想让小智做什么呢？',
+                ? '附件已加上（已暂存，过期会自动清）。想让小智做什么呢？'
+                : '附件已加上（本页有效）。想让小智做什么呢？',
             options: [
               { id: 'chat', label: '大模型' },
             ],
@@ -714,9 +1057,9 @@ export function ChatPage() {
       if (route.kind === 'section') {
         const map = {
           deals: {
-            text: '小智带你去「限时优惠」看看近期活动～',
+            text: '小智带你去「AI 优惠」看看各家活动～',
             to: ROUTES.DEALS,
-            label: '打开限时优惠',
+            label: '打开 AI 优惠',
           },
           articles: {
             text: '去「AI评测」看看真实体验与对比吧～',
@@ -729,7 +1072,7 @@ export function ChatPage() {
             label: '打开AI导览',
           },
           discover: {
-            text: '发现页汇总了热门产品与精选评测，小智觉得值得逛逛～',
+            text: '发现页汇总了热门 AI 与精选评测，小智觉得值得逛逛～',
             to: ROUTES.DISCOVER,
             label: '去发现',
           },
@@ -847,7 +1190,7 @@ export function ChatPage() {
           : ''
         : stripped
     if (!prompt.trim()) {
-      antMessage.info('这条没有可重试的文字内容，请重新说明需求')
+      antMessage.info('这条没有可重试的文字，重新说一下需求吧')
       return
     }
     if (urlsFromBubble.length > 0) {
@@ -901,6 +1244,7 @@ export function ChatPage() {
   }))
 
   const isEmptyChat = messages.length === 0
+  const storageBusy = loggedIn && !cloudReady
 
   const composer = (
     <form
@@ -953,7 +1297,7 @@ export function ChatPage() {
               type="text"
               className={styles.composerIconBtn}
               icon={<PlusOutlined />}
-              disabled={busy}
+              disabled={busy || storageBusy}
               aria-label="添加附件"
             />
           </Tooltip>
@@ -962,14 +1306,14 @@ export function ChatPage() {
           className={styles.composerInput}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="说需求，或上传文件…"
+          placeholder={storageBusy ? '同步中…' : '说需求，或上传文件…'}
           autoSize={{ minRows: 1, maxRows: 4 }}
           allowClear
-          disabled={busy}
+          disabled={busy || storageBusy}
           onPressEnter={(e) => {
             if (!e.shiftKey) {
               e.preventDefault()
-              if (!busy) void send(draft)
+              if (!busy && !storageBusy) void send(draft)
             }
           }}
         />
@@ -990,9 +1334,9 @@ export function ChatPage() {
               type="text"
               htmlType="submit"
               className={styles.composerSendBtn}
-              icon={<SendOutlined />}
+              icon={<ArrowUpOutlined />}
               aria-label="发送"
-              disabled={!draft.trim() && pending.length === 0}
+              disabled={storageBusy || (!draft.trim() && pending.length === 0)}
             />
           </Tooltip>
         )}
@@ -1002,7 +1346,7 @@ export function ChatPage() {
 
   return (
     <div className={styles.layout}>
-      {sidebarOpen ? (
+      {loggedIn && sidebarOpen ? (
         <button
           type="button"
           className={styles.sidebarScrim}
@@ -1010,36 +1354,39 @@ export function ChatPage() {
           onClick={() => setSidebarOpen(false)}
         />
       ) : null}
-      <ChatSidebar
-        conversations={conversations}
-        activeId={activeConvId}
-        loggedIn={loggedIn}
-        onSelect={onSelectConversation}
-        onNew={onNewConversation}
-        onDelete={onDeleteConversation}
-        onRename={onRenameConversation}
-        mobileOpen={sidebarOpen}
-        onCloseMobile={() => setSidebarOpen(false)}
-      />
+      {loggedIn ? (
+        <ChatSidebar
+          conversations={conversations}
+          activeId={activeConvId}
+          onSelect={onSelectConversation}
+          onNew={onNewConversation}
+          onDelete={onDeleteConversation}
+          onRename={onRenameConversation}
+          mobileOpen={sidebarOpen}
+          onCloseMobile={() => setSidebarOpen(false)}
+        />
+      ) : null}
       <div className={styles.shell}>
         <header className={styles.top}>
           <div className={styles.topRow}>
             <div className={styles.topLeft}>
-              <Button
-                type="text"
-                className={styles.menuBtn}
-                icon={<MenuOutlined />}
-                aria-label="会话列表"
-                onClick={() => setSidebarOpen(true)}
-              />
+              {loggedIn ? (
+                <Button
+                  type="text"
+                  className={styles.menuBtn}
+                  icon={<MenuOutlined />}
+                  aria-label="会话列表"
+                  onClick={() => setSidebarOpen(true)}
+                />
+              ) : null}
               <Typography.Title level={4} className={styles.title}>
                 小智
               </Typography.Title>
               <Tooltip
                 title={
                   loggedIn
-                    ? '登录用户每日可调用大模型的次数'
-                    : '未登录每日 3 次；登录后提升至 30 次'
+                    ? '今天还能找小智聊几轮'
+                    : '访客每天 3 次；登录后每天 30 次'
                 }
               >
                 <Tag className={styles.quotaTag} color={quota && quota.remaining <= 0 ? 'error' : 'cyan'}>
@@ -1047,20 +1394,22 @@ export function ChatPage() {
                     ? `今日剩余 ${quota.remaining}/${quota.daily}`
                     : loggedIn
                       ? '今日额度 30 次'
-                      : '访客今日 3 次 · 登录 30 次'}
+                      : '访客 3 次/天 · 登录后 30 次'}
                 </Tag>
               </Tooltip>
             </div>
             <Space size={4}>
-              <Tooltip title="新对话">
-                <Button
-                  type="text"
-                  icon={<PlusOutlined />}
-                  aria-label="新对话"
-                  disabled={busy}
-                  onClick={onNewConversation}
-                />
-              </Tooltip>
+              {loggedIn ? (
+                <Tooltip title="新对话">
+                  <Button
+                    type="text"
+                    icon={<PlusOutlined />}
+                    aria-label="新对话"
+                    disabled={busy}
+                    onClick={onNewConversation}
+                  />
+                </Tooltip>
+              ) : null}
               <Button
                 type="text"
                 icon={<ClearOutlined />}
@@ -1071,6 +1420,9 @@ export function ChatPage() {
               </Button>
             </Space>
           </div>
+          {!loggedIn ? (
+            <p className={styles.guestSessionHint}>登录后可多会话保存，换设备也能接着聊～</p>
+          ) : null}
         </header>
 
         {isEmptyChat ? (
@@ -1079,9 +1431,9 @@ export function ChatPage() {
             <p className={styles.emptyQuotaHint}>
               {loggedIn
                 ? quota
-                  ? `今日大模型还剩 ${quota.remaining} 次`
-                  : '登录用户每日可聊 30 次'
-                : '访客每日 3 次 · 登录后提升至 30 次'}
+                  ? `今天还能聊 ${quota.remaining} 次`
+                  : '登录后每天可聊 30 次'
+                : '每天可试 3 次 · 登录后提到 30 次哦'}
             </p>
             {composer}
           </div>
@@ -1303,7 +1655,7 @@ export function ChatPage() {
 
             <div className={styles.bottomDock}>
               <p className={styles.composerTip}>
-                我也可能会犯错哦，重要信息请务必自行核查，也可以去AI导览寻找或在这里搜索专业AI工具～
+                小智也可能说错，重要信息请再核对一下～
               </p>
               {composer}
             </div>

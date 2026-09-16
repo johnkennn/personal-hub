@@ -82,35 +82,38 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 
 | 路径 | 页面 | 说明 |
 |------|------|------|
-| `/` | 统一聊天 | **默认落地**；无侧栏；搜产品/评测 + 办事；`/chat` → `/` |
-| `/discover` | 发现 | 热门、精选评测 |
+| `/` | 发现 | **默认落地**；热门 AI、小智入口、精选评测；旧 `/discover` → `/` |
+| `/chat` | 小智 | Logo / ⌘K 进入；访客无多会话侧栏；登录可云端多会话 |
 | `/tools` | AI导览 | 分类产品库 |
 | `/tools/:slug` | 工具详情 | |
 | `/ai-tools/**` | （历史） | 兼容可留，非主路径 |
 | `/articles` | AI评测 | |
-| `/deals` | 限时优惠 | |
+| `/deals` | AI 优惠 | 第三方 AI 产品折扣/活动（需登录） |
 | `/about` | 关于 | |
-| `/login` `/register` | 账号 | 成功后进聊天 |
+| `/login` `/register` | 账号 | 成功后回发现（首页） |
 | `/studio/**` | 个人中心 | |
 | `/admin/**` | 治理 | Tool 等 |
 
-顶栏顺序：`小智 | 发现 | AI导览 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
+顶栏顺序：`发现 | AI导览 | AI评测 | AI 优惠 | 关于`（**小智不进目录，点左侧 Logo**；无顶栏搜索框）  
 
 **统一聊天（前端）：**
 
 | 模块 | 说明 |
 |------|------|
-| `pages/Chat` | 单一对话壳；附件；追问按钮；页内剩余额度 |
+| `pages/Chat` | 对话壳；附件；追问；页内剩余额度；登录侧栏多会话 |
 | `services/chatRouter.ts` | 规则意图：search / skill(chat) / clarify / section |
-| `utils/chatStorage.ts` | `sessionStorage`；关标签清空 |
+| `utils/chatStorage.ts` | 访客：`sessionStorage` 单会话；关标签清空 |
+| `api/chatConversations.ts` | 登录：云端会话 CRUD + 消息增量 upsert |
 | `api/aiTools.ts` | `runChatStream` → `POST /api/chat/stream`（intent 主要为 chat） |
 
 生成类需求统一走大模型 `chat`，不再拆多技能 system prompt。
 
 目录检索：`searchCatalog()` → `{ tools, reviews }`，由小智统一对话调用。  
-⌘/Ctrl+K → 回到小智。  
-品牌：`SITE_BRAND = '小智AI'`；顶栏「小智」对应 `/`。
-配额：访客每日 3、登录每日 30；SSE `done` 带回 `remainingQuota` / `dailyQuota`。
+⌘/Ctrl+K → `/chat`。  
+品牌：`SITE_BRAND = '小智AI'`；顶栏 Logo → `/chat`。  
+配额：访客每日 3、登录每日 30；SSE `done` 带回 `remainingQuota` / `dailyQuota`。  
+云端历史：`/api/chat/conversations/**`（需登录）；消息 `POST` 增量 upsert，清空用 `PUT` 整表替换。
+
 ---
 
 ## 4. 视觉体系（AI 风）

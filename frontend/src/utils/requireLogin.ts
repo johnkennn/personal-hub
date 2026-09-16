@@ -8,7 +8,7 @@ export function loginPathWithReturn(from?: string): string {
   const path =
     from ??
     `${window.location.pathname}${window.location.search}${window.location.hash}`
-  const safe = path.startsWith('/') && !path.startsWith('//') ? path : ROUTES.CHAT
+  const safe = path.startsWith('/') && !path.startsWith('//') ? path : ROUTES.HOME
   return `${ROUTES.LOGIN}?from=${encodeURIComponent(safe)}`
 }
 
@@ -50,7 +50,7 @@ export function ensureLoggedIn(options?: EnsureLoginOptions): Promise<boolean> {
     Modal.confirm({
       title: options?.title ?? '需要登录',
       content:
-        options?.content ?? '该功能需要登录后才能使用。是否前往登录页？',
+        options?.content ?? '这个功能需要登录哦，要去登录吗？',
       okText: '去登录',
       cancelText: '取消',
       centered: true,

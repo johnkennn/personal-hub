@@ -26,8 +26,8 @@ export function DealsPage() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
 
   usePageMeta({
-    title: '限时优惠',
-    description: '折扣与活动一站看。',
+    title: 'AI 优惠',
+    description: '第三方 AI 产品的折扣与活动，一站看清。',
   })
 
   useEffect(() => subscribeAuthChange(() => setLoggedIn(isLoggedIn())), [])
@@ -63,10 +63,10 @@ export function DealsPage() {
   }
 
   return (
-    <PageHero title="限时优惠" tagline="折扣与活动，一站看清">
+    <PageHero title="AI 优惠" tagline="第三方 AI 产品的折扣与活动，一站看清">
       {!loggedIn ? (
         <Empty
-          description="登录后即可查看限时优惠"
+          description="登录后就能看各家 AI 优惠啦"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         >
           <Button type="primary" onClick={() => void onGoLogin()}>

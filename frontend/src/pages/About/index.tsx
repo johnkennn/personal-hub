@@ -14,10 +14,10 @@ const CONTACT_EMAIL = '1668144459@qq.com'
 
 const MODULES = [
   { title: '小智', desc: '问答、搜产品与评测，也能叫大模型帮忙', to: ROUTES.CHAT },
-  { title: '发现', desc: '热门产品与精选评测', to: ROUTES.DISCOVER },
+  { title: '发现', desc: '热门 AI 与精选评测', to: ROUTES.DISCOVER },
   { title: 'AI导览', desc: '成熟 AI 产品按类汇总', to: ROUTES.TOOLS },
   { title: 'AI评测', desc: '真实体验与对比', to: ROUTES.ARTICLES },
-  { title: '限时优惠', desc: '折扣与活动一站看', to: ROUTES.DEALS },
+  { title: 'AI 优惠', desc: '各家 AI 折扣与活动一站看', to: ROUTES.DEALS },
 ] as const
 
 const listVariants = {

@@ -6,7 +6,7 @@ import styles from './MainLayout.module.css'
 
 export function MainLayout() {
   const { pathname } = useLocation()
-  const fillViewport = pathname === '/' || pathname === '/chat'
+  const fillViewport = pathname === '/chat'
 
   return (
     <div className={styles.layout}>

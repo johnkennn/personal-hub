@@ -177,7 +177,7 @@ export function UserProfilePage() {
   const workCount = articles.length + projects.length
 
   async function onFollow() {
-    if (!(await ensureLoggedIn({ content: '关注创作者需要登录。是否前往登录页？' }))) {
+    if (!(await ensureLoggedIn({ content: '关注需要登录哦，要去登录吗？' }))) {
       return
     }
     if (followBusy || !profile) return

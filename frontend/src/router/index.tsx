@@ -58,9 +58,9 @@ export const router = createBrowserRouter([
     path: '/',
     element: <MainLayout />,
     children: [
-      { index: true, element: <ChatPage /> },
-      { path: 'chat', element: <Navigate to="/" replace /> },
-      { path: 'discover', element: <HomePage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'chat', element: <ChatPage /> },
+      { path: 'discover', element: <Navigate to="/" replace /> },
       { path: 'about', element: <AboutPage /> },
       { path: 'tools', element: <ToolsPage /> },
       { path: 'tools/:slug', element: <ToolDetailPage /> },

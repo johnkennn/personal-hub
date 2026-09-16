@@ -232,7 +232,7 @@ export function AdminDealsPage() {
       <div className={styles.pageHead}>
         <div>
           <Typography.Title level={3} className={styles.pageTitle}>
-            限时优惠管理
+            AI 优惠管理
           </Typography.Title>
           <Typography.Paragraph type="secondary" className={styles.pageDesc}>
             维护进行中的活动；状态为「进行中」且在有效期内才会出现在前台。
@@ -318,7 +318,7 @@ export function AdminDealsPage() {
           </Form.Item>
         </Form>
         <div style={{ marginTop: 8 }}>
-          <Link to={ROUTES.DEALS}>查看前台限时优惠</Link>
+          <Link to={ROUTES.DEALS}>查看前台 AI 优惠</Link>
         </div>
       </Modal>
     </motion.div>

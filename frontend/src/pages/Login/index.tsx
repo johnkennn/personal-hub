@@ -30,7 +30,7 @@ export function LoginPage() {
       const data = res.data.data
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('登录成功')
-      navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.CHAT, { replace: true })
+      navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.HOME, { replace: true })
     } catch {
       message.error('登录失败，请检查用户名或密码')
     }
@@ -48,7 +48,7 @@ export function LoginPage() {
           欢迎回来
         </Typography.Title>
         <Typography.Paragraph type="secondary">
-          登录后可收藏工具、使用更高额度的实用工具，并管理账号。
+          登录后额度更高，还能同步小智多会话～
         </Typography.Paragraph>
 
         <Form form={form} layout="vertical" size="large" onFinish={onFinish} requiredMark={false}>

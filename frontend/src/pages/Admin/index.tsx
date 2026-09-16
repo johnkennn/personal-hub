@@ -103,8 +103,8 @@ export function AdminHomePage() {
       metrics: [],
     },
     {
-      title: '限时优惠',
-      desc: '维护进行中的折扣与活动，关联导览产品。',
+      title: 'AI 优惠',
+      desc: '维护各家 AI 产品的折扣与活动，关联导览产品。',
       to: ROUTES.ADMIN_DEALS,
       icon: <GiftOutlined />,
       metrics: [],

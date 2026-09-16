@@ -122,12 +122,12 @@ export function routeChatIntentConfident(
   if (/你是谁|你叫什么|介绍一下你|什么助手/.test(q)) {
     return {
       kind: 'smalltalk',
-      text: '小智是「小智AI」的站内助手：能帮你搜产品与评测，也能问答、翻译、文案、总结～关闭本标签页后，对话不会留在服务器哦。',
+      text: '小智是「小智AI」的站内助手：能帮你搜产品与评测，也能问答、翻译、文案、总结～',
     }
   }
 
   // 站内板块跳转（明确）
-  if (/^(打开|去|看看)?(限时)?(优惠|折扣|促销)$/.test(q) || (/优惠|折扣|促销|限时/.test(q) && q.length < 12)) {
+  if (/^(打开|去|看看)?(ai\s*)?(优惠|折扣|促销|限时优惠)$/i.test(q) || (/优惠|折扣|促销|限时/.test(q) && q.length < 12)) {
     return { kind: 'section', section: 'deals' }
   }
   if (/^(打开|去)?(ai)?(评测|测评)$/.test(q)) {

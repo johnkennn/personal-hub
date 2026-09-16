@@ -65,8 +65,8 @@ function promptLoginOnUnauthorized(serverMessage?: string) {
     content:
       serverMessage?.trim() ||
       (hadSession
-        ? '登录状态已失效，是否重新登录？'
-        : '该内容需要登录后查看。是否前往登录页？'),
+        ? '登录过期啦，要重新登录吗？'
+        : '需要登录才能看哦，要去登录吗？'),
   }).finally(() => {
     handlingUnauthorized = false
   })

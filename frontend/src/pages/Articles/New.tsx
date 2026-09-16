@@ -63,7 +63,7 @@ export function ArticleNewPage() {
     void (async () => {
       const ok = await ensureLoggedIn({
         title: '需要登录',
-        content: '写评测需要登录。是否前往登录页？取消将返回上一页。',
+        content: '写评测需要登录哦，要去登录吗？取消将返回上一页。',
       })
       if (!ok) {
         navigate(-1)
