@@ -13,7 +13,7 @@ const CONTACT_PHONE = '13476270359'
 const CONTACT_EMAIL = '1668144459@qq.com'
 
 const MODULES = [
-  { title: '聊天检索', desc: '问答、导流，搜产品与评测', to: ROUTES.CHAT },
+  { title: '小智', desc: '问答、搜产品与评测，也能叫大模型帮忙', to: ROUTES.CHAT },
   { title: '发现', desc: '热门产品与精选评测', to: ROUTES.DISCOVER },
   { title: 'AI导览', desc: '成熟 AI 产品按类汇总', to: ROUTES.TOOLS },
   { title: 'AI评测', desc: '真实体验与对比', to: ROUTES.ARTICLES },
@@ -57,7 +57,7 @@ export function AboutPage() {
     <PageHero
       narrow
       title={SITE_BRAND}
-      tagline="更快找到合适的 AI，用上站内技能。"
+      tagline="小智陪你更快找到合适的 AI，顺手用上站内能力。"
     >
       <section className={pageHeroStyles.section} aria-label="站内能力">
         <SectionHead label="能力" />

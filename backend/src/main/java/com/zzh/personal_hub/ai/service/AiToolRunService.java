@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,23 +37,17 @@ public class AiToolRunService {
 
     private final ChatTempImageLoader chatTempImageLoader;
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
-    private static final Map<String, String> SYSTEM_PROMPTS = Map.of(
-        "chat",
-        "你是 AI Tools Hub 的站内助手。可回答一般问题，也可协助翻译、文案、总结等。"
-        + "回答简洁准确；不确定就说明。若用户消息里带有本地日期参考，回答日期问题时以该日期为准。"
-        + "不要编造站内不存在的产品。",
-        "copywriting",
-        "你是电商与营销文案助手。根据用户给出的卖点、受众与语气，生成可直接使用的商品描述草稿。"
-                + "结构清晰，避免空话；不要编造无法从输入推断的参数。",
-        "translate",
-        "你是专业翻译助手。根据用户指定的目标语言翻译文本；若未说明目标语言，默认译为英文。"
-                + "只输出译文（必要时可加一行极短的语言说明），不要扩写、不要评论原文。",
-        "resume",
-        "你是简历优化助手。在保留事实的前提下润色结构与措辞，给出可直接粘贴的改写建议。"
-        + "不要编造经历；可简短免责：仅供参考、非求职保证。",
-        "summary",
-        "你是文档总结助手。根据用户说明与提供的正文，提炼条理清晰的要点摘要。"
-        + "不要编造原文没有的信息；若材料过短，如实说明。"
+
+    /** 统一大模型人设；旧技能 slug 会归一到 chat */
+    private static final String CHAT_SYSTEM_PROMPT =
+            "你是「小智」，小智AI 的站内助手。自称用「小智」而不是「我」，语气友好、略可爱但不油腻。"
+                    + "可回答一般问题，也可协助翻译、文案、总结、简历润色、合同风险提示等。"
+                    + "回答简洁准确；不确定就说明。若用户消息里带有本地日期参考，回答日期问题时以该日期为准。"
+                    + "不要编造站内不存在的产品。";
+
+    /** 历史多技能入口，全部走同一套 chat 提示词 */
+    private static final Set<String> LEGACY_SKILL_SLUGS = Set.of(
+            "copywriting", "translate", "resume", "summary", "contract"
     );
 
     private static final ExecutorService STREAM_EXECUTOR = Executors.newFixedThreadPool(8, r -> {
@@ -69,7 +64,7 @@ public class AiToolRunService {
 
     public AiRunResponse run(String slug, String prompt, HttpServletRequest request) {
         RunContext ctx = prepare(slug, prompt, request);
-        String text = aiClient.complete(SYSTEM_PROMPTS.get(ctx.slug()), ctx.prompt());
+        String text = aiClient.complete(CHAT_SYSTEM_PROMPT, ctx.prompt());
         saveLog(ctx);
         return new AiRunResponse(text, remainingAfterUse(ctx), ctx.dailyQuota());
     }
@@ -79,26 +74,34 @@ public class AiToolRunService {
      * 事件名：delta（text）、done（remainingQuota/dailyQuota）、error（message）
      */
     public SseEmitter runStream(String slug, String prompt, java.util.List<String> attachmentUrls, HttpServletRequest request) {
-        var images = chatTempImageLoader.loadImages(attachmentUrls);
-        List<String> dataUrls = images.stream().map(ChatTempImageLoader.ImagePart::dataUrl).toList();
-        String fullPrompt = buildPrompt(prompt, attachmentUrls);
-        if (!dataUrls.isEmpty()) {
-            String base = prompt == null ? "" : prompt.trim();
-            if (!StringUtils.hasText(base)) {
-                base = "请描述这张图片的主要内容。";
+        final List<String> dataUrls;
+        final RunContext ctx;
+        try {
+            var images = chatTempImageLoader.loadImages(attachmentUrls);
+            dataUrls = images.stream().map(ChatTempImageLoader.ImagePart::dataUrl).toList();
+            String fullPrompt = buildPrompt(prompt, attachmentUrls);
+            if (!dataUrls.isEmpty()) {
+                String base = prompt == null ? "" : prompt.trim();
+                if (!StringUtils.hasText(base)) {
+                    base = "请描述这张图片的主要内容。";
+                }
+                String textPart = chatTempTextExtractor.extractAll(attachmentUrls);
+                fullPrompt = StringUtils.hasText(textPart)
+                        ? "用户说明：\n" + base + "\n\n【附件文字】\n" + textPart
+                        : base;
             }
-            String textPart = chatTempTextExtractor.extractAll(attachmentUrls);
-            fullPrompt = StringUtils.hasText(textPart)
-                    ? "用户说明：\n" + base + "\n\n【附件文字】\n" + textPart
-                    : base;
+            // 配额等业务错误：不要抛出打断 SSE 协商（易变成 HTTP 500），改为 error 事件
+            ctx = prepare(slug, fullPrompt, request);
+        } catch (BusinessException e) {
+            return failedSse(e.getCode(), e.getMessage());
         }
-        RunContext ctx = prepare(slug, fullPrompt, request);
+
         long timeout = Math.max(30_000L, aiProperties.getTimeoutMs() + 15_000L);
         SseEmitter emitter = new SseEmitter(timeout);
 
         STREAM_EXECUTOR.execute(() -> {
             try {
-                aiClient.stream(SYSTEM_PROMPTS.get(ctx.slug()), ctx.prompt(), dataUrls, delta -> {
+                aiClient.stream(CHAT_SYSTEM_PROMPT, ctx.prompt(), dataUrls, delta -> {
                     try {
                         sendJson(emitter, "delta", Map.of("text", delta));
                     } catch (IOException e) {
@@ -131,11 +134,25 @@ public class AiToolRunService {
         return emitter;
     }
 
+    /** 同步失败（如额度用尽）时仍返回 SSE，方便前端统一解析 error 事件 */
+    private SseEmitter failedSse(int code, String message) {
+        SseEmitter emitter = new SseEmitter(15_000L);
+        STREAM_EXECUTOR.execute(() -> {
+            try {
+                sendJson(emitter, "error", Map.of(
+                        "message", message == null ? "请求失败" : message,
+                        "code", code
+                ));
+                emitter.complete();
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+        return emitter;
+    }
+
     private RunContext prepare(String slug, String prompt, HttpServletRequest request) {
-        String normalized = slug == null ? "" : slug.trim().toLowerCase();
-        if (!SYSTEM_PROMPTS.containsKey(normalized)) {
-            throw new BusinessException(404, "该技能暂未开放");
-        }
+        String normalized = normalizeToChatSlug(slug);
         if (!StringUtils.hasText(prompt)) {
             throw new BusinessException(400, "请输入内容");
         }
@@ -148,13 +165,22 @@ public class AiToolRunService {
                 : aiProperties.getGuestDailyQuota();
 
         Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
-        long used = aiRunLogRepository.countBySlugAndClientKeyAndCreatedAtGreaterThanEqual(
-                normalized, clientKey, dayStart);
+        long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
+                clientKey, dayStart);
         if (aiProperties.isQuotaEnabled() && used >= dailyQuota) {
             throw new BusinessException(429, "今日额度已用完，登录或明天再试");
         }
 
         return new RunContext(normalized, prompt.trim(), userId, clientKey, dailyQuota, used);
+    }
+
+    /** chat 与历史技能 slug 一律记为 chat，配额统一按 chat 计 */
+    private static String normalizeToChatSlug(String slug) {
+        String normalized = slug == null ? "" : slug.trim().toLowerCase();
+        if ("chat".equals(normalized) || LEGACY_SKILL_SLUGS.contains(normalized)) {
+            return "chat";
+        }
+        throw new BusinessException(404, "该能力暂未开放");
     }
 
     private void saveLog(RunContext ctx) {

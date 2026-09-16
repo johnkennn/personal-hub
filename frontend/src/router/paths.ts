@@ -57,9 +57,9 @@ export const ROUTES = {
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
-/** 顶栏：聊天为统一入口；产品库称「AI导览」 */
+/** 顶栏：小智为统一入口；产品库称「AI导览」 */
 export const NAV_ITEMS = [
-  { path: ROUTES.CHAT, label: '聊天' },
+  { path: ROUTES.CHAT, label: '小智' },
   { path: ROUTES.DISCOVER, label: '发现' },
   { path: ROUTES.TOOLS, label: 'AI导览' },
   { path: ROUTES.ARTICLES, label: 'AI评测' },
@@ -67,7 +67,7 @@ export const NAV_ITEMS = [
   { path: ROUTES.ABOUT, label: '关于' },
 ] as const
 
-export const SITE_BRAND = 'AI Tools Hub'
+export const SITE_BRAND = '小智AI'
 
 export function articleDetailPath(id: number | string) {
   return `/articles/${id}`

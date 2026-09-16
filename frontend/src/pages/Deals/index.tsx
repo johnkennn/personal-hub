@@ -9,7 +9,9 @@ import { usePageMeta } from '../../hooks/usePageMeta'
 import { ROUTES, toolDetailPath } from '../../router/paths'
 import { loadActiveDeals } from '../../services/dealCatalog'
 import type { DealDto } from '../../types/deal'
+import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
+import { loginPathWithReturn } from '../../utils/requireLogin'
 import styles from './Deals.module.css'
 
 function dealUrl(url: string | null | undefined): string | null {
@@ -21,31 +23,57 @@ function dealUrl(url: string | null | undefined): string | null {
 export function DealsPage() {
   const [items, setItems] = useState<DealDto[]>([])
   const [loading, setLoading] = useState(true)
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
 
   usePageMeta({
     title: '限时优惠',
     description: '折扣与活动一站看。',
   })
 
+  useEffect(() => subscribeAuthChange(() => setLoggedIn(isLoggedIn())), [])
+
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    loadActiveDeals()
-      .then(({ items: list }) => {
-        if (cancelled) return
-        setItems(list)
-      })
-      .finally(() => {
+
+    async function load() {
+      if (!isLoggedIn()) {
+        setItems([])
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+      try {
+        const { items: list } = await loadActiveDeals()
+        if (!cancelled) setItems(list)
+      } catch {
+        if (!cancelled) setItems([])
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+
+    void load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loggedIn])
+
+  async function onGoLogin() {
+    window.location.assign(loginPathWithReturn(ROUTES.DEALS))
+  }
 
   return (
     <PageHero title="限时优惠" tagline="折扣与活动，一站看清">
-      {loading ? (
+      {!loggedIn ? (
+        <Empty
+          description="登录后即可查看限时优惠"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        >
+          <Button type="primary" onClick={() => void onGoLogin()}>
+            去登录
+          </Button>
+        </Empty>
+      ) : loading ? (
         <Skeleton active paragraph={{ rows: 5 }} />
       ) : items.length === 0 ? (
         <Empty description="暂无进行中的优惠" />

@@ -54,7 +54,7 @@ export function HomePage() {
   )
 
   return (
-    <PageHero title="发现" tagline="热门产品 · 聊天技能 · 精选评测">
+    <PageHero title="发现" tagline="热门产品 · 小智助手 · 精选评测">
       <motion.section
         className={pageHeroStyles.section}
         initial={{ opacity: 0, y: 10 }}
@@ -98,7 +98,7 @@ export function HomePage() {
           label="快捷入口"
           action={
             <Link to={ROUTES.CHAT}>
-              <Button type="link">打开聊天</Button>
+              <Button type="link">打开小智</Button>
             </Link>
           }
         />
@@ -106,12 +106,12 @@ export function HomePage() {
           <Col xs={24} sm={12} lg={8}>
             <Link to={ROUTES.CHAT} className={ui.cardLink}>
               <Card className={ui.contentCard} variant="borderless" hoverable>
-                <Tag style={{ marginBottom: 8 }}>聊天</Tag>
+                <Tag style={{ marginBottom: 8 }}>小智</Tag>
                 <Typography.Title level={4} style={{ marginTop: 0 }}>
-                  文案写作
+                  大模型助手
                 </Typography.Title>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  对话里直接生成卖点草稿
+                  问答、文案、翻译、总结，一句话吩咐小智
                 </Typography.Paragraph>
               </Card>
             </Link>

@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.Instant;
 
 public interface AiRunLogRepository extends JpaRepository<AiRunLog, Long> {
-    long countBySlugAndClientKeyAndCreatedAtGreaterThanEqual(
-            String slug, String clientKey, Instant createdAt);
+    /** 统一按客户端计日配额（不区分历史技能 slug） */
+    long countByClientKeyAndCreatedAtGreaterThanEqual(String clientKey, Instant createdAt);
 }

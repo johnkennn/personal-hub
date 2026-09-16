@@ -1,5 +1,6 @@
 import { Layout, Typography } from 'antd'
 
+import { SITE_BRAND } from '../../router/paths'
 import styles from './Footer.module.css'
 
 const { Footer: AntFooter } = Layout
@@ -10,7 +11,7 @@ export function Footer() {
   return (
     <AntFooter className={styles.footer}>
       <Typography.Text type="secondary" className={styles.text}>
-        © {year} AI Tools Hub · 找对 AI，用得上手
+        © {year} {SITE_BRAND} · 找对 AI，用得上手
       </Typography.Text>
     </AntFooter>
   )

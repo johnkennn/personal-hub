@@ -16,16 +16,21 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ChatIntentRouterService {
 
+    /** 站内意图；生成类需求统一为 chat（大模型） */
     private static final Set<String> INTENTS = Set.of(
-            "search", "chat", "translate", "copywriting", "resume",
-            "summary", "contract", "clarify",
+            "search", "chat", "clarify",
             "deals", "articles", "tools", "discover", "about"
+    );
+
+    /** 旧分类器可能仍返回这些，映射为 chat */
+    private static final Set<String> LEGACY_GENERATIVE = Set.of(
+            "translate", "copywriting", "resume", "summary", "contract"
     );
 
     private static final String SYSTEM = """
             你是意图分类器。根据用户一句话，只输出一行 JSON（不要 markdown）：
-            {"intent":"search|chat|translate|copywriting|resume|summary|contract|clarify|deals|articles|tools|discover|about","query":"可选，搜产品时的关键词"}
-            规则：想找站内 AI 产品/评测 → search；闲聊或一般知识 → chat；明确翻译/文案/简历/总结/合同 → 对应技能；打开优惠/评测/导览/发现/关于 → 对应板块；实在不清 → clarify。
+            {"intent":"search|chat|clarify|deals|articles|tools|discover|about","query":"可选，搜产品时的关键词"}
+            规则：想找站内 AI 产品/评测 → search；闲聊、问答、翻译、文案、简历、总结、合同等生成类 → chat；打开优惠/评测/导览/发现/关于 → 对应板块；实在不清 → clarify。
             """;
 
     private final AiClient aiClient;
@@ -40,6 +45,9 @@ public class ChatIntentRouterService {
         try {
             JsonNode node = jsonMapper.readTree(json);
             String intent = node.path("intent").asString("chat").trim().toLowerCase();
+            if (LEGACY_GENERATIVE.contains(intent)) {
+                intent = "chat";
+            }
             if (!INTENTS.contains(intent)) {
                 intent = "chat";
             }

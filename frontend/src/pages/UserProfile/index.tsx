@@ -35,6 +35,7 @@ import {
 import { getUserId, isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
+import { ensureLoggedIn } from '../../utils/requireLogin'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { Profile } from '../../types/profile'
 import type { Article } from '../../types/article'
@@ -176,8 +177,7 @@ export function UserProfilePage() {
   const workCount = articles.length + projects.length
 
   async function onFollow() {
-    if (!loggedIn) {
-      message.info('登录后即可关注创作者')
+    if (!(await ensureLoggedIn({ content: '关注创作者需要登录。是否前往登录页？' }))) {
       return
     }
     if (followBusy || !profile) return

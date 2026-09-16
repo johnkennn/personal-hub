@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { clearAuth, getToken } from '../utils/authStorage'
+import { clearAuth, getToken, isLoggedIn } from '../utils/authStorage'
+import { ensureLoggedIn } from '../utils/requireLogin'
 import { ROUTES } from '../router/paths'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
@@ -22,18 +23,17 @@ request.interceptors.request.use((config) => {
 })
 
 /**
- * 后端 JWT 过期 / 无效时：
- * - Security 返回 HTTP 401 +「未登录或登录已失效」
- * - 或业务体 code=401
- * 前端仍可能显示旧 username（localStorage），因此需统一清会话并回登录页。
+ * 后端 JWT 过期 / 接口要求登录时：
+ * - HTTP 401 或业务体 code=401
+ * 弹窗确认是否去登录；取消则留在原页（不再强制跳转）。
  */
 let handlingUnauthorized = false
 
 request.interceptors.response.use(
   (response) => {
-    const body = response.data as { code?: number } | undefined
+    const body = response.data as { code?: number; message?: string } | undefined
     if (body?.code === 401) {
-      redirectToLoginOnUnauthorized()
+      promptLoginOnUnauthorized(body.message)
       return Promise.reject(response)
     }
     return response
@@ -41,21 +41,33 @@ request.interceptors.response.use(
   (error) => {
     const status = error?.response?.status
     const code = error?.response?.data?.code
+    const message = error?.response?.data?.message as string | undefined
     if (status === 401 || code === 401) {
-      redirectToLoginOnUnauthorized()
+      promptLoginOnUnauthorized(message)
     }
     return Promise.reject(error)
   },
 )
 
-function redirectToLoginOnUnauthorized() {
+function promptLoginOnUnauthorized(serverMessage?: string) {
   if (handlingUnauthorized) return
-  handlingUnauthorized = true
-  clearAuth()
   const path = window.location.pathname
-  if (path !== ROUTES.LOGIN && path !== ROUTES.REGISTER) {
-    window.location.assign(ROUTES.LOGIN)
-  } else {
+  if (path === ROUTES.LOGIN || path === ROUTES.REGISTER) return
+
+  handlingUnauthorized = true
+  const hadSession = isLoggedIn()
+  clearAuth()
+
+  // 与 ensureLoggedIn 共用一套弹窗，避免「页面弹一次 + 401 再弹一次」
+  void ensureLoggedIn({
+    force: true,
+    title: hadSession ? '登录已失效' : '需要登录',
+    content:
+      serverMessage?.trim() ||
+      (hadSession
+        ? '登录状态已失效，是否重新登录？'
+        : '该内容需要登录后查看。是否前往登录页？'),
+  }).finally(() => {
     handlingUnauthorized = false
-  }
+  })
 }

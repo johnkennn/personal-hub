@@ -43,7 +43,14 @@ export async function consumeSseResponse(
           dailyQuota: Number(parsed.data.dailyQuota ?? -1),
         })
       } else if (parsed.event === 'error') {
-        throw new Error(String(parsed.data.message || '生成失败'))
+        const msg = String(parsed.data.message || '生成失败')
+        const code = Number(parsed.data.code ?? 0)
+        const err = new Error(msg) as Error & { status?: number; code?: number }
+        if (code > 0) {
+          err.code = code
+          err.status = code
+        }
+        throw err
       }
     }
   }

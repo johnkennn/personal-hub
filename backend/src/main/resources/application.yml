@@ -26,10 +26,11 @@ app:
     base-url: ${AI_BASE_URL:https://api.openai.com/v1}
     api-key: ${AI_API_KEY:}
     model: ${AI_MODEL:gpt-4o-mini}
-    guest-daily-quota: 5
-    user-daily-quota: 30
+    guest-daily-quota: ${AI_GUEST_DAILY_QUOTA:3}
+    user-daily-quota: ${AI_USER_DAILY_QUOTA:30}
     timeout-ms: 45000
-    quota-enabled: ${AI_QUOTA_ENABLED:false}
+    # 默认开启配额：访客每日 3 次，登录用户 30 次
+    quota-enabled: ${AI_QUOTA_ENABLED:true}
     # 识图：空则回退到 model；另配 vision-* 可换一家识图服务
     vision-model: ${AI_VISION_MODEL:}
     vision-base-url: ${AI_VISION_BASE_URL:}

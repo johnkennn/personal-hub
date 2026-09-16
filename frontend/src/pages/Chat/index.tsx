@@ -28,13 +28,11 @@ import {
   type CatalogSearchResult,
 } from '../../services/globalSearch'
 import {
-  DISCLAIMERS,
   chatRouteFromLlm,
   looksLikeImageQuestion,
   routeChatIntent,
   routeChatIntentConfident,
   type RouteOverride,
-  type SkillSlug,
 } from '../../services/chatRouter'
 import { fetchChatRoute } from '../../api/chatRoute'
 import {
@@ -47,6 +45,8 @@ import {
 } from '../../utils/chatStorage'
 import { copyToClipboard } from '../../utils/clipboard'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
+import { isLoggedIn } from '../../utils/authStorage'
+import { ensureLoggedIn } from '../../utils/requireLogin'
 import styles from './Chat.module.css'
 
 /** 附件白名单（轻量：前端先拦；后端上传落地后再双检） */
@@ -132,73 +132,9 @@ function hitsFromCatalog(result: CatalogSearchResult): ChatHit[] {
   return [...tools, ...reviews]
 }
 
-function draftCopywritingFallback(raw: string): string {
-  const brief = raw.replace(/\s+/g, ' ').trim()
-  return [
-    '【商品描述草稿】（本地兜底）',
-    '',
-    `根据：「${brief.slice(0, 180)}${brief.length > 180 ? '…' : ''}」`,
-    '',
-    '标题建议：一款贴近真实需求的好物。',
-    '正文：把核心卖点说清楚——好用、好懂、好下手。',
-  ].join('\n')
-}
-
-function draftTranslateFallback(raw: string): string {
-  return `【译文草稿】（本地兜底）\n\n${raw.slice(0, 240)}`
-}
-
-function draftResumeFallback(raw: string): string {
-  return [
-    DISCLAIMERS.resume,
-    '',
-    '【简历优化演示】',
-    '· 建议用量化结果改写经历（数字、范围、成果）',
-    '· 按目标岗位调整关键词',
-    '· 删掉空泛形容词',
-    '',
-    `原文摘录：${raw.slice(0, 200)}${raw.length > 200 ? '…' : ''}`,
-  ].join('\n')
-}
-
-function draftContractFallback(raw: string): string {
-  return [
-    DISCLAIMERS.contract,
-    '',
-    '【风险提示草稿·演示】',
-    '· 请核对违约金、管辖、自动续费、数据与隐私条款',
-    '· 关键义务是否对等、终止条件是否清晰',
-    '',
-    `片段摘录：${raw.slice(0, 200)}${raw.length > 200 ? '…' : ''}`,
-  ].join('\n')
-}
-
-function draftSummaryFallback(raw: string): string {
-  return [
-    '【内容总结·本地兜底】',
-    '当前未能连上模型服务。请检查后端 app.ai 配置，或稍后再试。',
-    '文档可抽字：.txt / .md / .pdf / .docx / .xlsx。',
-    '图片需后端配置识图模型（vision-model）后才能描述画面。',
-    '',
-    '要点：',
-    `· ${raw.slice(0, 120)}${raw.length > 120 ? '…' : ''}`,
-  ].join('\n')
-}
-
-function draftChatFallback(raw: string): string {
-  return [
-    '【通用问答·本地兜底】',
-    '当前未能连上模型服务。请检查后端 app.ai 配置，或稍后再试。',
-    '',
-    `你的问题：${raw.slice(0, 200)}${raw.length > 200 ? '…' : ''}`,
-  ].join('\n')
-}
-
 async function streamSkillReply(
-  slug: SkillSlug,
   content: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
-  fallback: (raw: string) => string,
   attachmentUrls?: string[],
   signal?: AbortSignal,
 ) {
@@ -208,37 +144,9 @@ async function streamSkillReply(
     { id: assistantId, role: 'assistant', text: '' },
   ])
 
-  const useApi =
-    slug === 'chat' ||
-    slug === 'copywriting' ||
-    slug === 'translate' ||
-    slug === 'resume' ||
-    slug === 'summary'
-
-  async function typeLocal(full: string) {
-    let i = 0
-    while (i < full.length) {
-      if (signal?.aborted) return
-      const end = Math.min(full.length, i + 6)
-      const chunk = full.slice(i, end)
-      i = end
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId ? { ...m, text: m.text + chunk } : m,
-        ),
-      )
-      await new Promise((r) => setTimeout(r, 12))
-    }
-  }
-
-  if (!useApi) {
-    await typeLocal(fallback(content))
-    return
-  }
-
   try {
     await runSkillStream(
-      slug,
+      'chat',
       content,
       {
         signal,
@@ -268,20 +176,38 @@ async function streamSkillReply(
       err instanceof Error && err.message.trim()
         ? err.message.trim()
         : '调用模型失败，请稍后重试'
-    // 线上勿再静默本地兜底，否则像「翻译成功」其实没调到模型
+    const status = (err as { status?: number })?.status
+    const quotaExceeded =
+      status === 429 || /额度|今日.*用完|quota/i.test(reason)
+
+    const softReason =
+      quotaExceeded && !isLoggedIn()
+        ? '今日试用额度用完啦～登录后每天可多聊一些哦'
+        : reason
+
     setMessages((prev) =>
       prev.map((m) =>
         m.id === assistantId
           ? {
               ...m,
               text: m.text.trim()
-                ? `${m.text}\n\n（生成中断：${reason}）`
-                : `生成失败：${reason}`,
+                ? `${m.text}\n\n（${softReason}）`
+                : softReason,
             }
           : m,
       ),
     )
-    antMessage.error(reason)
+
+    // 未登录额度：只弹确认框，避免再出一条 toast 叠两层
+    if (quotaExceeded && !isLoggedIn()) {
+      void ensureLoggedIn({
+        title: '今日试用额度已用完',
+        content:
+          '未登录每天可试用 3 次。登录后每日额度提升至 30 次，要去登录吗？',
+      })
+    } else {
+      antMessage.error(reason)
+    }
   }
 }
 
@@ -354,7 +280,7 @@ async function copyText(text: string) {
 export function ChatPage() {
   const navigate = useNavigate()
   const listRef = useRef<HTMLDivElement>(null)
-  /** 最近一次已上传到服务器的临时附件，供点「总结提炼」时带上 */
+  /** 最近一次已上传到服务器的临时附件 URL，供选项 / 重新生成复用 */
   const lastAttachmentUrlsRef = useRef<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const stickToBottomRef = useRef(true)
@@ -366,8 +292,8 @@ export function ChatPage() {
   const [showJumpTop, setShowJumpTop] = useState(false)
 
   usePageMeta({
-    title: '聊天',
-    description: `${SITE_BRAND} 聊天：搜产品、翻译、写文案、总结。`,
+    title: '小智',
+    description: `${SITE_BRAND}：搜产品、评测，或直接和大模型聊。`,
   })
 
   useEffect(() => {
@@ -546,8 +472,6 @@ export function ChatPage() {
       if (!content && filesSnapshot.length > 0) {
         if (aborted()) return
         const hasVideo = filesSnapshot.some((f) => f.kind === 'video')
-        const hasImage = filesSnapshot.some((f) => f.kind === 'image')
-        const hasDoc = filesSnapshot.some((f) => f.kind === 'doc' || f.kind === 'text')
         const anyServer = filesSnapshot.some((f) => f.uploadStatus === 'ready')
         setMessages((prev) => [
           ...prev,
@@ -555,25 +479,13 @@ export function ChatPage() {
             id: uid(),
             role: 'assistant',
             text: hasVideo
-              ? '已收到视频（本会话暂存）。视频理解即将支持。若还有文档/图片，可说明用途；或补充文字需求。'
+              ? '已收到视频（本会话暂存）。视频理解即将支持～若还有文档/图片，可说明用途；或补充文字需求。'
               : anyServer
-                ? '已收到附件（已暂存服务器，过期后自动删除）。请选择要我做什么：'
-                : '已收到附件（仅存本标签页，关闭即消失）。请选择要我做什么：',
-            options: hasImage
-              ? [
-                  { id: 'summary', label: '描述 / 总结图片内容' },
-                  { id: 'copywriting', label: '根据图写文案' },
-                ]
-              : hasDoc
-                ? [
-                    { id: 'summary', label: '总结提炼' },
-                    { id: 'contract', label: '合同风险提示' },
-                    { id: 'translate', label: '翻译' },
-                  ]
-                : [
-                    { id: 'summary', label: '总结提炼' },
-                    { id: 'copywriting', label: '写文案' },
-                  ],
+                ? '已收到附件（已暂存服务器，过期后自动删除）。想让小智做什么呢？'
+                : '已收到附件（仅存本标签页，关闭即消失）。想让小智做什么呢？',
+            options: [
+              { id: 'chat', label: '大模型' },
+            ],
           },
         ])
         return
@@ -592,7 +504,7 @@ export function ChatPage() {
       }
       if (aborted()) return
 
-      // 已上传图片：问「图里是什么」或模型仍返回 clarify → 直接识图总结，不弹选项
+      // 已上传图片：问「图里是什么」或模型仍返回 clarify → 直接走 AI 聊天识图，不弹选项
       const hasReadyImage =
         filesSnapshot.some((f) => f.kind === 'image' && f.uploadStatus === 'ready') ||
         (opts?.regenerate === true &&
@@ -602,7 +514,7 @@ export function ChatPage() {
         content &&
         (route.kind === 'clarify' || looksLikeImageQuestion(content))
       ) {
-        route = { kind: 'skill', slug: 'summary', prompt: content }
+        route = { kind: 'skill', slug: 'chat', prompt: content }
       }
 
       if (route.kind === 'clarify') {
@@ -629,27 +541,27 @@ export function ChatPage() {
       if (route.kind === 'section') {
         const map = {
           deals: {
-            text: '可以打开「限时优惠」查看近期活动。',
+            text: '小智带你去「限时优惠」看看近期活动～',
             to: ROUTES.DEALS,
             label: '打开限时优惠',
           },
           articles: {
-            text: '可以打开「AI评测」浏览体验与对比。',
+            text: '去「AI评测」看看真实体验与对比吧～',
             to: ROUTES.ARTICLES,
             label: '打开AI评测',
           },
           tools: {
-            text: '可以去「AI导览」按分类浏览。',
+            text: '「AI导览」可以按分类慢慢逛～',
             to: ROUTES.TOOLS,
             label: '打开AI导览',
           },
           discover: {
-            text: '发现页汇总了热门产品与精选评测。',
+            text: '发现页汇总了热门产品与精选评测，小智觉得值得逛逛～',
             to: ROUTES.DISCOVER,
             label: '去发现',
           },
           about: {
-            text: '关于页有模块说明与联系方式。',
+            text: '关于页有模块说明与联系方式，需要找人可以去那里～',
             to: ROUTES.ABOUT,
             label: '打开关于',
           },
@@ -696,15 +608,12 @@ export function ChatPage() {
             {
               id: uid(),
               role: 'assistant',
-              text: `没有找到与「${route.query}」匹配的产品或评测。可以换个词，或说明你是要翻译 / 写文案等。`,
+              text: `没有找到与「${route.query}」匹配的产品或评测。可以换个词，或直接提问让小智帮你处理～`,
               actions: [
                 { label: '打开AI导览', to: ROUTES.TOOLS },
                 { label: '打开AI评测', to: ROUTES.ARTICLES },
               ],
-              options: [
-                { id: 'copywriting', label: '改写文案' },
-                { id: 'translate', label: '翻译这段' },
-              ],
+              options: [{ id: 'chat', label: '大模型' }],
             },
           ])
         }
@@ -712,18 +621,6 @@ export function ChatPage() {
       }
 
       if (route.kind === 'skill') {
-        const fallback =
-          route.slug === 'copywriting'
-            ? draftCopywritingFallback
-            : route.slug === 'translate'
-              ? draftTranslateFallback
-              : route.slug === 'resume'
-                ? draftResumeFallback
-                : route.slug === 'contract'
-                  ? draftContractFallback
-                  : route.slug === 'chat'
-                    ? draftChatFallback
-                    : draftSummaryFallback
         const urlsForSkill =
           attachmentUrls.length > 0
             ? attachmentUrls
@@ -731,19 +628,14 @@ export function ChatPage() {
               ? lastAttachmentUrlsRef.current
               : undefined
         const prompt =
-          (route.slug === 'summary' || route.slug === 'chat' || route.slug === 'copywriting') &&
           (!route.prompt.trim() || route.prompt === '请根据我刚才的说明继续') &&
           urlsForSkill &&
           urlsForSkill.length > 0
-            ? route.slug === 'copywriting'
-              ? '请根据附件图片写商品/营销文案'
-              : '请描述或总结附件要点'
+            ? '请根据附件内容回答或处理我的需求'
             : route.prompt
         await streamSkillReply(
-          route.slug,
           prompt,
           setMessages,
-          fallback,
           urlsForSkill,
           controller.signal,
         )
@@ -770,7 +662,7 @@ export function ChatPage() {
     const prompt =
       !stripped.trim() || stripped.startsWith('（仅发送了附件）')
         ? urlsFromBubble.length > 0
-          ? '请描述或总结附件要点'
+          ? '请根据附件内容回答或处理我的需求'
           : ''
         : stripped
     if (!prompt.trim()) {
@@ -934,7 +826,7 @@ export function ChatPage() {
           <div className={styles.topRow}>
             <div className={styles.topLeft}>
               <Typography.Title level={4} className={styles.title}>
-                聊天
+                小智
               </Typography.Title>
             </div>
             <Button
@@ -950,7 +842,7 @@ export function ChatPage() {
 
         {isEmptyChat ? (
           <div className={styles.emptyStage}>
-            <p className={styles.emptyHint}>请尽情咨询吩咐我～</p>
+            <p className={styles.emptyHint}>有事尽管吩咐小智～</p>
             {composer}
           </div>
         ) : (

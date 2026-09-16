@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Data
 public class ChatStreamRequest {
-    /** 内部技能：copywriting / translate / resume 等 */
+    /** 流式意图：主要为 chat；历史技能 slug 后端会归一到 chat */
     @NotBlank(message = "请指定意图")
     @Size(max = 64)
     private String intent;

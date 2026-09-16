@@ -13,7 +13,7 @@ import {
   unlikeContent,
   type CommentItem,
 } from '../api/social'
-import { ROUTES, articleDetailPath, projectDetailPath } from '../router/paths'
+import { articleDetailPath, projectDetailPath } from '../router/paths'
 import {
   getUserId,
   getUsername,
@@ -23,6 +23,7 @@ import {
 } from '../utils/authStorage'
 import { formatDateTime } from '../utils/format'
 import { pushActivity } from '../utils/activityStorage'
+import { ensureLoggedIn, loginPathWithReturn } from '../utils/requireLogin'
 
 type SocialPanelProps = {
   kind: 'article' | 'project'
@@ -73,8 +74,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
   }, [refresh])
 
   async function onLike() {
-    if (!loggedIn) {
-      message.info('登录后即可点赞')
+    if (!(await ensureLoggedIn({ content: '点赞需要登录。是否前往登录页？' }))) {
       return
     }
     try {
@@ -96,8 +96,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
   }
 
   async function onComment(values: { content: string }) {
-    if (!loggedIn) {
-      message.info('登录后即可评论')
+    if (!(await ensureLoggedIn({ content: '发表评论需要登录。是否前往登录页？' }))) {
       return
     }
     try {
@@ -153,7 +152,7 @@ export function SocialPanel({ kind, contentId }: SocialPanelProps) {
 
       {!loggedIn ? (
         <Typography.Paragraph type="secondary">
-          <Link to={ROUTES.LOGIN}>登录</Link> 后可点赞与评论，让互动被看见。
+          <Link to={loginPathWithReturn()}>登录</Link> 后可点赞与评论，让互动被看见。
         </Typography.Paragraph>
       ) : (
         <Form form={form} onFinish={(v) => void onComment(v)} style={{ marginBottom: 20 }}>

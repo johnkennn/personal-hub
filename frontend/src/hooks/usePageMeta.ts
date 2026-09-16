@@ -9,9 +9,9 @@ export type PageMetaInput = {
   type?: 'website' | 'article'
 }
 
-const SITE = 'AI Tools Hub'
+const SITE = '小智AI'
 const DEFAULT_DESC =
-  '发现分类齐全的 AI 产品、试用站内实用工具、阅读真实评测，并了解近期限时优惠。'
+  '小智陪你发现分类齐全的 AI 产品、试用站内能力、阅读真实评测，并了解近期限时优惠。'
 
 function absoluteUrl(pathOrUrl: string | undefined): string | undefined {
   if (!pathOrUrl) return undefined

@@ -51,7 +51,7 @@ app:
     base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
     api-key: ${AI_API_KEY:}
     model: ${AI_MODEL:deepseek-flash}
-    guest-daily-quota: ${AI_GUEST_DAILY_QUOTA:5}
+    guest-daily-quota: ${AI_GUEST_DAILY_QUOTA:3}
     user-daily-quota: ${AI_USER_DAILY_QUOTA:30}
     timeout-ms: ${AI_TIMEOUT_MS:60000}
     # 生产建议打开，避免额度被刷爆

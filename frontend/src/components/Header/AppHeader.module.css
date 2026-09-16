@@ -38,19 +38,30 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  white-space: nowrap;
+  filter: drop-shadow(0 0 12px rgba(46, 230, 166, 0.35));
+}
+
+.brandLogo {
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.brandText {
   font-family: var(--ph-font-display);
   font-size: 1.05rem;
   font-weight: 700;
-  text-decoration: none;
   letter-spacing: 0.04em;
-  white-space: nowrap;
   background: linear-gradient(120deg, #2ee6a6 0%, #3d9eff 50%, #a78bff 100%);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent !important;
   animation: brandShine 6s ease infinite;
-  filter: drop-shadow(0 0 12px rgba(46, 230, 166, 0.35));
 }
 
 .brand:hover {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
 import { EditOutlined, ExportOutlined, FireOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
@@ -18,6 +18,7 @@ import { loadHubToolBySlug, loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
 import { listArticleIdsBoundToTool } from '../../utils/articleToolBindings'
 import { excerpt, formatDateTime } from '../../utils/format'
+import { ensureLoggedIn } from '../../utils/requireLogin'
 import {
   getCommentCount,
   getHeatScore,
@@ -48,6 +49,7 @@ function writeReviewPath(slug: string) {
 
 export function ToolDetailPage() {
   const { slug = '' } = useParams()
+  const navigate = useNavigate()
   const [tool, setTool] = useState<HubTool | null>(null)
   const [toolNames, setToolNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -178,6 +180,18 @@ export function ToolDetailPage() {
 
   const reviewHref = writeReviewPath(tool.slug)
 
+  async function onWriteReview() {
+    if (
+      !(await ensureLoggedIn({
+        title: '需要登录',
+        content: '写评测需要登录。是否前往登录页？',
+      }))
+    ) {
+      return
+    }
+    navigate(reviewHref)
+  }
+
   return (
     <motion.div
       className={styles.detail}
@@ -288,11 +302,9 @@ export function ToolDetailPage() {
                 },
               ]}
             />
-            <Link to={reviewHref}>
-              <Button type="primary" icon={<EditOutlined />}>
-                去写评测
-              </Button>
-            </Link>
+            <Button type="primary" icon={<EditOutlined />} onClick={() => void onWriteReview()}>
+              去写评测
+            </Button>
           </div>
         </div>
 
@@ -301,11 +313,9 @@ export function ToolDetailPage() {
             description="还没有相关评测，来写第一篇？"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Link to={reviewHref}>
-              <Button type="primary" icon={<EditOutlined />}>
-                去写评测
-              </Button>
-            </Link>
+            <Button type="primary" icon={<EditOutlined />} onClick={() => void onWriteReview()}>
+              去写评测
+            </Button>
           </Empty>
         ) : (
           <ul className={styles.reviewList}>

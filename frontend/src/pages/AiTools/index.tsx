@@ -18,8 +18,8 @@ const TOOLS = [
 
 export function AiToolsPage() {
   usePageMeta({
-    title: '聊天技能',
-    description: '站内打开即用的技能，例如商品描述生成。',
+    title: '站内能力',
+    description: '也可直接找小智用大模型完成文案等任务。',
   })
 
   return (
@@ -27,10 +27,10 @@ export function AiToolsPage() {
       <div className={ui.pageHead}>
         <div>
           <Typography.Title level={2} className={ui.pageTitle}>
-            聊天技能
+            站内能力
           </Typography.Title>
           <Typography.Paragraph className={ui.pageDesc}>
-            这些能力也可在「聊天」里一键打开。不需要跳转外部网站即可完成写描述等任务。
+            独立页即将开放；现在也可以去「小智」里直接吩咐大模型完成文案等任务。
           </Typography.Paragraph>
         </div>
       </div>

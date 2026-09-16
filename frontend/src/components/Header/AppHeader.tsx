@@ -27,6 +27,7 @@ import {
 } from '../../utils/profileDisplay'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
 import { NAV_ITEMS, ROUTES, SITE_BRAND } from '../../router/paths'
+import { BrandLogo } from '../BrandLogo'
 import { NotificationBell } from '../NotificationBell'
 import styles from './AppHeader.module.css'
 
@@ -182,7 +183,8 @@ export function AppHeader() {
       <div className={styles.inner}>
         <Flex align="center" gap="large" className={styles.left}>
           <Link to={ROUTES.CHAT} className={styles.brand}>
-            {SITE_BRAND}
+            <BrandLogo size={28} className={styles.brandLogo} />
+            <span className={styles.brandText}>{SITE_BRAND}</span>
           </Link>
           {!isMobile ? (
             <Menu

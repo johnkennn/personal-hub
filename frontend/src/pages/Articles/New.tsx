@@ -25,6 +25,7 @@ import { loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
 import { saveArticleToolBindings } from '../../utils/articleToolBindings'
 import { isLoggedIn } from '../../utils/authStorage'
+import { ensureLoggedIn } from '../../utils/requireLogin'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = {
@@ -58,11 +59,17 @@ export function ArticleNewPage() {
   }, [toolsQuery, hubTools])
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      const from = `${location.pathname}${location.search}`
-      navigate(`${ROUTES.LOGIN}?from=${encodeURIComponent(from)}`, { replace: true })
-    }
-  }, [navigate, location.pathname, location.search])
+    if (isLoggedIn()) return
+    void (async () => {
+      const ok = await ensureLoggedIn({
+        title: '需要登录',
+        content: '写评测需要登录。是否前往登录页？取消将返回上一页。',
+      })
+      if (!ok) {
+        navigate(-1)
+      }
+    })()
+  }, [navigate])
 
   useEffect(() => {
     let cancelled = false

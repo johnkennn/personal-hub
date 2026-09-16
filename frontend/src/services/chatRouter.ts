@@ -1,10 +1,21 @@
 /**
  * 轻量规则意图路由 + 可选 LLM 路由回退。
- * - routeChatIntentConfident：高置信才返回，否则 null（交给模型）
- * - routeChatIntent：完整规则（含启发式），作模型失败时的兜底
+ * 站内：搜产品/评测、跳转板块、介绍本站。
+ * 其余生成类需求统一走 AI 聊天（调大模型），不再拆多技能入口。
  */
 
-export type SkillSlug = 'chat' | 'copywriting' | 'translate' | 'resume' | 'contract' | 'summary'
+export type SkillSlug = 'chat'
+
+/** 历史气泡选项 id 仍可点；一律映射为 chat / search */
+export type RouteOverride =
+  | SkillSlug
+  | 'search'
+  | 'copywriting'
+  | 'translate'
+  | 'resume'
+  | 'contract'
+  | 'summary'
+  | null
 
 export type ChatRouteResult =
   | { kind: 'search'; query: string }
@@ -17,8 +28,6 @@ export type ChatRouteResult =
   | { kind: 'smalltalk'; text: string }
   | { kind: 'section'; section: 'deals' | 'articles' | 'tools' | 'discover' | 'about' }
 
-export type RouteOverride = SkillSlug | 'search' | null
-
 export type LlmRouteDto = {
   intent: string
   query?: string | null
@@ -30,13 +39,13 @@ function hasSearchCue(q: string): boolean {
   )
 }
 
-function hasSkillCue(q: string): boolean {
-  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图|图中|图片里|这张图|看图|图里/.test(
+function hasGenerativeCue(q: string): boolean {
+  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图|图中|图片里|这张图|看图|图里|帮我|弄一下|处理一下|优化一下|改一下/.test(
     q,
   )
 }
 
-/** 用户在问「图里是什么」一类（配合附件走总结/识图） */
+/** 用户在问「图里是什么」一类（配合附件走识图） */
 export function looksLikeImageQuestion(q: string): boolean {
   return /图中|图片里|图片中|这张图|照片里|图里|看图|识图|识别图片|描述.*(图|照片)|图.*(什么|内容|描述)|照片.*(什么|内容)/.test(
     q,
@@ -51,12 +60,12 @@ function looksLikeQuestion(q: string): boolean {
 
 const CLARIFY_OPTIONS = [
   { id: 'search', label: '搜产品 / 评测' },
-  { id: 'copywriting', label: '写文案' },
-  { id: 'translate', label: '翻译' },
-  { id: 'resume', label: '简历优化' },
-  { id: 'summary', label: '总结提炼' },
-  { id: 'contract', label: '合同风险提示' },
+  { id: 'chat', label: '大模型' },
 ] as const
+
+function toChatSkill(raw: string): ChatRouteResult {
+  return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+}
 
 /**
  * 高置信规则：命中则无需调模型；拿不准返回 null。
@@ -80,68 +89,34 @@ export function routeChatIntentConfident(
     override === 'contract' ||
     override === 'summary'
   ) {
-    return {
-      kind: 'skill',
-      slug: override,
-      prompt: override === 'chat' ? withLocalDateHint(raw) : raw,
-    }
+    return toChatSkill(raw)
   }
 
   if (!raw) {
     return {
       kind: 'clarify',
-      text: '可以说具体一点，例如「搜豆包」，或「译成英文：你好」。',
-      options: [
-        { id: 'search', label: '搜产品 / 评测' },
-        { id: 'copywriting', label: '写文案' },
-        { id: 'translate', label: '翻译' },
-      ],
+      text: '可以说具体一点哦～例如「搜豆包」，或直接提问让小智帮你处理。',
+      options: [...CLARIFY_OPTIONS],
     }
   }
 
   if (/你好|您好|嗨|hi\b|hello|早上好|晚上好|下午好/.test(q)) {
     return {
       kind: 'smalltalk',
-      text: '你好！可以直接提问，或说「搜 + 关键词」找产品，也可说明要翻译 / 写文案 / 总结。',
+      text: '嗨～小智在呢！可以直接提问，或说「搜 + 关键词」找站内产品与评测。',
     }
   }
   if (/谢谢|感谢|多谢/.test(q)) {
-    return { kind: 'smalltalk', text: '不客气，还有需要随时说。' }
+    return { kind: 'smalltalk', text: '嘿嘿不客气，还有需要随时叫小智～' }
   }
   if (/你是谁|你叫什么|介绍一下你|什么助手/.test(q)) {
     return {
       kind: 'smalltalk',
-      text: '我是 AI Tools Hub 统一聊天助手：可搜站内产品与评测，也可问答、翻译、文案、总结等。关闭本标签页后，对话不会保留在服务器。',
+      text: '小智是「小智AI」的站内助手：能帮你搜产品与评测，也能问答、翻译、文案、总结～关闭本标签页后，对话不会留在服务器哦。',
     }
   }
 
-  if (hasSearchCue(q) && hasSkillCue(q)) {
-    return {
-      kind: 'clarify',
-      text: '这句话既像「搜产品」又像「办事」。请选一个，我按你的选择来：',
-      options: [...CLARIFY_OPTIONS],
-    }
-  }
-
-  if (/译成|翻译成|翻译成|翻译为|请翻译|帮我翻译|translate/.test(q) || /^译[:：]/.test(raw)) {
-    return { kind: 'skill', slug: 'translate', prompt: raw }
-  }
-  if (/简历|润色.*经历|优化.*简历|求职信/.test(q)) {
-    return { kind: 'skill', slug: 'resume', prompt: raw }
-  }
-  if (/合同|条款风险|违约责任/.test(q)) {
-    return { kind: 'skill', slug: 'contract', prompt: raw }
-  }
-  if (/总结|摘要|提炼要点|归纳一下/.test(q) && !hasSearchCue(q)) {
-    return { kind: 'skill', slug: 'summary', prompt: raw }
-  }
-  if (looksLikeImageQuestion(q)) {
-    return { kind: 'skill', slug: 'summary', prompt: raw }
-  }
-  if (/商品描述|写文案|生成描述|卖点文案|营销文案|帮我写.*文案/.test(q)) {
-    return { kind: 'skill', slug: 'copywriting', prompt: raw }
-  }
-
+  // 站内板块跳转（明确）
   if (/^(打开|去|看看)?(限时)?(优惠|折扣|促销)$/.test(q) || (/优惠|折扣|促销|限时/.test(q) && q.length < 12)) {
     return { kind: 'section', section: 'deals' }
   }
@@ -159,24 +134,37 @@ export function routeChatIntentConfident(
   }
 
   const searchQuery = extractSearchQuery(raw)
+  if (hasSearchCue(q) && hasGenerativeCue(q)) {
+    return {
+      kind: 'clarify',
+      text: '这句话既像「搜产品」又像「找 AI 帮忙」。选一个就好～',
+      options: [...CLARIFY_OPTIONS],
+    }
+  }
   if (hasSearchCue(q) && searchQuery.length >= 1) {
     return { kind: 'search', query: searchQuery }
   }
 
+  // 生成类 / 普通问句：统一 AI 聊天（调大模型）；短歧义句再追问
   if (
     /帮我|弄一下|处理一下|看一下这份|优化一下|改一下/.test(q) &&
     !hasSearchCue(q) &&
-    !looksLikeQuestion(q)
+    !looksLikeQuestion(q) &&
+    raw.length < 12
   ) {
     return {
       kind: 'clarify',
-      text: '想让我具体做什么？选一项（也可再发一段更完整的说明）：',
+      text: '想让小智具体做什么？选一项（也可再发一段更完整的说明）～',
       options: [...CLARIFY_OPTIONS],
     }
   }
 
-  // 短词「豆包」、普通问句等 → 交给模型判断
-  return null
+  // 拿不准的短词交给 LLM 路由；其余直接聊天
+  if (raw.length <= 16 && !looksLikeQuestion(q) && !hasGenerativeCue(q) && !hasSearchCue(q)) {
+    return null
+  }
+
+  return toChatSkill(raw)
 }
 
 /** 完整规则兜底（模型不可用时） */
@@ -197,7 +185,7 @@ export function routeChatIntent(rawInput: string, override?: RouteOverride): Cha
     return { kind: 'search', query: searchQuery }
   }
 
-  return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+  return toChatSkill(raw)
 }
 
 /** 把后端 LLM 路由结果转成前端统一结构 */
@@ -210,17 +198,12 @@ export function chatRouteFromLlm(data: LlmRouteDto, rawInput: string): ChatRoute
     case 'search':
       return { kind: 'search', query }
     case 'translate':
-      return { kind: 'skill', slug: 'translate', prompt: raw }
     case 'copywriting':
-      return { kind: 'skill', slug: 'copywriting', prompt: raw }
     case 'resume':
-      return { kind: 'skill', slug: 'resume', prompt: raw }
     case 'summary':
-      return { kind: 'skill', slug: 'summary', prompt: raw }
     case 'contract':
-      return { kind: 'skill', slug: 'contract', prompt: raw }
     case 'chat':
-      return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+      return toChatSkill(raw)
     case 'deals':
     case 'section_deals':
       return { kind: 'section', section: 'deals' }
@@ -239,11 +222,11 @@ export function chatRouteFromLlm(data: LlmRouteDto, rawInput: string): ChatRoute
     case 'clarify':
       return {
         kind: 'clarify',
-        text: '还不太确定你的意图。请选一个方向：',
+        text: '还不太确定你的意图呢。选一个方向就好～',
         options: [...CLARIFY_OPTIONS],
       }
     default:
-      return { kind: 'skill', slug: 'chat', prompt: withLocalDateHint(raw) }
+      return toChatSkill(raw)
   }
 }
 
@@ -266,11 +249,4 @@ export function extractSearchQuery(raw: string): string {
   s = s.replace(/相关的?(评测|测评|文章|工具|产品|ai)?$/i, '')
   s = s.replace(/(的)?(评测|测评|文章)$/i, '')
   return s.replace(/\s+/g, ' ').trim()
-}
-
-export const DISCLAIMERS: Record<'resume' | 'contract', string> = {
-  resume:
-    '【说明】以下简历建议仅供参考，不构成录用或求职结果保证。关闭本标签页后，对话内容不会保留在服务器。',
-  contract:
-    '【重要】以下仅为条款风险提示草稿，不构成法律意见或正式审查结论。请咨询持证律师。关闭本标签页后，原文不会保留在服务器。',
 }

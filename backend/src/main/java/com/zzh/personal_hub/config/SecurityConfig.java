@@ -83,7 +83,7 @@ public class SecurityConfig {
                     // —— Tools（AI导览）+ 限时优惠 ——
                     .requestMatchers(HttpMethod.GET, "/api/tool-categories", "/api/tool-categories/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/*").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/deals").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/deals").authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/chat/stream").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/chat/route").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/chat/attachments").permitAll()
