@@ -53,7 +53,7 @@ function ShowcaseSection({
   )
 }
 
-/** 项目展映页：故事 / 技术 / 画廊 / 制作特辑 / 分享 */
+/** 项目笔记页：说明 / 标签 / 配图 / 相关评测 / 分享 */
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [project, setProject] = useState<PublicProject | null>(null)
@@ -214,7 +214,7 @@ export function ProjectDetailPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
           >
-            作品展映
+            项目笔记
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -253,7 +253,7 @@ export function ProjectDetailPage() {
                 rel="noreferrer"
                 icon={<PlayCircleOutlined />}
               >
-                观看演示
+                打开演示
               </Button>
             ) : null}
             {project.repoUrl ? (
@@ -264,7 +264,7 @@ export function ProjectDetailPage() {
                 rel="noreferrer"
                 icon={<LinkOutlined />}
               >
-                打开仓库
+                查看仓库
               </Button>
             ) : null}
           </motion.div>
@@ -272,12 +272,12 @@ export function ProjectDetailPage() {
       </section>
 
       <div className={styles.body}>
-        <ShowcaseSection title="故事" desc="这个作品要解决什么问题、为什么值得做成产品。">
+        <ShowcaseSection title="在讲什么" desc="这个笔记想说明的问题、做法或体验。">
           <p className={styles.story}>{project.description}</p>
         </ShowcaseSection>
 
         {tags.length > 0 ? (
-          <ShowcaseSection title="技术" desc="支撑作品落地的关键技术栈。">
+          <ShowcaseSection title="相关标签" desc="技术或主题关键词，方便对照。">
             <div className={styles.techList}>
               {tags.map((tag) => (
                 <Tag key={tag} className={styles.techChip}>
@@ -289,7 +289,7 @@ export function ProjectDetailPage() {
         ) : null}
 
         {gallery.length > 0 ? (
-          <ShowcaseSection title="画廊" desc="作品界面与现场截图，点击可放大预览。">
+          <ShowcaseSection title="配图" desc="界面或过程截图，点击可放大。">
             <Image.PreviewGroup>
               <div className={styles.galleryGrid}>
                 {gallery.map((m) => {
@@ -312,7 +312,7 @@ export function ProjectDetailPage() {
         ) : null}
 
         {related.length > 0 ? (
-          <ShowcaseSection title="制作特辑" desc="与本作品相关的构建日志与文章。">
+          <ShowcaseSection title="相关评测" desc="与这篇笔记有关的 AI 评测。">
             <ul className={styles.featureList}>
               {related.map((a) => (
                 <li key={a.id}>

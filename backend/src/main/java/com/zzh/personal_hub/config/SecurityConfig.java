@@ -82,7 +82,7 @@ public class SecurityConfig {
 
                     // —— Tools（AI导览）+ 限时优惠 ——
                     .requestMatchers(HttpMethod.GET, "/api/tool-categories", "/api/tool-categories/*").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/*").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/deals").authenticated()
                     // 云端会话历史：必须登录（须写在 chat 公开接口之前）
                     .requestMatchers("/api/chat/conversations", "/api/chat/conversations/**").authenticated()

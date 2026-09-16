@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Button,
   Card,
   Col,
   Empty,
+  Input,
   Row,
   Segmented,
+  Select,
   Skeleton,
   Space,
   Typography,
@@ -28,18 +30,35 @@ import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
+import { loadHubTools } from '../../services/toolCatalog'
 import { isLoggedIn } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
 import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
+function parseToolsParam(raw: string | null): string[] {
+  if (!raw?.trim()) return []
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 export function ArticlesPage() {
   const { message } = App.useApp()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [articles, setArticles] = useState<PublicArticle[]>([])
+  const [toolOptions, setToolOptions] = useState<{ value: string; label: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
   const [sort, setSort] = useState<'latest' | 'hot'>('latest')
+
+  const selectedTools = useMemo(
+    () => parseToolsParam(searchParams.get('tools')),
+    [searchParams],
+  )
+  const query = searchParams.get('q') ?? ''
 
   usePageMeta({
     title: 'AI评测',
@@ -55,15 +74,50 @@ export function ArticlesPage() {
       .finally(() => setLoading(false))
   }, [message])
 
+  useEffect(() => {
+    loadHubTools().then((list) => {
+      setToolOptions(list.map((t) => ({ value: t.slug, label: t.name })))
+    })
+  }, [])
+
+  function patchSearchParams(next: { tools?: string[]; q?: string }) {
+    const params = new URLSearchParams(searchParams)
+    if (next.tools !== undefined) {
+      if (next.tools.length) params.set('tools', next.tools.join(','))
+      else params.delete('tools')
+    }
+    if (next.q !== undefined) {
+      const q = next.q.trim()
+      if (q) params.set('q', q)
+      else params.delete('q')
+    }
+    setSearchParams(params, { replace: true })
+    setPage(1)
+  }
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return articles.filter((a) => {
+      if (selectedTools.length > 0) {
+        const slugs = a.relatedToolSlugs ?? []
+        if (!selectedTools.some((s) => slugs.includes(s))) return false
+      }
+      if (!q) return true
+      const title = a.title.toLowerCase()
+      const author = a.authorName.toLowerCase()
+      return title.includes(q) || author.includes(q)
+    })
+  }, [articles, selectedTools, query])
+
   const sorted = useMemo(() => {
-    const list = [...articles]
+    const list = [...filtered]
     if (sort === 'hot') {
       list.sort((a, b) => getLikeCount('article', b.id) - getLikeCount('article', a.id))
     } else {
       list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     }
     return list
-  }, [articles, sort])
+  }, [filtered, sort])
 
   const pageItems = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -74,8 +128,28 @@ export function ArticlesPage() {
     <PageHero
       title="AI评测"
       tagline="真实体验，帮你判断值不值得用"
+      fill
       extra={
-        <Space wrap>
+        <Space wrap align="center" size="middle">
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="关联工具"
+            value={selectedTools}
+            onChange={(v) => patchSearchParams({ tools: v })}
+            options={toolOptions}
+            optionFilterProp="label"
+            maxTagCount="responsive"
+            style={{ minWidth: 180, maxWidth: 300 }}
+          />
+          <Input.Search
+            allowClear
+            placeholder="搜索作者 / 标题"
+            value={query}
+            onChange={(e) => patchSearchParams({ q: e.target.value })}
+            onSearch={(v) => patchSearchParams({ q: v })}
+            style={{ width: 200 }}
+          />
           <Segmented
             value={sort}
             onChange={(v) => {
@@ -97,7 +171,7 @@ export function ArticlesPage() {
           {isLoggedIn() ? (
             <Link to={ROUTES.STUDIO_ARTICLE_NEW}>
               <Button type="primary" icon={<PlusOutlined />}>
-                写文章
+                写测评
               </Button>
             </Link>
           ) : null}
@@ -107,7 +181,9 @@ export function ArticlesPage() {
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : articles.length === 0 ? (
-        <Empty description="暂无已发布文章" />
+        <Empty description="暂无已发布评测" />
+      ) : sorted.length === 0 ? (
+        <Empty description="没有符合筛选条件的评测" />
       ) : (
         <CatalogListLayout
           pageSize={pageSize}

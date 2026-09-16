@@ -22,7 +22,7 @@ export function CatalogListLayout({ pageSize, children, pager }: CatalogListLayo
 
   return (
     <div className={styles.catalogShell}>
-      <div className={styles.catalogBody} style={vars}>
+      <div className={`${styles.catalogBody} ph-scroll`} style={vars}>
         {children}
       </div>
       {pager}
@@ -46,7 +46,7 @@ export function CatalogPager({ current, pageSize, total, onChange }: CatalogPage
         total={total}
         onChange={onChange}
         onShowSizeChange={onChange}
-        showSizeChanger
+        showSizeChanger={{ showSearch: false }}
         pageSizeOptions={[...CATALOG_PAGE_SIZE_OPTIONS].map(String)}
         showTotal={(t) => `共 ${t} 条`}
         hideOnSinglePage={false}

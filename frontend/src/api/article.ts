@@ -26,6 +26,11 @@ export function fetchProjectRelatedArticles(projectId: number | string) {
   return request.get<ApiResponse<Article[]>>(`/api/projects/${projectId}/articles`)
 }
 
+/** 某 AI 产品下已发布的关联评测 */
+export function fetchToolRelatedArticles(slug: string) {
+  return request.get<ApiResponse<Article[]>>(`/api/tools/${encodeURIComponent(slug)}/articles`)
+}
+
 export function updateArticle(id: number | string, data: ArticleUpdateRequest) {
   return request.put<ApiResponse<Article>>(`/api/articles/${id}`, data)
 }

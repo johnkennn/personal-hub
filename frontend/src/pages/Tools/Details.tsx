@@ -1,24 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, Empty, Segmented, Skeleton, Tag, Typography } from 'antd'
-import { EditOutlined, ExportOutlined, FireOutlined } from '@ant-design/icons'
+import { Link, useParams } from 'react-router-dom'
+import { Button, Card, Col, Empty, Row, Segmented, Skeleton, Tag, Typography } from 'antd'
+import { ExportOutlined, FireOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
+import { AuthorChip } from '../../components/AuthorChip'
 import { BackNavButton } from '../../components/BackNavButton'
+import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
 import { listSeedReviewsForTool } from '../../data/seedToolReviews'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import {
   articleDetailPath,
+  articlesListPath,
   ROUTES,
   toolDetailPath,
 } from '../../router/paths'
-import { loadPublicArticles } from '../../services/publicContent'
+import { loadRelatedArticlesForTool } from '../../services/publicContent'
 import { loadHubToolBySlug, loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
-import { listArticleIdsBoundToTool } from '../../utils/articleToolBindings'
 import { excerpt, formatDateTime } from '../../utils/format'
-import { ensureLoggedIn } from '../../utils/requireLogin'
 import {
   getCommentCount,
   getHeatScore,
@@ -31,9 +32,13 @@ type ReviewSort = 'latest' | 'hot'
 
 type RelatedReviewItem = {
   key: string
+  id: number
   title: string
   excerpt: string
+  authorId?: number
   authorName: string
+  avatarUrl?: string
+  coverUrl?: string | null
   updatedAt: string
   to: string
   likes: number
@@ -42,14 +47,8 @@ type RelatedReviewItem = {
   relatedToolSlugs: string[]
 }
 
-function writeReviewPath(slug: string) {
-  const q = new URLSearchParams({ tools: slug })
-  return `${ROUTES.STUDIO_ARTICLE_NEW}?${q.toString()}`
-}
-
 export function ToolDetailPage() {
   const { slug = '' } = useParams()
-  const navigate = useNavigate()
   const [tool, setTool] = useState<HubTool | null>(null)
   const [toolNames, setToolNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -82,10 +81,11 @@ export function ToolDetailPage() {
   }, [slug])
 
   useEffect(() => {
+    if (!slug) return
     let cancelled = false
-    loadPublicArticles()
-      .then((res) => {
-        if (!cancelled) setArticles(res.items)
+    loadRelatedArticlesForTool(slug)
+      .then(({ items }) => {
+        if (!cancelled) setArticles(items)
       })
       .catch(() => {
         if (!cancelled) setArticles([])
@@ -104,6 +104,7 @@ export function ToolDetailPage() {
       const comments = getCommentCount('article', idForHeat) + r.seedComments
       return {
         key: `seed-${r.id}`,
+        id: idForHeat,
         title: r.title,
         excerpt: r.excerpt,
         authorName: r.authorName,
@@ -116,36 +117,33 @@ export function ToolDetailPage() {
       }
     })
 
-    const boundIds = new Set(listArticleIdsBoundToTool(tool.slug))
-    const name = tool.name.toLowerCase()
-    const keys = tool.keywords.map((k) => k.toLowerCase())
-
-    const fromArticles: RelatedReviewItem[] = articles
-      .filter((a) => {
-        if (boundIds.has(a.id)) return true
-        const t = a.title.toLowerCase()
-        return t.includes(name) || keys.some((k) => t.includes(k))
-      })
-      .map((a) => {
-        const likes = getLikeCount('article', a.id)
-        const comments = getCommentCount('article', a.id)
-        return {
-          key: `article-${a.id}`,
-          title: a.title,
-          excerpt: excerpt(a.content, 90),
-          authorName: a.authorName,
-          updatedAt: a.updatedAt,
-          to: articleDetailPath(a.id),
-          likes,
-          comments,
-          heat: getHeatScore('article', a.id),
-          relatedToolSlugs: [tool.slug],
-        }
-      })
+    const fromArticles: RelatedReviewItem[] = articles.map((a) => {
+      const likes = getLikeCount('article', a.id)
+      const comments = getCommentCount('article', a.id)
+      return {
+        key: `article-${a.id}`,
+        id: a.id,
+        title: a.title,
+        excerpt: excerpt(a.content, 72),
+        authorId: a.authorId || undefined,
+        authorName: a.authorName,
+        avatarUrl: a.avatarUrl,
+        coverUrl: a.coverUrl,
+        updatedAt: a.updatedAt,
+        to: articleDetailPath(a.id),
+        likes,
+        comments,
+        heat: getHeatScore('article', a.id),
+        relatedToolSlugs: a.relatedToolSlugs?.length
+          ? a.relatedToolSlugs
+          : [tool.slug],
+      }
+    })
 
     const seen = new Set<string>()
     const merged: RelatedReviewItem[] = []
-    for (const item of [...fromSeed, ...fromArticles]) {
+    const source = fromArticles.length > 0 ? fromArticles : fromSeed
+    for (const item of source) {
       const dedupe = item.title.trim().toLowerCase()
       if (seen.has(dedupe)) continue
       seen.add(dedupe)
@@ -159,6 +157,9 @@ export function ToolDetailPage() {
     }
     return merged
   }, [tool, articles, sort])
+
+  const previewReviews = useMemo(() => relatedReviews.slice(0, 4), [relatedReviews])
+  const moreReviewsHref = articlesListPath({ tools: slug ? [slug] : [] })
 
   if (loading) {
     return (
@@ -176,20 +177,6 @@ export function ToolDetailPage() {
         </Empty>
       </motion.div>
     )
-  }
-
-  const reviewHref = writeReviewPath(tool.slug)
-
-  async function onWriteReview() {
-    if (
-      !(await ensureLoggedIn({
-        title: '需要登录',
-        content: '写评测需要登录哦，要去登录吗？',
-      }))
-    ) {
-      return
-    }
-    navigate(reviewHref)
   }
 
   return (
@@ -302,65 +289,82 @@ export function ToolDetailPage() {
                 },
               ]}
             />
-            <Button type="primary" icon={<EditOutlined />} onClick={() => void onWriteReview()}>
-              去写评测
-            </Button>
+            <Link to={moreReviewsHref}>
+              <Button>更多测评</Button>
+            </Link>
           </div>
         </div>
 
-        {relatedReviews.length === 0 ? (
-          <Empty
-            description="还没有相关评测，来写第一篇？"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Button type="primary" icon={<EditOutlined />} onClick={() => void onWriteReview()}>
-              去写评测
-            </Button>
+        {previewReviews.length === 0 ? (
+          <Empty description="还没有相关评测" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+            <Link to={moreReviewsHref}>
+              <Button>更多测评</Button>
+            </Link>
           </Empty>
         ) : (
-          <ul className={styles.reviewList}>
-            {relatedReviews.map((r) => (
-              <li key={r.key}>
-                <Link to={r.to} className={styles.reviewCard}>
-                  <div className={styles.reviewMain}>
-                    <span className={styles.reviewTitle}>{r.title}</span>
-                    <span className={styles.reviewExcerpt}>{r.excerpt}</span>
-                    <div className={styles.reviewMeta}>
-                      <span>{r.authorName}</span>
-                      <span>{formatDateTime(r.updatedAt)}</span>
-                      <span>
-                        {r.likes} 赞 · {r.comments} 评
-                      </span>
-                    </div>
-                    {r.relatedToolSlugs.length > 1 ? (
-                      <div className={styles.reviewTools}>
-                        {r.relatedToolSlugs.map((s) => {
-                          const label = toolNames[s] ?? s
-                          if (s === tool.slug) {
-                            return (
-                              <Tag key={s} className={styles.miniToolTag}>
-                                {label}
-                              </Tag>
-                            )
-                          }
-                          return (
-                            <Link
-                              key={s}
-                              to={toolDetailPath(s)}
-                              className={styles.miniToolLink}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Tag className={styles.miniToolTag}>{label}</Tag>
-                            </Link>
-                          )
-                        })}
+          <Row gutter={[14, 14]}>
+            {previewReviews.map((r) => (
+              <Col xs={24} sm={12} lg={8} xl={6} key={r.key} style={{ display: 'flex' }}>
+                <motion.div
+                  className={ui.catalogCardMotion}
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className={`${ui.cardLink} ${ui.catalogCardShell}`}>
+                    <Link to={r.to} className={ui.catalogCardHit} aria-label={r.title} />
+                    <Card className={`${ui.contentCard} ${ui.catalogCard}`} variant="borderless">
+                      <CoverStrip
+                        title={r.title}
+                        tone={coverToneFromId(Math.abs(r.id))}
+                        coverUrl={r.coverUrl}
+                        compact
+                      />
+                      <Typography.Title level={5} className={ui.catalogCardTitle}>
+                        {r.title}
+                      </Typography.Title>
+                      <Typography.Paragraph type="secondary" className={ui.catalogCardExcerpt}>
+                        {r.excerpt}
+                      </Typography.Paragraph>
+                      <div className={`${ui.catalogCardMeta} ${ui.catalogCardMetaInteractive}`}>
+                        <AuthorChip
+                          authorId={r.authorId}
+                          authorName={r.authorName}
+                          avatarUrl={r.avatarUrl}
+                          size={22}
+                        />
+                        <Typography.Text type="secondary" className={ui.muted}>
+                          {sort === 'hot' ? `${r.likes} 赞` : formatDateTime(r.updatedAt)}
+                        </Typography.Text>
                       </div>
-                    ) : null}
+                      {r.relatedToolSlugs.length > 1 ? (
+                        <div className={styles.reviewTools}>
+                          {r.relatedToolSlugs.map((s) => {
+                            const label = toolNames[s] ?? s
+                            if (s === tool.slug) {
+                              return (
+                                <Tag key={s} className={styles.miniToolTag}>
+                                  {label}
+                                </Tag>
+                              )
+                            }
+                            return (
+                              <Link
+                                key={s}
+                                to={toolDetailPath(s)}
+                                className={styles.miniToolLink}
+                              >
+                                <Tag className={styles.miniToolTag}>{label}</Tag>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </Card>
                   </div>
-                </Link>
-              </li>
+                </motion.div>
+              </Col>
             ))}
-          </ul>
+          </Row>
         )}
       </section>
     </motion.div>

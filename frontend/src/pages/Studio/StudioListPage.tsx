@@ -335,7 +335,7 @@ export function StudioListPage<T extends { id: number }>({
             rowSelection={rowSelection}
             pagination={{
               pageSize: 5,
-              showSizeChanger: true,
+              showSizeChanger: { showSearch: false },
               pageSizeOptions: [5, 10, 20],
               showTotal: (total) => `共 ${total} 条`,
             }}

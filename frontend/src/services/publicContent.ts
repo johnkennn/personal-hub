@@ -4,6 +4,7 @@ import {
   fetchArticleById,
   fetchArticleForManage,
   fetchProjectRelatedArticles,
+  fetchToolRelatedArticles,
 } from '../api/article'
 import { fetchProjects, fetchProjectById, fetchProjectForManage } from '../api/project'
 import {
@@ -281,6 +282,18 @@ export async function loadRelatedArticlesForProject(
 ): Promise<{ items: PublicArticle[] }> {
   try {
     const res = await fetchProjectRelatedArticles(projectId)
+    return { items: await mapArticles(res.data.data ?? []) }
+  } catch {
+    return { items: [] }
+  }
+}
+
+/** 工具详情「相关评测」：顺带补全作者昵称 */
+export async function loadRelatedArticlesForTool(
+  slug: string,
+): Promise<{ items: PublicArticle[] }> {
+  try {
+    const res = await fetchToolRelatedArticles(slug)
     return { items: await mapArticles(res.data.data ?? []) }
   } catch {
     return { items: [] }

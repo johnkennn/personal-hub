@@ -5,8 +5,10 @@ export interface Article {
   published: boolean
   authorId?: number
   coverUrl?: string | null
-  /** 可选：关联项目，用于展映页制作特辑 */
+  /** 可选：关联项目 */
   relatedProjectId?: number | null
+  /** 关联 AI 工具 slug */
+  relatedToolSlugs?: string[]
   createdAt: string
   updatedAt: string
   deletedAt?: string | null
@@ -17,6 +19,7 @@ export interface ArticleCreateRequest {
   content: string
   published?: boolean
   relatedProjectId?: number | null
+  relatedToolSlugs?: string[]
 }
 
 export interface ArticleUpdateRequest {
@@ -24,4 +27,5 @@ export interface ArticleUpdateRequest {
   content: string
   published: boolean
   relatedProjectId?: number | null
+  relatedToolSlugs?: string[]
 }

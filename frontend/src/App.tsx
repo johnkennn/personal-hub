@@ -7,7 +7,11 @@ import { appTheme } from './theme/appTheme'
 
 function App() {
   return (
-    <ConfigProvider locale={zhCN} theme={appTheme}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={appTheme}
+      pagination={{ showSizeChanger: { showSearch: false } }}
+    >
       <AntApp>
         <RouterProvider router={router} />
       </AntApp>

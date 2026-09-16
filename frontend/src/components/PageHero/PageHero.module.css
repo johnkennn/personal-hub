@@ -3,6 +3,16 @@
   padding-bottom: 1.5rem;
 }
 
+.shellFill {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 .narrow {
   max-width: 920px;
   margin: 0 auto;
@@ -103,6 +113,14 @@
 .body {
   position: relative;
   z-index: 1;
+}
+
+.bodyFill {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .section {

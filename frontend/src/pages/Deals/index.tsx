@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Empty, Skeleton, Tag } from 'antd'
 import { GiftOutlined, LinkOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
+import {
+  applyCatalogPageChange,
+  CatalogListLayout,
+  CatalogPager,
+} from '../../components/CatalogPager'
 import { PageHero } from '../../components/PageHero'
+import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { ROUTES, toolDetailPath } from '../../router/paths'
 import { loadActiveDeals } from '../../services/dealCatalog'
@@ -20,10 +26,17 @@ function dealUrl(url: string | null | undefined): string | null {
   return t
 }
 
+/** 去掉批量种子用的内部标记，避免展示到前台 */
+function cleanDealText(text: string) {
+  return text.replace(/\s*<!--seed:bulk-v1-->\s*/g, '').trim()
+}
+
 export function DealsPage() {
   const [items, setItems] = useState<DealDto[]>([])
   const [loading, setLoading] = useState(true)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZE)
 
   usePageMeta({
     title: 'AI 优惠',
@@ -44,7 +57,10 @@ export function DealsPage() {
       setLoading(true)
       try {
         const { items: list } = await loadActiveDeals()
-        if (!cancelled) setItems(list)
+        if (!cancelled) {
+          setItems(list)
+          setPage(1)
+        }
       } catch {
         if (!cancelled) setItems([])
       } finally {
@@ -58,12 +74,17 @@ export function DealsPage() {
     }
   }, [loggedIn])
 
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return items.slice(start, start + pageSize)
+  }, [items, page, pageSize])
+
   async function onGoLogin() {
     window.location.assign(loginPathWithReturn(ROUTES.DEALS))
   }
 
   return (
-    <PageHero title="AI 优惠" tagline="第三方 AI 产品的折扣与活动，一站看清">
+    <PageHero title="AI 优惠" tagline="第三方 AI 产品的折扣与活动，一站看清" fill>
       {!loggedIn ? (
         <Empty
           description="登录后就能看各家 AI 优惠啦"
@@ -78,75 +99,87 @@ export function DealsPage() {
       ) : items.length === 0 ? (
         <Empty description="暂无进行中的优惠" />
       ) : (
-        <div className={styles.grid}>
-          {items.map((d, i) => {
-            const link = dealUrl(d.url)
-            return (
-              <motion.article
-                key={d.id}
-                className={styles.card}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.05, 0.3) }}
-              >
-                <div className={styles.cardTop}>
-                  <GiftOutlined className={styles.icon} />
-                  <div className={styles.meta}>
-                    <h3 className={styles.title}>{d.title}</h3>
-                    <div className={styles.tags}>
-                      {d.toolName ? (
-                        <Tag color="cyan">
-                          {d.toolSlug ? (
-                            <Link to={toolDetailPath(d.toolSlug)}>{d.toolName}</Link>
-                          ) : (
-                            d.toolName
-                          )}
-                        </Tag>
-                      ) : null}
-                      {d.promoCode ? (
-                        <span className={styles.code}>
-                          <code>{d.promoCode}</code>
-                        </span>
-                      ) : null}
+        <CatalogListLayout
+          pageSize={pageSize}
+          pager={
+            <CatalogPager
+              current={page}
+              pageSize={pageSize}
+              total={items.length}
+              onChange={(p, ps) => applyCatalogPageChange(setPage, setPageSize, pageSize, p, ps)}
+            />
+          }
+        >
+          <div className={styles.grid}>
+            {pageItems.map((d, i) => {
+              const link = dealUrl(d.url)
+              return (
+                <motion.article
+                  key={d.id}
+                  className={styles.card}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.05, 0.3) }}
+                >
+                  <div className={styles.cardTop}>
+                    <GiftOutlined className={styles.icon} />
+                    <div className={styles.meta}>
+                      <h3 className={styles.title}>{d.title}</h3>
+                      <div className={styles.tags}>
+                        {d.toolName ? (
+                          <Tag color="cyan">
+                            {d.toolSlug ? (
+                              <Link to={toolDetailPath(d.toolSlug)}>{d.toolName}</Link>
+                            ) : (
+                              d.toolName
+                            )}
+                          </Tag>
+                        ) : null}
+                        {d.promoCode ? (
+                          <span className={styles.code}>
+                            <code>{d.promoCode}</code>
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <p className={styles.desc}>{d.description}</p>
+                  <p className={styles.desc}>{cleanDealText(d.description)}</p>
 
-                {link ? (
-                  <a
-                    className={styles.url}
-                    href={link}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={link}
-                  >
-                    <LinkOutlined />
-                    <span>{link.replace(/^https?:\/\//, '')}</span>
-                  </a>
-                ) : null}
+                  {link ? (
+                    <a
+                      className={styles.url}
+                      href={link}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={link}
+                    >
+                      <LinkOutlined />
+                      <span>{link.replace(/^https?:\/\//, '')}</span>
+                    </a>
+                  ) : null}
 
-                <div className={styles.footer}>
-                  <span className={styles.window}>
-                    {formatDateTime(d.startsAt)} — {formatDateTime(d.endsAt)}
-                  </span>
-                  <div className={styles.actions}>
-                    {d.toolSlug ? (
-                      <Link to={toolDetailPath(d.toolSlug)}>
-                        <Button size="small">产品详情</Button>
-                      </Link>
-                    ) : (
-                      <Link to={ROUTES.TOOLS}>
-                        <Button size="small">AI导览</Button>
-                      </Link>
-                    )}
+                  <div className={styles.footer}>
+                    <span className={styles.window}>
+                      {formatDateTime(d.startsAt)} — {formatDateTime(d.endsAt)}
+                    </span>
+                    <div className={styles.actions}>
+                      {d.toolSlug ? (
+                        <Link to={toolDetailPath(d.toolSlug)}>
+                          <Button size="small">产品详情</Button>
+                        </Link>
+                      ) : (
+                        <Link to={ROUTES.TOOLS}>
+                          <Button size="small">AI导览</Button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.article>
-            )
-          })}
-        </div>
+                </motion.article>
+              )
+            })}
+          </div>
+        </CatalogListLayout>
       )}
     </PageHero>
   )

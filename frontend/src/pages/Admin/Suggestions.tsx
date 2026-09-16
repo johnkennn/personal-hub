@@ -114,7 +114,7 @@ export function AdminSuggestionsPage() {
         dataSource={items}
         pagination={{
           pageSize: 10,
-          showSizeChanger: true,
+          showSizeChanger: { showSearch: false },
           pageSizeOptions: [10, 20, 50],
           showTotal: (t) => `共 ${t} 条`,
         }}

@@ -23,7 +23,6 @@ import { articleDetailPath, ROUTES } from '../../router/paths'
 import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
-import { saveArticleToolBindings } from '../../utils/articleToolBindings'
 import { isLoggedIn } from '../../utils/authStorage'
 import { ensureLoggedIn } from '../../utils/requireLogin'
 import styles from '../../styles/ui.module.css'
@@ -103,17 +102,16 @@ export function ArticleNewPage() {
         title: values.title,
         content: values.content,
         relatedProjectId: values.relatedProjectId,
+        relatedToolSlugs: values.relatedToolSlugs ?? [],
         published: false,
       })
       const article = res.data.data
-
-      saveArticleToolBindings(article.id, values.relatedToolSlugs ?? [])
 
       if (coverFile) {
         try {
           await uploadArticleCover(article.id, coverFile)
         } catch {
-          message.warning('文章已创建，封面上传失败，可在详情页点「编辑」重试')
+          message.warning('评测已创建，封面上传失败，可在详情页点「编辑」重试')
         }
       }
 
@@ -122,6 +120,7 @@ export function ArticleNewPage() {
           title: values.title,
           content: values.content,
           relatedProjectId: values.relatedProjectId,
+          relatedToolSlugs: values.relatedToolSlugs ?? [],
           published: true,
         })
         message.success('已发布')

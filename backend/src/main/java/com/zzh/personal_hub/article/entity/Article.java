@@ -6,10 +6,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @Setter
@@ -47,7 +49,11 @@ public class Article {
     @Column(name = "cover_url", length = 512)
     private String coverUrl;
 
-    /** 可选：关联项目 id，用于展映页「制作特辑」 */
+    /** 可选：关联项目 id */
     @Column(name = "related_project_id")
     private Long relatedProjectId;
+
+    /** 关联 AI 工具 slug（非表字段，服务层填充后返回） */
+    @Transient
+    private List<String> relatedToolSlugs;
 }

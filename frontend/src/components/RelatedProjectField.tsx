@@ -5,7 +5,7 @@ import { fetchMyProjectDrafts, fetchMyProjectPublished } from '../api/project'
 import type { Project } from '../types/project'
 
 /**
- * 写文章时选择关联项目（制作特辑）。
+ * 写评测时可选关联项目（站内笔记/展映，次要）。
  * 选项 = 我的草稿 + 已发布项目。
  */
 export function RelatedProjectField() {
@@ -45,10 +45,10 @@ export function RelatedProjectField() {
   return (
     <Form.Item
       name="relatedProjectId"
-      label="关联项目（制作特辑）"
+      label="相关笔记（可选）"
       extra={
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          可选。关联后会在该项目展映页展示为「制作特辑」。
+          次要字段。一般只需绑定上方「关联 AI 工具」；有站内项目笔记时再选。
         </Typography.Text>
       }
     >
@@ -57,7 +57,7 @@ export function RelatedProjectField() {
         showSearch
         optionFilterProp="label"
         loading={loading}
-        placeholder={options.length ? '选择一个项目' : '暂无可关联项目'}
+        placeholder={options.length ? '选择相关笔记' : '暂无可关联笔记'}
         options={options}
         disabled={!loading && options.length === 0}
       />

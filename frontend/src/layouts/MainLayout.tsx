@@ -2,29 +2,40 @@ import { Outlet, useLocation } from 'react-router-dom'
 
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
+import { ROUTES } from '../router/paths'
 import styles from './MainLayout.module.css'
 
 export function MainLayout() {
   const { pathname } = useLocation()
-  const fillViewport = pathname === '/chat'
+  const isChat = pathname === '/chat'
+  /** 列表页：主区不整页滚，交给内部列表滚，分页始终可见 */
+  const lockMainScroll =
+    isChat ||
+    pathname === ROUTES.ARTICLES ||
+    pathname === ROUTES.TOOLS ||
+    pathname === ROUTES.DEALS
 
   return (
     <div className={styles.layout}>
       <Header />
       <main
         className={
-          fillViewport ? styles.mainFill : `${styles.main} ph-scroll`
+          lockMainScroll ? styles.mainFill : `${styles.main} ph-scroll`
         }
       >
         <div
           className={
-            fillViewport ? styles.mainInnerFillBleed : styles.mainInner
+            isChat
+              ? styles.mainInnerFillBleed
+              : lockMainScroll
+                ? styles.mainInnerFill
+                : styles.mainInner
           }
         >
           <Outlet />
         </div>
       </main>
-      {!fillViewport ? <Footer /> : null}
+      {!isChat ? <Footer /> : null}
     </div>
   )
 }

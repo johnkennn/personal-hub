@@ -14,7 +14,12 @@ function isOngoing(d: DealDto, now = Date.now()): boolean {
 export async function loadActiveDeals(): Promise<{ items: DealDto[]; fromApi: boolean }> {
   try {
     const res = await fetchActiveDeals()
-    const list = (res.data.data ?? []).filter((d) => isOngoing(d))
+    const list = (res.data.data ?? [])
+      .filter((d) => isOngoing(d))
+      .map((d) => ({
+        ...d,
+        description: d.description.replace(/\s*<!--seed:bulk-v1-->\s*/g, '').trim(),
+      }))
     if (list.length > 0) {
       return { items: list, fromApi: true }
     }

@@ -1,6 +1,6 @@
 /**
- * 前端临时：评测 ↔ AI 工具多对多绑定（后端 relatedToolIds 就绪前）。
- * 写评测页选择工具后写入；工具详情「相关评测」会读这里。
+ * 前端临时兜底：评测 ↔ AI 工具绑定（后端 article_tool 未返回时用）。
+ * 新写入请走 API 的 relatedToolSlugs；本机仅作旧数据兼容。
  */
 const KEY = 'ai-hub-article-tool-bindings-v1'
 

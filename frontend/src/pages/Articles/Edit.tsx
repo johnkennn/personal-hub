@@ -1,6 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
-import { App, Alert, Button, Card, Checkbox, Form, Input, Space, Spin, Tabs, Typography } from 'antd'
+import {
+  App,
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Form,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Tabs,
+  Typography,
+} from 'antd'
 import { motion } from 'framer-motion'
 
 import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
@@ -10,6 +23,8 @@ import { RelatedProjectField } from '../../components/RelatedProjectField'
 import { fetchArticleForManage, updateArticle } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { invalidateDiscoverCatalog } from '../../services/publicContent'
+import { loadHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import { isLoggedIn } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -18,6 +33,7 @@ type FormValues = {
   content: string
   published: boolean
   relatedProjectId?: number | null
+  relatedToolSlugs?: string[]
 }
 
 export function ArticleEditPage() {
@@ -33,12 +49,32 @@ export function ArticleEditPage() {
   const [publishedLocked, setPublishedLocked] = useState(false)
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [preview, setPreview] = useState({ title: '', content: '' })
+  const [hubTools, setHubTools] = useState<HubTool[]>([])
+
+  const toolOptions = useMemo(
+    () =>
+      hubTools.map((t) => ({
+        value: t.slug,
+        label: `${t.name}（${t.category}）`,
+      })),
+    [hubTools],
+  )
 
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate(ROUTES.LOGIN, { replace: true })
     }
   }, [navigate])
+
+  useEffect(() => {
+    let cancelled = false
+    loadHubTools().then((list) => {
+      if (!cancelled) setHubTools(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -59,13 +95,14 @@ export function ArticleEditPage() {
           content: article.content,
           published: article.published,
           relatedProjectId: article.relatedProjectId ?? undefined,
+          relatedToolSlugs: article.relatedToolSlugs ?? [],
         })
         setPreview({ title: article.title, content: article.content })
       })
       .catch(() => {
         if (!cancelled) {
           setLoadError(true)
-          message.error('加载文章失败')
+          message.error('加载评测失败')
         }
       })
       .finally(() => {
@@ -79,7 +116,13 @@ export function ArticleEditPage() {
   async function onFinish(values: FormValues) {
     if (!id) return
     try {
-      const res = await updateArticle(id, values)
+      const res = await updateArticle(id, {
+        title: values.title,
+        content: values.content,
+        published: values.published,
+        relatedProjectId: values.relatedProjectId,
+        relatedToolSlugs: values.relatedToolSlugs ?? [],
+      })
       invalidateDiscoverCatalog()
       message.success('已保存')
       if (res.data.data.published) {
@@ -107,8 +150,8 @@ export function ArticleEditPage() {
       <Alert
         type="warning"
         showIcon
-        message="无法加载文章"
-        description="请确认已登录且该文章属于你；不会使用假数据顶替。"
+        message="无法加载评测"
+        description="请确认已登录且该评测属于你；不会使用假数据顶替。"
         action={<BackNavButton fallback={ROUTES.STUDIO_ARTICLE_DRAFTS} type="default" size="small" />}
       />
     )
@@ -120,7 +163,7 @@ export function ArticleEditPage() {
         type="info"
         showIcon
         message="已发布内容不可直接编辑"
-        description="请先在个人中心「文章已发布」中下架，再回到草稿编辑。"
+        description="请先在个人中心「评测已发布」中下架，再回到草稿编辑。"
         action={
           <Link to={ROUTES.STUDIO_ARTICLE_PUBLISHED}>
             <Button size="small" type="primary">
@@ -139,7 +182,7 @@ export function ArticleEditPage() {
           fallback={fromStudio ? ROUTES.STUDIO_ARTICLE_DRAFTS : ROUTES.ARTICLES}
         />
       </Space>
-      <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑文章">
+      <Card className={`${styles.panel} ${styles.widePanel}`} variant="borderless" title="编辑评测">
         <Form
           key={id}
           form={form}
@@ -147,6 +190,20 @@ export function ArticleEditPage() {
           onFinish={onFinish}
           onValuesChange={(_, all) => setPreview({ title: all.title ?? '', content: all.content ?? '' })}
         >
+          <Form.Item
+            name="relatedToolSlugs"
+            label="关联 AI 工具"
+            rules={[{ required: true, type: 'array', min: 1, message: '请至少绑定一个 AI 工具' }]}
+            extra="一篇评测可绑定多个工具；绑定后会出现在对应产品详情的「相关评测」里。"
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="选择评测涉及的 AI 产品"
+              options={toolOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
           <Form.Item name="title" label="标题" rules={[{ required: true }]}>
             <Input size="large" />
           </Form.Item>

@@ -20,6 +20,7 @@ export type PublicArticle = {
   coverTone?: string
   coverUrl?: string | null
   relatedProjectId?: number | null
+  relatedToolSlugs?: string[]
 }
 
 export type PublicProject = {

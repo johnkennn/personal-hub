@@ -3,6 +3,7 @@ package com.zzh.personal_hub.tool.repository;
 import com.zzh.personal_hub.tool.entity.Tool;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,8 @@ public interface ToolRepository extends JpaRepository<Tool, Long> {
     Optional<Tool> findBySlugAndPublishedTrueAndDeletedAtIsNull(String slug);
 
     Optional<Tool> findBySlugAndDeletedAtIsNull(String slug);
+
+    List<Tool> findBySlugInAndDeletedAtIsNull(Collection<String> slugs);
 
     List<Tool> findByDeletedAtIsNullOrderByUpdatedAtDesc();
 

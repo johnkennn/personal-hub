@@ -72,6 +72,17 @@ export function articleDetailPath(id: number | string) {
   return `/articles/${id}`
 }
 
+/** AI 评测列表（可带工具筛选 / 搜索） */
+export function articlesListPath(opts?: { tools?: string[]; q?: string }) {
+  const params = new URLSearchParams()
+  const tools = (opts?.tools ?? []).map((s) => s.trim()).filter(Boolean)
+  if (tools.length) params.set('tools', tools.join(','))
+  const q = opts?.q?.trim()
+  if (q) params.set('q', q)
+  const qs = params.toString()
+  return qs ? `${ROUTES.ARTICLES}?${qs}` : ROUTES.ARTICLES
+}
+
 export function articleEditPath(id: number | string) {
   return `/studio/articles/${id}/edit`
 }

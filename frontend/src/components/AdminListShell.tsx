@@ -73,7 +73,7 @@ export function AdminPager({
         total={total}
         onChange={onChange}
         onShowSizeChange={onChange}
-        showSizeChanger
+        showSizeChanger={{ showSearch: false }}
         pageSizeOptions={[...ADMIN_PAGE_SIZE_OPTIONS].map(String)}
         showTotal={(t) => `共 ${t} ${unit}`}
         hideOnSinglePage={false}

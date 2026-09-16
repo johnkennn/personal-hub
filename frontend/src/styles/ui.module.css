@@ -227,11 +227,18 @@
 .catalogShell {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .catalogBody {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
 
 @media (min-width: 576px) {
@@ -257,8 +264,11 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: auto;
-  padding-top: 24px;
+  margin-top: 0;
+  padding-top: 12px;
+  padding-bottom: 2px;
+  border-top: 1px solid rgba(100, 140, 200, 0.16);
+  background: linear-gradient(180deg, transparent, rgba(5, 7, 15, 0.55) 30%);
 }
 
 /** 治理后台表格列表 */

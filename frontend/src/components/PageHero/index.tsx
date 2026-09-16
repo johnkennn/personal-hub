@@ -12,6 +12,8 @@ type PageHeroProps = {
   className?: string
   /** 关于页等收窄版 */
   narrow?: boolean
+  /** 占满主区剩余高度（列表页：内部滚动、底部分页固定） */
+  fill?: boolean
 }
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -26,10 +28,16 @@ export function PageHero({
   children,
   className,
   narrow,
+  fill,
 }: PageHeroProps) {
   return (
     <div
-      className={[styles.shell, narrow ? styles.narrow : '', className]
+      className={[
+        styles.shell,
+        narrow ? styles.narrow : '',
+        fill ? styles.shellFill : '',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
     >
@@ -62,7 +70,11 @@ export function PageHero({
         </div>
       </header>
 
-      {children ? <div className={styles.body}>{children}</div> : null}
+      {children ? (
+        <div className={[styles.body, fill ? styles.bodyFill : ''].filter(Boolean).join(' ')}>
+          {children}
+        </div>
+      ) : null}
     </div>
   )
 }

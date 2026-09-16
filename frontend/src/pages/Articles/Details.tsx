@@ -9,6 +9,7 @@ import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { OwnerContentActions } from '../../components/OwnerContentActions'
 import { ReadingProgress } from '../../components/ReadingProgress'
+import { RelatedToolsBlock } from '../../components/RelatedToolsBlock'
 import { ShareCard } from '../../components/ShareCard'
 import { SocialPanel } from '../../components/SocialPanel'
 import { coverMediaStyle } from '../../components/CoverStrip'
@@ -20,6 +21,9 @@ import {
   ROUTES,
 } from '../../router/paths'
 import { loadArticleForViewer } from '../../services/publicContent'
+import { loadHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
+import { getArticleToolBindings } from '../../utils/articleToolBindings'
 import { getUserId } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
@@ -28,6 +32,7 @@ import styles from '../../styles/ui.module.css'
 export function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [article, setArticle] = useState<PublicArticle | null>(null)
+  const [relatedTools, setRelatedTools] = useState<HubTool[]>([])
   const [adminDeletedPreview, setAdminDeletedPreview] = useState(false)
   const [deletedAt, setDeletedAt] = useState<string | null>(null)
   const [purgeAt, setPurgeAt] = useState<string | null>(null)
@@ -40,6 +45,7 @@ export function ArticleDetailPage() {
     setLoadedId(id)
     setLoading(true)
     setArticle(null)
+    setRelatedTools([])
     setAdminDeletedPreview(false)
     setDeletedAt(null)
     setPurgeAt(null)
@@ -54,13 +60,29 @@ export function ArticleDetailPage() {
     if (!id) return
     let cancelled = false
     loadArticleForViewer(id)
-      .then((res) => {
+      .then(async (res) => {
         if (cancelled) return
         setArticle(res.item)
         setAdminDeletedPreview(res.adminDeletedPreview)
         setDeletedAt(res.deletedAt ?? null)
         setPurgeAt(res.purgeAt ?? null)
-        setError(res.item ? '' : '文章不存在或加载失败')
+        setError(res.item ? '' : '评测不存在或加载失败')
+
+        if (res.item) {
+          const fromApi = res.item.relatedToolSlugs ?? []
+          const fromLocal = getArticleToolBindings(res.item.id)
+          const slugs = fromApi.length > 0 ? fromApi : fromLocal
+          if (slugs.length === 0) {
+            setRelatedTools([])
+            return
+          }
+          const all = await loadHubTools()
+          if (cancelled) return
+          const bySlug = new Map(all.map((t) => [t.slug, t]))
+          setRelatedTools(slugs.map((s) => bySlug.get(s)).filter(Boolean) as HubTool[])
+        } else {
+          setRelatedTools([])
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -85,7 +107,7 @@ export function ArticleDetailPage() {
     return (
       <Result
         status="404"
-        title="文章不存在"
+        title="评测不存在"
         extra={<BackNavButton fallback={ROUTES.ARTICLES} type="primary" />}
       />
     )
@@ -99,7 +121,7 @@ export function ArticleDetailPage() {
     return (
       <Result
         status="404"
-        title={error || '文章不存在'}
+        title={error || '评测不存在'}
         extra={<BackNavButton fallback={ROUTES.ARTICLES} type="primary" />}
       />
     )
@@ -148,7 +170,7 @@ export function ArticleDetailPage() {
         <Typography.Title level={1} style={{ fontFamily: 'var(--ph-font-display)', marginBottom: 8 }}>
           {article.title}
         </Typography.Title>
-        <Space wrap style={{ marginBottom: 8 }}>
+        <Space wrap style={{ marginBottom: 12 }}>
           <AuthorChip
             authorId={article.authorId || undefined}
             authorName={article.authorName}
@@ -157,17 +179,21 @@ export function ArticleDetailPage() {
           <Typography.Text type="secondary">{formatDateTime(article.createdAt)}</Typography.Text>
           {article.relatedProjectId ? (
             <Link to={projectDetailPath(article.relatedProjectId)}>
-              <Typography.Link>查看关联展映</Typography.Link>
+              <Typography.Link style={{ fontSize: 13, color: 'rgba(140, 165, 195, 0.85)' }}>
+                相关笔记
+              </Typography.Link>
             </Link>
           ) : null}
         </Space>
+
+        <RelatedToolsBlock tools={relatedTools} />
 
         {resolveMediaUrl(article.coverUrl) ? (
           <div
             className={styles.articleCover}
             style={coverMediaStyle(article.coverUrl, article.id, article.coverTone)}
             role="img"
-            aria-label="文章封面"
+            aria-label="评测封面"
           />
         ) : null}
 

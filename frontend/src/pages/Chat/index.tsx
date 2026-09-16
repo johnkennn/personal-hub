@@ -452,34 +452,40 @@ export function ChatPage() {
     })
   }, [])
 
-  // 登录 ↔ 访客：切换存储来源（访客 session 单会话；登录云端多会话；互不迁移）
-  useEffect(() => {
+  // 登录 ↔ 访客切换时同步重置 UI（渲染期调整 state，避免 effect 里连环 setState）
+  const [authMode, setAuthMode] = useState(loggedIn)
+  if (authMode !== loggedIn) {
+    setAuthMode(loggedIn)
     abortRef.current?.abort()
     abortRef.current = null
     setBusy(false)
     setPending([])
     setDraft('')
     setSidebarOpen(false)
-
+    cloudSyncedRef.current = new Map()
     if (!loggedIn) {
       setCloudReady(false)
       setCloudList([])
       setCloudEmptyIds(new Set())
-      cloudSyncedRef.current = new Map()
       setActiveConvId('guest')
       setMessages(loadChatMessages())
-      return
+    } else {
+      setCloudReady(false)
+      setCloudList([])
+      setCloudEmptyIds(new Set())
+      setMessages([])
+      setActiveConvId('')
     }
+  }
+
+  // 登录后：拉取云端多会话（访客不走这里）
+  useEffect(() => {
+    if (!loggedIn) return
 
     const controller = new AbortController()
-    setCloudReady(false)
-    setMessages([])
-    setActiveConvId('')
-    cloudSyncedRef.current = new Map()
-
     void (async () => {
       try {
-        let summaries = await listCloudConversations(controller.signal)
+        const summaries = await listCloudConversations(controller.signal)
         if (controller.signal.aborted) return
 
         if (summaries.length === 0) {
