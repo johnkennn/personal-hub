@@ -14,7 +14,9 @@ import {
 import { motion } from 'framer-motion'
 import type { UploadFile } from 'antd/es/upload/interface'
 
+import { MarkdownBody } from '../../components/MarkdownBody'
 import { runSkillStream } from '../../api/aiTools'
+import { fetchChatQuota } from '../../api/chatQuota'
 import { uploadChatAttachment } from '../../api/chatAttachments'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
@@ -322,6 +324,26 @@ export function ChatPage() {
       setQuota(null)
     })
   }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetchChatQuota(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return
+        if (data.quotaEnabled === false) {
+          setQuota(null)
+          return
+        }
+        setQuota({
+          remaining: Math.max(0, data.remainingQuota),
+          daily: Math.max(0, data.dailyQuota),
+        })
+      })
+      .catch(() => {
+        /* 后端尚未上线 /quota 时保持占位文案 */
+      })
+    return () => controller.abort()
+  }, [loggedIn])
 
   useEffect(() => {
     saveChatMessages(messages)
@@ -908,63 +930,73 @@ export function ChatPage() {
                 onScroll={onListScroll}
               >
                 <div className={styles.list}>
-                  {messages.map((m) => (
+                  {messages.map((m) => {
+                    const visibleText = stripAttachmentNote(m.text)
+                    const atts = resolveMessageAttachments(m)
+                    const showTools =
+                      Boolean(visibleText.trim()) || atts.length > 0
+                    const isUser = m.role === 'user'
+                    return (
                     <motion.div
                       key={m.id}
-                      className={m.role === 'user' ? styles.rowUser : styles.rowAssistant}
+                      className={isUser ? styles.rowUser : styles.rowAssistant}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
                     >
                       <div
                         className={
-                          m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant
+                          isUser ? styles.msgColUser : styles.msgColAssistant
                         }
                       >
-                        {(() => {
-                          const visibleText = stripAttachmentNote(m.text)
-                          const atts = resolveMessageAttachments(m)
-                          return (
-                            <>
-                              {visibleText ? (
-                                <p className={styles.bubbleText}>{visibleText}</p>
-                              ) : null}
-                              {atts.length > 0 ? (
-                                <ul className={styles.msgAttachList} aria-label="附件">
-                                  {atts.map((a, i) => {
-                                    const src = resolveMediaUrl(a.url ?? undefined)
-                                    const key = `${a.name}-${a.url ?? i}`
-                                    if (a.kind === 'image' && src) {
-                                      return (
-                                        <li key={key} className={styles.msgAttachImage}>
-                                          <a href={src} target="_blank" rel="noreferrer">
-                                            <img src={src} alt={a.name} loading="lazy" />
-                                          </a>
-                                          <span className={styles.msgAttachName}>{a.name}</span>
-                                        </li>
-                                      )
-                                    }
-                                    return (
-                                      <li key={key} className={styles.msgAttachFile}>
-                                        <span className={styles.msgAttachKind}>
-                                          {a.kind === 'video'
-                                            ? '视频'
-                                            : a.kind === 'text'
-                                              ? '文本'
-                                              : '文档'}
-                                        </span>
-                                        <span className={styles.msgAttachName}>{a.name}</span>
-                                        {!a.url ? (
-                                          <span className={styles.msgAttachHint}>仅本页</span>
-                                        ) : null}
-                                      </li>
-                                    )
-                                  })}
-                                </ul>
-                              ) : null}
-                            </>
+                      <div
+                        className={
+                          isUser ? styles.bubbleUser : styles.bubbleAssistant
+                        }
+                      >
+                        {visibleText ? (
+                          isUser ? (
+                            <p className={styles.bubbleText}>{visibleText}</p>
+                          ) : (
+                            <MarkdownBody
+                              content={visibleText}
+                              className={styles.mdInBubble}
+                            />
                           )
-                        })()}
+                        ) : null}
+                        {atts.length > 0 ? (
+                          <ul className={styles.msgAttachList} aria-label="附件">
+                            {atts.map((a, i) => {
+                              const src = resolveMediaUrl(a.url ?? undefined)
+                              const key = `${a.name}-${a.url ?? i}`
+                              if (a.kind === 'image' && src) {
+                                return (
+                                  <li key={key} className={styles.msgAttachImage}>
+                                    <a href={src} target="_blank" rel="noreferrer">
+                                      <img src={src} alt={a.name} loading="lazy" />
+                                    </a>
+                                    <span className={styles.msgAttachName}>{a.name}</span>
+                                  </li>
+                                )
+                              }
+                              return (
+                                <li key={key} className={styles.msgAttachFile}>
+                                  <span className={styles.msgAttachKind}>
+                                    {a.kind === 'video'
+                                      ? '视频'
+                                      : a.kind === 'text'
+                                        ? '文本'
+                                        : '文档'}
+                                  </span>
+                                  <span className={styles.msgAttachName}>{a.name}</span>
+                                  {!a.url ? (
+                                    <span className={styles.msgAttachHint}>仅本页</span>
+                                  ) : null}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        ) : null}
                         {m.hits?.length ? (
                           <ul className={styles.hitList}>
                             {m.hits.map((h) => (
@@ -1006,43 +1038,42 @@ export function ChatPage() {
                             ))}
                           </Space>
                         ) : null}
-                        {(stripAttachmentNote(m.text).trim() ||
-                          resolveMessageAttachments(m).length > 0) ? (
-                          <div
-                            className={
-                              m.role === 'user'
-                                ? styles.msgToolsUser
-                                : styles.msgToolsAssistant
-                            }
-                          >
-                            <Tooltip title="复制">
+                      </div>
+                      {showTools ? (
+                        <div
+                          className={
+                            isUser ? styles.msgToolsUser : styles.msgToolsAssistant
+                          }
+                        >
+                          <Tooltip title="复制">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<CopyOutlined />}
+                              aria-label="复制"
+                              onClick={() =>
+                                void copyText(visibleText || m.text)
+                              }
+                            />
+                          </Tooltip>
+                          {!isUser ? (
+                            <Tooltip title="重新生成">
                               <Button
                                 type="text"
                                 size="small"
-                                icon={<CopyOutlined />}
-                                aria-label="复制"
-                                onClick={() =>
-                                  void copyText(stripAttachmentNote(m.text) || m.text)
-                                }
+                                icon={<RedoOutlined />}
+                                aria-label="重新生成"
+                                disabled={busy}
+                                onClick={() => onRetry(m.id)}
                               />
                             </Tooltip>
-                            {m.role === 'assistant' ? (
-                              <Tooltip title="重新生成">
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  icon={<RedoOutlined />}
-                                  aria-label="重新生成"
-                                  disabled={busy}
-                                  onClick={() => onRetry(m.id)}
-                                />
-                              </Tooltip>
-                            ) : null}
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
+                      ) : null}
                       </div>
                     </motion.div>
-                  ))}
+                    )
+                  })}
                   {busy && messages[messages.length - 1]?.role !== 'assistant' ? (
                     <div className={styles.rowAssistant}>
                       <div className={styles.bubbleAssistant}>

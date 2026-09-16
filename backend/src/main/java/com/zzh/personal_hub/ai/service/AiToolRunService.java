@@ -3,6 +3,7 @@ package com.zzh.personal_hub.ai.service;
 import com.zzh.personal_hub.ai.client.AiClient;
 import com.zzh.personal_hub.ai.config.AiProperties;
 import com.zzh.personal_hub.ai.dto.AiRunResponse;
+import com.zzh.personal_hub.ai.dto.ChatQuotaResponse;
 import com.zzh.personal_hub.ai.entity.AiRunLog;
 import com.zzh.personal_hub.ai.repository.AiRunLogRepository;
 import com.zzh.personal_hub.common.exception.BusinessException;
@@ -228,4 +229,18 @@ public class AiToolRunService {
             int dailyQuota,
             long usedBefore
     ) {}
+
+    public ChatQuotaResponse quotaStatus(HttpServletRequest request) {
+        Optional<User> user = currentUserService.findUser();
+        Long userId = user.map(User::getId).orElse(null);
+        String clientKey = userId != null ? "u:" + userId : "ip:" + clientIp(request);
+        int dailyQuota = userId != null
+                ? aiProperties.getUserDailyQuota()
+                : aiProperties.getGuestDailyQuota();
+        Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
+        long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
+                clientKey, dayStart);
+        int remaining = (int) Math.max(0, dailyQuota - used);
+        return new ChatQuotaResponse(remaining, dailyQuota, aiProperties.isQuotaEnabled());
+    }
 }

@@ -4,6 +4,7 @@ import com.zzh.personal_hub.common.response.ApiResponse;
 
 import java.util.Map;
 
+import com.zzh.personal_hub.ai.dto.ChatQuotaResponse;
 import com.zzh.personal_hub.ai.dto.ChatRouteRequest;
 import com.zzh.personal_hub.ai.dto.ChatStreamRequest;
 import com.zzh.personal_hub.ai.service.AiToolRunService;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,5 +47,10 @@ public class ChatController {
     @PostMapping("/route")
     public ApiResponse<Map<String, Object>> route(@Valid @RequestBody ChatRouteRequest body) {
         return ApiResponse.success(chatIntentRouterService.route(body.getMessage()));
+    }
+
+    @GetMapping("/quota")
+    public ApiResponse<ChatQuotaResponse> quota(HttpServletRequest request) {
+        return ApiResponse.success(aiToolRunService.quotaStatus(request));
     }
 }

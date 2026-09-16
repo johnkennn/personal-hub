@@ -237,9 +237,10 @@
 .msgToolsUser,
 .msgToolsAssistant {
   display: flex;
-  gap: 0.15rem;
-  margin-top: 0.35rem;
-  opacity: 0.55;
+  align-items: center;
+  gap: 0.1rem;
+  margin-top: 0.2rem;
+  opacity: 0.45;
   transition: opacity 0.15s ease;
 }
 
@@ -251,8 +252,8 @@
   justify-content: flex-start;
 }
 
-.bubbleUser:hover .msgToolsUser,
-.bubbleAssistant:hover .msgToolsAssistant {
+.msgColUser:hover .msgToolsUser,
+.msgColAssistant:hover .msgToolsAssistant {
   opacity: 1;
 }
 
@@ -280,9 +281,26 @@
   max-width: 100%;
 }
 
+.msgColUser,
+.msgColAssistant {
+  display: flex;
+  flex-direction: column;
+  max-width: min(92%, 560px);
+  min-width: 0;
+}
+
+.msgColUser {
+  align-items: flex-end;
+}
+
+.msgColAssistant {
+  align-items: flex-start;
+}
+
 .bubbleUser,
 .bubbleAssistant {
-  max-width: min(92%, 560px);
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   padding: 0.8rem 1rem;
   border-radius: 18px;
@@ -313,6 +331,39 @@
   word-break: break-word;
   max-width: 100%;
   color: var(--ph-text);
+}
+
+/* 气泡内 Markdown：比文章页更紧凑 */
+.mdInBubble {
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+}
+
+.mdInBubble :global(h1),
+.mdInBubble :global(h2),
+.mdInBubble :global(h3) {
+  margin: 0.75em 0 0.35em !important;
+}
+
+.mdInBubble :global(h1:first-child),
+.mdInBubble :global(h2:first-child),
+.mdInBubble :global(h3:first-child),
+.mdInBubble :global(p:first-child) {
+  margin-top: 0 !important;
+}
+
+.mdInBubble :global(p),
+.mdInBubble :global(ul),
+.mdInBubble :global(ol),
+.mdInBubble :global(blockquote),
+.mdInBubble :global(pre) {
+  margin-bottom: 0.65em !important;
+}
+
+.mdInBubble :global(p:last-child),
+.mdInBubble :global(ul:last-child),
+.mdInBubble :global(ol:last-child) {
+  margin-bottom: 0 !important;
 }
 
 .msgAttachList {
