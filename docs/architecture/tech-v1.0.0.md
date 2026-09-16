@@ -1,4 +1,4 @@
-# AI Tools Hub — 技术方案
+# 小智AI — 技术方案
 
 | 项 | 说明 |
 |----|------|
@@ -94,23 +94,23 @@ LLM 厂商（可插拔）← 仅服务器持有密钥
 | `/studio/**` | 个人中心 | |
 | `/admin/**` | 治理 | Tool 等 |
 
-顶栏顺序：`聊天 | 发现 | AI导览 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
+顶栏顺序：`小智 | 发现 | AI导览 | AI评测 | 限时优惠 | 关于`（**无顶栏搜索框**）  
 
 **统一聊天（前端）：**
 
 | 模块 | 说明 |
 |------|------|
-| `pages/Chat` | 单一对话壳；附件回形针；追问按钮 |
-| `services/chatRouter.ts` | 规则意图：search / skill / clarify / section；可升级后端或 LLM |
-| `utils/chatStorage.ts` | `sessionStorage`（`ai-hub-chat-messages-v2`）；关标签清空 |
-| 技能执行 | `runAiToolStream` → `POST /api/ai-tools/{slug}/run/stream` |
+| `pages/Chat` | 单一对话壳；附件；追问按钮；页内剩余额度 |
+| `services/chatRouter.ts` | 规则意图：search / skill(chat) / clarify / section |
+| `utils/chatStorage.ts` | `sessionStorage`；关标签清空 |
+| `api/aiTools.ts` | `runChatStream` → `POST /api/chat/stream`（intent 主要为 chat） |
 
-内部技能 slug（对用户不可见）：`copywriting` `translate` `resume`；（渐进）`summary` `contract` 等。
+生成类需求统一走大模型 `chat`，不再拆多技能 system prompt。
 
-目录检索：`searchCatalog()` → `{ tools, reviews }`，由统一聊天调用。  
-⌘/Ctrl+K → 回到聊天。  
-品牌：`SITE_BRAND = 'AI Tools Hub'`。
-
+目录检索：`searchCatalog()` → `{ tools, reviews }`，由小智统一对话调用。  
+⌘/Ctrl+K → 回到小智。  
+品牌：`SITE_BRAND = '小智AI'`；顶栏「小智」对应 `/`。
+配额：访客每日 3、登录每日 30；SSE `done` 带回 `remainingQuota` / `dailyQuota`。
 ---
 
 ## 4. 视觉体系（AI 风）

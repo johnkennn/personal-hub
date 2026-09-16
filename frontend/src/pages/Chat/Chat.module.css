@@ -68,9 +68,10 @@
 
 .topLeft {
   display: flex;
-  align-items: flex-start;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.55rem;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .menuBtn {
@@ -85,6 +86,14 @@
   background-clip: text;
   color: transparent !important;
   white-space: nowrap;
+}
+
+.quotaTag {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  border-radius: 999px !important;
+  font-size: 0.75rem !important;
+  user-select: none;
 }
 
 .emptyStage {
@@ -110,6 +119,13 @@
   letter-spacing: 0.02em;
   color: rgba(190, 210, 230, 0.88);
   font-family: var(--ph-font-display);
+}
+
+.emptyQuotaHint {
+  margin: -0.25rem 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(140, 170, 200, 0.75);
 }
 
 .composerTip {

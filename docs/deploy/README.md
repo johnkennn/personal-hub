@@ -1,4 +1,4 @@
-# AI Tools Hub 部署说明（工程名 personal-hub · 无 Docker）
+# 小智AI 部署说明（工程名 personal-hub · 无 Docker）
 
 > 产品方向与目录见 [prd-outline.md](../product/prd-outline.md)、技术方案见 [tech-v1.0.0.md](../architecture/tech-v1.0.0.md)。  
 > 本文只讲**现网部署与运维**（服务器路径、systemd、Nginx、CI/CD），与品牌文案无关。  

@@ -1,9 +1,9 @@
-# Personal Hub → AI Tools Hub
+# Personal Hub → 小智AI
 
 仓库工程名仍为 `personal-hub`。
 
-**产品：** [AI Tools Hub](docs/product/prd-outline.md) — 聊天检索为默认入口（模糊搜产品/评测 + 侧栏技能），AI导航浏览外部产品。  
-**阶段：** P0 壳已就绪，进入 **P1 正式开发**（见 [roadmap.md](docs/product/roadmap.md)）。
+**产品：** [小智AI](docs/product/prd-outline.md) — 默认入口「小智」统一对话（搜产品/评测 + 大模型办事），AI 导览浏览外部产品。  
+**阶段：** P0 壳已就绪，**P1 持续打磨**（见 [roadmap.md](docs/product/roadmap.md)）。
 
 **工程：** 在现有 React + Spring Boot + MySQL 上演进，不整体重构；部署见 [docs/deploy/README.md](docs/deploy/README.md)。
 
@@ -15,7 +15,7 @@
 
 | 路径 | 说明 |
 |------|------|
-| `frontend/` | React（Vite）前端；默认页为聊天 `/` |
+| `frontend/` | React（Vite）前端；默认页为小智 `/` |
 | `backend/` | Spring Boot 后端 |
 | `docs/product/prd-outline.md` | **产品需求大纲（准绳）** |
 | `docs/product/roadmap.md` | 分期路线图（P0–P3） |

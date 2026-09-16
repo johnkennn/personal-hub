@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input, Space, Tooltip, Typography, Upload, message as antMessage } from 'antd'
+import { Button, Input, Space, Tag, Tooltip, Typography, Upload, message as antMessage } from 'antd'
 import {
   ClearOutlined,
   CopyOutlined,
@@ -45,7 +45,7 @@ import {
 } from '../../utils/chatStorage'
 import { copyToClipboard } from '../../utils/clipboard'
 import { resolveMediaUrl } from '../../utils/mediaUrl'
-import { isLoggedIn } from '../../utils/authStorage'
+import { isLoggedIn, subscribeAuthChange } from '../../utils/authStorage'
 import { ensureLoggedIn } from '../../utils/requireLogin'
 import styles from './Chat.module.css'
 
@@ -137,6 +137,7 @@ async function streamSkillReply(
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
   attachmentUrls?: string[],
   signal?: AbortSignal,
+  onQuota?: (info: { remainingQuota: number; dailyQuota: number }) => void,
 ) {
   const assistantId = uid()
   setMessages((prev) => [
@@ -157,7 +158,17 @@ async function streamSkillReply(
             ),
           )
         },
-        onDone: () => undefined,
+        onDone: (info) => {
+          if (
+            info &&
+            Number.isFinite(info.remainingQuota) &&
+            info.remainingQuota >= 0 &&
+            Number.isFinite(info.dailyQuota) &&
+            info.dailyQuota > 0
+          ) {
+            onQuota?.(info)
+          }
+        },
       },
       attachmentUrls,
     )
@@ -182,8 +193,10 @@ async function streamSkillReply(
 
     const softReason =
       quotaExceeded && !isLoggedIn()
-        ? '今日试用额度用完啦～登录后每天可多聊一些哦'
-        : reason
+        ? '今日试用额度用完啦～登录后每天可聊 30 次哦'
+        : quotaExceeded
+          ? '今日额度用完啦，明天再来找小智，或稍后再试～'
+          : reason
 
     setMessages((prev) =>
       prev.map((m) =>
@@ -205,6 +218,9 @@ async function streamSkillReply(
         content:
           '未登录每天可试用 3 次。登录后每日额度提升至 30 次，要去登录吗？',
       })
+    } else if (quotaExceeded && isLoggedIn()) {
+      antMessage.warning('今日登录额度已用完（每日 30 次），明天再来找小智～')
+      onQuota?.({ remainingQuota: 0, dailyQuota: 30 })
     } else {
       antMessage.error(reason)
     }
@@ -290,11 +306,22 @@ export function ChatPage() {
   const [pending, setPending] = useState<PendingFile[]>([])
   const [showJumpBottom, setShowJumpBottom] = useState(false)
   const [showJumpTop, setShowJumpTop] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
+  const [quota, setQuota] = useState<{ remaining: number; daily: number } | null>(
+    null,
+  )
 
   usePageMeta({
     title: '小智',
     description: `${SITE_BRAND}：搜产品、评测，或直接和大模型聊。`,
   })
+
+  useEffect(() => {
+    return subscribeAuthChange(() => {
+      setLoggedIn(isLoggedIn())
+      setQuota(null)
+    })
+  }, [])
 
   useEffect(() => {
     saveChatMessages(messages)
@@ -638,6 +665,11 @@ export function ChatPage() {
           setMessages,
           urlsForSkill,
           controller.signal,
+          (info) =>
+            setQuota({
+              remaining: info.remainingQuota,
+              daily: info.dailyQuota,
+            }),
         )
       }
     } finally {
@@ -828,6 +860,21 @@ export function ChatPage() {
               <Typography.Title level={4} className={styles.title}>
                 小智
               </Typography.Title>
+              <Tooltip
+                title={
+                  loggedIn
+                    ? '登录用户每日可调用大模型的次数'
+                    : '未登录每日 3 次；登录后提升至 30 次'
+                }
+              >
+                <Tag className={styles.quotaTag} color={quota && quota.remaining <= 0 ? 'error' : 'cyan'}>
+                  {quota
+                    ? `今日剩余 ${quota.remaining}/${quota.daily}`
+                    : loggedIn
+                      ? '今日额度 30 次'
+                      : '访客今日 3 次 · 登录 30 次'}
+                </Tag>
+              </Tooltip>
             </div>
             <Button
               type="text"
@@ -843,6 +890,13 @@ export function ChatPage() {
         {isEmptyChat ? (
           <div className={styles.emptyStage}>
             <p className={styles.emptyHint}>有事尽管吩咐小智～</p>
+            <p className={styles.emptyQuotaHint}>
+              {loggedIn
+                ? quota
+                  ? `今日大模型还剩 ${quota.remaining} 次`
+                  : '登录用户每日可聊 30 次'
+                : '访客每日 3 次 · 登录后提升至 30 次'}
+            </p>
             {composer}
           </div>
         ) : (
