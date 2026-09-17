@@ -40,7 +40,7 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   text-decoration: none;
   white-space: nowrap;
   filter: drop-shadow(0 0 12px rgba(46, 230, 166, 0.35));
@@ -48,12 +48,15 @@
 
 .brandLogo {
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 11px;
+  /* SVG 矢量放大更清晰；禁止浏览器把小图糊化 */
+  shape-rendering: geometricPrecision;
+  overflow: visible;
 }
 
 .brandText {
   font-family: var(--ph-font-display);
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   background: linear-gradient(120deg, #2ee6a6 0%, #3d9eff 50%, #a78bff 100%);

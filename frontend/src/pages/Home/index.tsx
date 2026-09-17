@@ -77,7 +77,7 @@ export function HomePage() {
               <Link to={toolDetailPath(t.slug)} className={ui.cardLink}>
                 <Card className={ui.contentCard} variant="borderless" hoverable>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <ToolLogo name={t.name} logoUrl={t.logoUrl} size={44} />
+                    <ToolLogo name={t.name} logoUrl={t.logoUrl} size={52} />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <Tag style={{ marginBottom: 8 }}>{t.category}</Tag>
                       <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>

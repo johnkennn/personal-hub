@@ -53,7 +53,7 @@ export function ArticleReviewCard({
         <Card className={`${styles.contentCard} ${styles.catalogCard}`} variant="borderless">
           {tools.length > 0 ? (
             <div className={styles.catalogCardLogos}>
-              <ToolLogoChips tools={tools} size={26} />
+              <ToolLogoChips tools={tools} size={32} />
             </div>
           ) : null}
           {showReviewTag ? (

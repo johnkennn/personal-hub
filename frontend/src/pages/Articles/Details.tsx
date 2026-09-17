@@ -97,7 +97,7 @@ export function ArticleDetailPage() {
       ? {
           title: article.title,
           description: excerpt(article.content, 120),
-          image: resolveToolLogoUrl(relatedTools[0]?.logoUrl) ?? '/og-share.jpg',
+          image: resolveToolLogoUrl(relatedTools[0]?.logoUrl) ?? '/og-rays.jpg',
           type: 'article',
         }
       : null,

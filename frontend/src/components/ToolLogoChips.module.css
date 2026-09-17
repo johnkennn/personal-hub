@@ -25,6 +25,8 @@
 
 .avatar :global(img) {
   object-fit: contain;
-  padding: 3px;
+  /* 少留白，图标更大更清晰 */
+  padding: 1px;
   background: #fff;
+  image-rendering: -webkit-optimize-contrast;
 }

@@ -56,7 +56,7 @@ export function ToolDetailPage() {
   usePageMeta({
     title: tool ? tool.name : '工具详情',
     description: tool?.summary ?? 'AI 产品详情',
-    image: resolveToolLogoUrl(tool?.logoUrl) ?? '/og-share.jpg',
+    image: resolveToolLogoUrl(tool?.logoUrl) ?? '/og-rays.jpg',
   })
 
   useEffect(() => {
@@ -183,7 +183,7 @@ export function ToolDetailPage() {
 
       <header className={styles.detailHead}>
         <div className={styles.detailHeadMain}>
-          <ToolLogo name={tool.name} logoUrl={tool.logoUrl} size={64} />
+          <ToolLogo name={tool.name} logoUrl={tool.logoUrl} size={72} />
           <div>
             <Typography.Title level={2} className={ui.pageTitle}>
               {tool.name}

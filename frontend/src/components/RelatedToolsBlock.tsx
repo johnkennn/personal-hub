@@ -39,7 +39,7 @@ export function RelatedToolsBlock({ tools, compact }: RelatedToolsBlockProps) {
               textDecoration: 'none',
             }}
           >
-            <ToolLogo name={t.name} logoUrl={t.logoUrl} size={28} />
+            <ToolLogo name={t.name} logoUrl={t.logoUrl} size={36} />
             <span style={{ fontSize: 13, fontWeight: 500 }}>{t.name}</span>
             {t.category ? (
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>

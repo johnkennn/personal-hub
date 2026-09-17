@@ -51,8 +51,8 @@ export function usePageMeta(meta: PageMetaInput | null) {
     const pageTitle = meta.title.includes(SITE) ? meta.title : `${meta.title} · ${SITE}`
     const description = (meta.description?.trim() || DEFAULT_DESC).slice(0, 160)
     const url = absoluteUrl(meta.url) || (typeof window !== 'undefined' ? window.location.href : '')
-    // 微信不吃 SVG；默认用站内 JPG 分享图
-    const image = absoluteUrl(meta.image) || absoluteUrl('/og-share.jpg')
+    // 微信不吃 SVG；默认用站内 JPG 分享图（与 index.html 静态 og 一致）
+    const image = absoluteUrl(meta.image) || absoluteUrl('/og-rays.jpg')
     const type = meta.type ?? 'website'
 
     const prevTitle = document.title

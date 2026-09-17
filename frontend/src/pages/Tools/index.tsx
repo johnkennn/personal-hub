@@ -138,7 +138,7 @@ export function ToolsPage() {
                 <Link to={toolDetailPath(t.slug)} className={styles.card}>
                   <div className={styles.cardTop}>
                     <div className={styles.cardIdentity}>
-                      <ToolLogo name={t.name} logoUrl={t.logoUrl} size={36} />
+                      <ToolLogo name={t.name} logoUrl={t.logoUrl} size={48} />
                       <span className={styles.cardName}>{t.name}</span>
                     </div>
                     {t.featured ? <span className={styles.badge}>精选</span> : null}

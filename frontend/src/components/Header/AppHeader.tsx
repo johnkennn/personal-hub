@@ -183,7 +183,7 @@ export function AppHeader() {
       <div className={styles.inner}>
         <Flex align="center" gap="large" className={styles.left}>
           <Link to={ROUTES.CHAT} className={styles.brand}>
-            <BrandLogo size={28} className={styles.brandLogo} />
+            <BrandLogo size={40} className={styles.brandLogo} />
             <span className={styles.brandText}>{SITE_BRAND}</span>
           </Link>
           {!isMobile ? (

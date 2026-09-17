@@ -126,7 +126,7 @@ export function DealsPage() {
                     <ToolLogo
                       name={d.toolName || d.title}
                       logoUrl={d.toolLogoUrl}
-                      size={40}
+                      size={48}
                     />
                     <div className={styles.meta}>
                       <h3 className={styles.title}>{d.title}</h3>

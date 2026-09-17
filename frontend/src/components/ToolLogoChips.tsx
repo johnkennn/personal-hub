@@ -20,7 +20,7 @@ type ToolLogoChipsProps = {
 }
 
 /** 评测卡 / 工具卡上的 Logo 组：可点进对应产品详情 */
-export function ToolLogoChips({ tools, size = 28, className }: ToolLogoChipsProps) {
+export function ToolLogoChips({ tools, size = 32, className }: ToolLogoChipsProps) {
   if (!tools.length) return null
   return (
     <Space size={6} wrap className={[styles.row, className].filter(Boolean).join(' ')}>
