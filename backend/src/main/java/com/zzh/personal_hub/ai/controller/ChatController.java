@@ -37,9 +37,10 @@ public class ChatController {
             @Valid @RequestBody ChatStreamRequest body,
             HttpServletRequest request) {
         return aiToolRunService.runStream(
-            body.getIntent(), 
-            body.getMessage(), 
+            body.getIntent(),
+            body.getMessage(),
             body.getAttachmentUrls(),
+            body.getHistory(),
             request
         );
     }

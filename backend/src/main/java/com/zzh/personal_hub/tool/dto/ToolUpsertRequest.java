@@ -36,6 +36,10 @@ public class ToolUpsertRequest {
     @Size(max = 500)
     private String websiteUrl;
 
+    @NotBlank(message = "请上传或填写 Logo 地址")
+    @Size(max = 512)
+    private String logoUrl;
+
     @Size(max = 500)
     private String affiliateUrl;
 

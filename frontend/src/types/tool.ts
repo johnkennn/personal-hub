@@ -18,6 +18,7 @@ export type ToolDto = {
   audience: string | null
   pricing: string
   websiteUrl: string
+  logoUrl: string | null
   affiliateUrl: string | null
   keywordsJson: string | null
   tagsJson: string | null
@@ -47,5 +48,6 @@ export type HubTool = {
   pros: string[]
   cons: string[]
   websiteUrl: string
+  logoUrl?: string | null
   featured: boolean
 }

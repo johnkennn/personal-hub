@@ -32,6 +32,7 @@ import {
 } from '../../services/globalSearch'
 import {
   chatRouteFromLlm,
+  looksLikeCatalogRecommend,
   looksLikeImageQuestion,
   routeChatIntent,
   routeChatIntentConfident,
@@ -46,6 +47,7 @@ import {
   type ChatHit,
   type ChatMessage,
 } from '../../utils/chatStorage'
+import { buildChatHistoryPayload } from '../../utils/chatHistory'
 import {
   titleFromMessages,
   type ChatConversation,
@@ -232,6 +234,7 @@ async function streamSkillReply(
   attachmentUrls?: string[],
   signal?: AbortSignal,
   onQuota?: (info: { remainingQuota: number; dailyQuota: number }) => void,
+  history?: { role: string; content: string }[],
 ) {
   const assistantId = uid()
   const createdAt = Date.now()
@@ -266,6 +269,7 @@ async function streamSkillReply(
         },
       },
       attachmentUrls,
+      history,
     )
   } catch (err) {
     if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
@@ -929,7 +933,12 @@ export function ChatPage() {
   async function send(
     text: string,
     override?: RouteOverride,
-    opts?: { regenerate?: boolean; attachmentUrls?: string[] },
+    opts?: {
+      regenerate?: boolean
+      attachmentUrls?: string[]
+      /** 重试时显式传入，避免 setState 尚未生效导致上下文不准 */
+      history?: { role: string; content: string }[]
+    },
   ) {
     const content = text.trim()
     if ((!content && pending.length === 0 && !opts?.regenerate) || busy) return
@@ -984,6 +993,9 @@ export function ChatPage() {
     abortRef.current = controller
     setBusy(true)
     stickToBottomRef.current = true
+
+    const historyPayload =
+      opts?.history ?? buildChatHistoryPayload(messages)
 
     try {
       const aborted = () => controller.signal.aborted
@@ -1118,7 +1130,9 @@ export function ChatPage() {
               id: uid(),
               role: 'assistant',
               createdAt: Date.now(),
-              text: `找到与「${route.query}」相关的 ${parts.join('、')}，点击下方条目可打开：`,
+              text: looksLikeCatalogRecommend(content)
+                ? `本站收录里，和小智对上「${route.query}」的有 ${parts.join('、')}，优先看看这些：`
+                : `找到与「${route.query}」相关的 ${parts.join('、')}，点击下方条目可打开：`,
               hits: hitsFromCatalog(result),
               actions: [
                 { label: '打开AI导览', to: ROUTES.TOOLS },
@@ -1126,6 +1140,19 @@ export function ChatPage() {
               ],
             },
           ])
+        } else if (looksLikeCatalogRecommend(content)) {
+          await streamSkillReply(
+            `用户想在站内找相关 AI 产品，但目录检索「${route.query}」暂无命中。请先明确说明本站暂时没有直接匹配的收录，再基于通用知识给 2～3 个简要建议，并提醒以官网为准、不要假装它们已收录在本站。用户原话：${content}`,
+            setMessages,
+            undefined,
+            controller.signal,
+            (info) =>
+              setQuota({
+                remaining: info.remainingQuota,
+                daily: info.dailyQuota,
+              }),
+            historyPayload,
+          )
         } else {
           setMessages((prev) => [
             ...prev,
@@ -1168,6 +1195,7 @@ export function ChatPage() {
               remaining: info.remainingQuota,
               daily: info.dailyQuota,
             }),
+          historyPayload,
         )
       }
     } finally {
@@ -1207,6 +1235,7 @@ export function ChatPage() {
       regenerate: true,
       attachmentUrls:
         urlsFromBubble.length > 0 ? urlsFromBubble : lastAttachmentUrlsRef.current,
+      history: buildChatHistoryPayload(messages.slice(0, userIdx)),
     })
   }
 

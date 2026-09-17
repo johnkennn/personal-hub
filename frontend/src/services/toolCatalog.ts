@@ -30,6 +30,7 @@ export function toolFromApi(t: ToolDto): HubTool {
     pros: parseJsonArray(t.prosJson),
     cons: parseJsonArray(t.consJson),
     websiteUrl: t.websiteUrl,
+    logoUrl: t.logoUrl,
     featured: Boolean(t.featured),
   }
 }
@@ -50,6 +51,7 @@ export function toolFromSeed(t: SeedTool): HubTool {
     pros: t.pros,
     cons: t.cons,
     websiteUrl: t.websiteUrl,
+    logoUrl: null,
     featured: Boolean(t.featured),
   }
 }

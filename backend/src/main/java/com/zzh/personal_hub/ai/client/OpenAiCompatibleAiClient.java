@@ -81,11 +81,21 @@ public class OpenAiCompatibleAiClient implements AiClient {
 
     @Override
     public void stream(String systemPrompt, String userPrompt, List<String> imageDataUrls, Consumer<String> onDelta) {
+        stream(systemPrompt, List.of(), userPrompt, imageDataUrls, onDelta);
+    }
+
+    @Override
+    public void stream(
+            String systemPrompt,
+            List<AiChatTurn> history,
+            String userPrompt,
+            List<String> imageDataUrls,
+            Consumer<String> onDelta) {
         boolean vision = imageDataUrls != null && !imageDataUrls.isEmpty();
         ensureApiKey(vision);
         try {
             HttpResponse<java.io.InputStream> response = httpClient.send(
-                    buildRequest(systemPrompt, userPrompt, imageDataUrls, true),
+                    buildRequest(systemPrompt, history, userPrompt, imageDataUrls, true),
                     HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BusinessException(502, "模型服务暂不可用（HTTP " + response.statusCode() + "）");
@@ -155,6 +165,15 @@ public class OpenAiCompatibleAiClient implements AiClient {
 
     private HttpRequest buildRequest(
             String systemPrompt, String userPrompt, List<String> imageDataUrls, boolean stream) throws Exception {
+        return buildRequest(systemPrompt, List.of(), userPrompt, imageDataUrls, stream);
+    }
+
+    private HttpRequest buildRequest(
+            String systemPrompt,
+            List<AiChatTurn> history,
+            String userPrompt,
+            List<String> imageDataUrls,
+            boolean stream) throws Exception {
         boolean vision = imageDataUrls != null && !imageDataUrls.isEmpty();
         String model = vision
                 ? (StringUtils.hasText(aiProperties.getVisionModel())
@@ -187,12 +206,25 @@ public class OpenAiCompatibleAiClient implements AiClient {
             userContent = parts;
         }
 
+        List<Map<String, Object>> messages = new java.util.ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+        if (history != null) {
+            for (AiChatTurn turn : history) {
+                if (turn == null || !StringUtils.hasText(turn.content())) {
+                    continue;
+                }
+                String role = turn.role() == null ? "" : turn.role().trim().toLowerCase();
+                if (!"user".equals(role) && !"assistant".equals(role)) {
+                    continue;
+                }
+                messages.add(Map.of("role", role, "content", turn.content().trim()));
+            }
+        }
+        messages.add(Map.of("role", "user", "content", userContent));
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
-        body.put("messages", List.of(
-                Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userContent)
-        ));
+        body.put("messages", messages);
         body.put("temperature", 0.7);
         body.put("stream", stream);
 

@@ -2,38 +2,33 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Button,
-  Card,
-  Col,
   Empty,
   Input,
   Row,
+  Col,
   Segmented,
   Select,
   Skeleton,
   Space,
-  Typography,
   App,
 } from 'antd'
 import { FireOutlined, PlusOutlined } from '@ant-design/icons'
-import { motion } from 'framer-motion'
 
-import { AuthorChip } from '../../components/AuthorChip'
+import { ArticleReviewCard } from '../../components/ArticleReviewCard'
 import {
   applyCatalogPageChange,
   CatalogListLayout,
   CatalogPager,
 } from '../../components/CatalogPager'
-import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
 import { PageHero } from '../../components/PageHero'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { usePageMeta } from '../../hooks/usePageMeta'
-import { articleDetailPath, ROUTES } from '../../router/paths'
+import { ROUTES } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
 import { loadHubTools } from '../../services/toolCatalog'
+import type { HubTool } from '../../types/tool'
 import { isLoggedIn } from '../../utils/authStorage'
-import { excerpt, formatDateTime } from '../../utils/format'
-import { getLikeCount } from '../../utils/socialStorage'
 import styles from '../../styles/ui.module.css'
 
 function parseToolsParam(raw: string | null): string[] {
@@ -48,6 +43,7 @@ export function ArticlesPage() {
   const { message } = App.useApp()
   const [searchParams, setSearchParams] = useSearchParams()
   const [articles, setArticles] = useState<PublicArticle[]>([])
+  const [toolsBySlug, setToolsBySlug] = useState<Record<string, HubTool>>({})
   const [toolOptions, setToolOptions] = useState<{ value: string; label: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -76,6 +72,9 @@ export function ArticlesPage() {
 
   useEffect(() => {
     loadHubTools().then((list) => {
+      const map: Record<string, HubTool> = {}
+      for (const t of list) map[t.slug] = t
+      setToolsBySlug(map)
       setToolOptions(list.map((t) => ({ value: t.slug, label: t.name })))
     })
   }, [])
@@ -112,7 +111,7 @@ export function ArticlesPage() {
   const sorted = useMemo(() => {
     const list = [...filtered]
     if (sort === 'hot') {
-      list.sort((a, b) => getLikeCount('article', b.id) - getLikeCount('article', a.id))
+      list.sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0))
     } else {
       list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     }
@@ -203,53 +202,29 @@ export function ArticlesPage() {
           }
         >
           <Row gutter={[14, 14]}>
-            {pageItems.map((article) => (
-              <Col xs={24} sm={12} lg={8} xl={6} key={article.id} style={{ display: 'flex' }}>
-                <motion.div
-                  className={styles.catalogCardMotion}
-                  whileHover={{ y: -3 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className={`${styles.cardLink} ${styles.catalogCardShell}`}>
-                    <Link
-                      to={articleDetailPath(article.id)}
-                      className={styles.catalogCardHit}
-                      aria-label={article.title}
-                    />
-                    <Card
-                      className={`${styles.contentCard} ${styles.catalogCard}`}
-                      variant="borderless"
-                    >
-                      <CoverStrip
-                        title={article.title}
-                        tone={article.coverTone ?? coverToneFromId(article.id)}
-                        coverUrl={article.coverUrl}
-                        compact
-                      />
-                      <Typography.Title level={5} className={styles.catalogCardTitle}>
-                        {article.title}
-                      </Typography.Title>
-                      <Typography.Paragraph type="secondary" className={styles.catalogCardExcerpt}>
-                        {excerpt(article.content, 72)}
-                      </Typography.Paragraph>
-                      <div className={`${styles.catalogCardMeta} ${styles.catalogCardMetaInteractive}`}>
-                        <AuthorChip
-                          authorId={article.authorId || undefined}
-                          authorName={article.authorName}
-                          avatarUrl={article.avatarUrl}
-                          size={22}
-                        />
-                        <Typography.Text type="secondary" className={styles.muted}>
-                          {sort === 'hot'
-                            ? `${getLikeCount('article', article.id)} 赞`
-                            : formatDateTime(article.createdAt)}
-                        </Typography.Text>
-                      </div>
-                    </Card>
-                  </div>
-                </motion.div>
-              </Col>
-            ))}
+            {pageItems.map((article) => {
+              const tools = (article.relatedToolSlugs ?? [])
+                .map((slug) => toolsBySlug[slug])
+                .filter(Boolean)
+                .map((t) => ({ slug: t.slug, name: t.name, logoUrl: t.logoUrl }))
+              return (
+                <Col xs={24} sm={12} lg={8} xl={6} key={article.id} style={{ display: 'flex' }}>
+                  <ArticleReviewCard
+                    article={{
+                      id: article.id,
+                      title: article.title,
+                      content: article.content,
+                      authorId: article.authorId,
+                      authorName: article.authorName,
+                      avatarUrl: article.avatarUrl,
+                      createdAt: article.createdAt,
+                      likeCount: article.likeCount ?? 0,
+                    }}
+                    tools={tools}
+                  />
+                </Col>
+              )
+            })}
           </Row>
         </CatalogListLayout>
       )}

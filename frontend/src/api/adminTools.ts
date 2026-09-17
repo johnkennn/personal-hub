@@ -11,6 +11,7 @@ export type AdminToolUpsertBody = {
   audience?: string | null
   pricing: string
   websiteUrl: string
+  logoUrl: string
   affiliateUrl?: string | null
   keywordsJson?: string | null
   tagsJson?: string | null
@@ -50,6 +51,14 @@ export function unpublishAdminTool(id: number) {
 
 export function deleteAdminTool(id: number) {
   return request.delete<ApiResponse<null>>(`/api/admin/tools/${id}`)
+}
+
+export function uploadAdminToolLogo(id: number, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return request.post<ApiResponse<ToolDto>>(`/api/admin/tools/${id}/logo`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
 }
 
 export function fetchAdminToolCategories() {

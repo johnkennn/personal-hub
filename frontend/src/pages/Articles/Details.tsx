@@ -26,7 +26,6 @@ import type { HubTool } from '../../types/tool'
 import { getArticleToolBindings } from '../../utils/articleToolBindings'
 import { getUserId } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
-import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from '../../styles/ui.module.css'
 
 export function ArticleDetailPage() {
@@ -97,7 +96,7 @@ export function ArticleDetailPage() {
       ? {
           title: article.title,
           description: excerpt(article.content, 120),
-          image: resolveMediaUrl(article.coverUrl),
+          image: relatedTools[0]?.logoUrl ?? undefined,
           type: 'article',
         }
       : null,
@@ -188,15 +187,6 @@ export function ArticleDetailPage() {
 
         <RelatedToolsBlock tools={relatedTools} />
 
-        {resolveMediaUrl(article.coverUrl) ? (
-          <div
-            className={styles.articleCover}
-            style={coverMediaStyle(article.coverUrl, article.id, article.coverTone)}
-            role="img"
-            aria-label="评测封面"
-          />
-        ) : null}
-
         <div className={styles.articleBody} style={{ marginTop: 28 }}>
           <MarkdownBody content={article.content} />
         </div>
@@ -207,7 +197,11 @@ export function ArticleDetailPage() {
               <ShareCard
                 title={article.title}
                 description={excerpt(article.content, 120)}
-                mediaStyle={coverMediaStyle(article.coverUrl, article.id, article.coverTone)}
+                mediaStyle={coverMediaStyle(
+                  relatedTools[0]?.logoUrl,
+                  article.id,
+                  article.coverTone,
+                )}
               />
             </div>
             {article.published ? <SocialPanel kind="article" contentId={article.id} /> : null}

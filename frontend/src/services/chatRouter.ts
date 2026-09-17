@@ -34,13 +34,22 @@ export type LlmRouteDto = {
 }
 
 function hasSearchCue(q: string): boolean {
-  return /搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索|有没有.*?(工具|产品|评测|模型)|哪个好|有哪些.*?(工具|产品|ai)/.test(
+  return /搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索|有没有.*?(工具|产品|评测|模型|软件)|哪个好|有哪些.*?(工具|产品|ai|软件)|推荐.*?(工具|产品|软件|模型|ai)|安利|本站.*?(工具|产品|ai|软件)|站内.*?(工具|产品|ai|软件)/.test(
     q,
   )
 }
 
+/** 想让小智推荐 / 挑选 AI 产品（优先走站内检索） */
+export function looksLikeCatalogRecommend(q: string): boolean {
+  const hasProductWord = /工具|产品|软件|模型|ai|助手|平台|应用/.test(q)
+  const hasRecommend =
+    /推荐|安利|选一个|挑一个|哪个好|哪款|有没有好用|好用的|适合.*(用|做)|求推荐/.test(q)
+  const hasSiteScope = /本站|站内|你们站|站点里|导览里|收录/.test(q)
+  return (hasRecommend && hasProductWord) || (hasSiteScope && (hasRecommend || hasProductWord))
+}
+
 function hasGenerativeCue(q: string): boolean {
-  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图|图中|图片里|这张图|看图|图里|帮我|弄一下|处理一下|优化一下|改一下/.test(
+  return /翻译|译成|润色|简历|文案|商品描述|卖点|合同|总结|摘要|识别|画图|生图|图中|图片里|这张图|看图|图里|弄一下|处理一下|优化一下|改一下/.test(
     q,
   )
 }
@@ -155,10 +164,23 @@ export function routeChatIntentConfident(
     return { kind: 'search', query: searchQuery }
   }
 
+  // 推荐 / 找站内 AI 产品：优先检索目录，避免直接调大模型瞎编
+  if (
+    looksLikeCatalogRecommend(q) &&
+    !looksLikeImageQuestion(q) &&
+    !/文案|翻译|译成|简历|合同|总结|摘要|润色|生图|画图/.test(q)
+  ) {
+    const query = extractSearchQuery(raw) || raw
+    if (query.length >= 1) {
+      return { kind: 'search', query }
+    }
+  }
+
   // 生成类 / 普通问句：统一 AI 聊天（调大模型）；短歧义句再追问
   if (
     /帮我|弄一下|处理一下|看一下这份|优化一下|改一下/.test(q) &&
     !hasSearchCue(q) &&
+    !looksLikeCatalogRecommend(q) &&
     !looksLikeQuestion(q) &&
     raw.length < 12
   ) {
@@ -252,11 +274,20 @@ export function withLocalDateHint(raw: string): string {
 
 export function extractSearchQuery(raw: string): string {
   let s = raw.trim()
-  s = s.replace(
-    /^(请|帮我|麻烦你?)?(搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索一下|检索|搜)(一下|下)?[:：\s]*/i,
-    '',
-  )
-  s = s.replace(/相关的?(评测|测评|文章|工具|产品|ai)?$/i, '')
+  // 多轮剥离：本站范围词 + 推荐/搜索虚词 +「好用」等
+  for (let i = 0; i < 3; i += 1) {
+    const before = s
+    s = s.replace(/^(本站|站内|你们站|站点里|导览里)(里|中|的)?/i, '')
+    s = s.replace(
+      /^(请|帮我|麻烦你?|给我)?(搜索|搜一下|搜下|搜搜|查找|找一下|找下|查一下|检索一下|检索|搜|推荐一下|推荐一个|推荐个|推荐|安利一个|安利)(一下|下|一个|个)?[:：\s]*/i,
+      '',
+    )
+    s = s.replace(/^(有没有|求|想要|想找|找个|找一个)/i, '')
+    if (s === before) break
+  }
+  s = s.replace(/好用的?/g, '')
+  s = s.replace(/相关的?(评测|测评|文章|工具|产品|ai|软件)?$/i, '')
   s = s.replace(/(的)?(评测|测评|文章)$/i, '')
+  s = s.replace(/[？?]+$/g, '')
   return s.replace(/\s+/g, ' ').trim()
 }

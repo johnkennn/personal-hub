@@ -33,15 +33,8 @@
 
 .cardTop {
   display: flex;
-  gap: 0.55rem;
+  gap: 0.7rem;
   align-items: flex-start;
-}
-
-.icon {
-  margin-top: 0.2rem;
-  font-size: 1.05rem;
-  color: #2ee6a6;
-  flex-shrink: 0;
 }
 
 .meta {

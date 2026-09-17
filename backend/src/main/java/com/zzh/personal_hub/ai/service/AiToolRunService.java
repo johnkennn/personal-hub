@@ -1,8 +1,10 @@
 package com.zzh.personal_hub.ai.service;
 
+import com.zzh.personal_hub.ai.client.AiChatTurn;
 import com.zzh.personal_hub.ai.client.AiClient;
 import com.zzh.personal_hub.ai.config.AiProperties;
 import com.zzh.personal_hub.ai.dto.AiRunResponse;
+import com.zzh.personal_hub.ai.dto.ChatHistoryItem;
 import com.zzh.personal_hub.ai.dto.ChatQuotaResponse;
 import com.zzh.personal_hub.ai.entity.AiRunLog;
 import com.zzh.personal_hub.ai.repository.AiRunLogRepository;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,7 +47,12 @@ public class AiToolRunService {
             "你是「小智」，小智AI 的站内助手。自称用「小智」而不是「我」，语气友好、略可爱但不油腻。"
                     + "可回答一般问题，也可协助翻译、文案、总结、简历润色、合同风险提示等。"
                     + "回答简洁准确；不确定就说明。若用户消息里带有本地日期参考，回答日期问题时以该日期为准。"
-                    + "不要编造站内不存在的产品。";
+                    + "推荐 AI 产品时：优先依据对话里已给出的站内检索结果；若没有站内命中，先说明本站暂无直接匹配，"
+                    + "再基于通用知识给简要建议，并提醒以官网为准，不要假装某产品已收录在本站。";
+
+    /** 上下文双限制：最多保留若干条历史（约 N 轮），且总字符有上限 */
+    private static final int MAX_HISTORY_MESSAGES = 16;
+    private static final int MAX_HISTORY_CHARS = 10_000;
 
     /** 历史多技能入口，全部走同一套 chat 提示词 */
     private static final Set<String> LEGACY_SKILL_SLUGS = Set.of(
@@ -75,8 +83,18 @@ public class AiToolRunService {
      * 事件名：delta（text）、done（remainingQuota/dailyQuota）、error（message）
      */
     public SseEmitter runStream(String slug, String prompt, java.util.List<String> attachmentUrls, HttpServletRequest request) {
+        return runStream(slug, prompt, attachmentUrls, null, request);
+    }
+
+    public SseEmitter runStream(
+            String slug,
+            String prompt,
+            java.util.List<String> attachmentUrls,
+            java.util.List<ChatHistoryItem> history,
+            HttpServletRequest request) {
         final List<String> dataUrls;
         final RunContext ctx;
+        final List<AiChatTurn> turns;
         try {
             var images = chatTempImageLoader.loadImages(attachmentUrls);
             dataUrls = images.stream().map(ChatTempImageLoader.ImagePart::dataUrl).toList();
@@ -93,6 +111,7 @@ public class AiToolRunService {
             }
             // 配额等业务错误：不要抛出打断 SSE 协商（易变成 HTTP 500），改为 error 事件
             ctx = prepare(slug, fullPrompt, request);
+            turns = sanitizeHistory(history);
         } catch (BusinessException e) {
             return failedSse(e.getCode(), e.getMessage());
         }
@@ -102,7 +121,7 @@ public class AiToolRunService {
 
         STREAM_EXECUTOR.execute(() -> {
             try {
-                aiClient.stream(CHAT_SYSTEM_PROMPT, ctx.prompt(), dataUrls, delta -> {
+                aiClient.stream(CHAT_SYSTEM_PROMPT, turns, ctx.prompt(), dataUrls, delta -> {
                     try {
                         sendJson(emitter, "delta", Map.of("text", delta));
                     } catch (IOException e) {
@@ -226,6 +245,48 @@ public class AiToolRunService {
             return forwarded.split(",")[0].trim();
         }
         return request.getRemoteAddr() == null ? "unknown" : request.getRemoteAddr();
+    }
+
+    /** 从最新往旧截断：最多 MAX_HISTORY_MESSAGES 条，且总字符 ≤ MAX_HISTORY_CHARS */
+    private List<AiChatTurn> sanitizeHistory(List<ChatHistoryItem> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        List<AiChatTurn> cleaned = new ArrayList<>();
+        for (ChatHistoryItem item : raw) {
+            if (item == null || !StringUtils.hasText(item.getContent())) {
+                continue;
+            }
+            String role = item.getRole() == null ? "" : item.getRole().trim().toLowerCase();
+            if (!"user".equals(role) && !"assistant".equals(role)) {
+                continue;
+            }
+            String content = item.getContent().trim();
+            if (content.length() > 2000) {
+                content = content.substring(0, 2000) + "…";
+            }
+            cleaned.add(new AiChatTurn(role, content));
+        }
+        if (cleaned.isEmpty()) {
+            return List.of();
+        }
+        List<AiChatTurn> recent = cleaned.size() <= MAX_HISTORY_MESSAGES
+                ? cleaned
+                : cleaned.subList(cleaned.size() - MAX_HISTORY_MESSAGES, cleaned.size());
+        int total = 0;
+        int from = recent.size();
+        for (int i = recent.size() - 1; i >= 0; i--) {
+            int len = recent.get(i).content().length();
+            if (total + len > MAX_HISTORY_CHARS) {
+                break;
+            }
+            total += len;
+            from = i;
+        }
+        if (from >= recent.size()) {
+            return List.of();
+        }
+        return new ArrayList<>(recent.subList(from, recent.size()));
     }
 
     private record RunContext(

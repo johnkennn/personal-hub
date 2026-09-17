@@ -45,6 +45,10 @@ public class Tool {
     @Column(name = "website_url", nullable = false, length = 500)
     private String websiteUrl;
 
+    /** 产品 Logo，对外路径或绝对 URL */
+    @Column(name = "logo_url", length = 512)
+    private String logoUrl;
+
     @Column(name = "affiliate_url", length = 500)
     private String affiliateUrl;
 

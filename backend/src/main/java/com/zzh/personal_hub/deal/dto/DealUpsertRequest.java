@@ -36,5 +36,6 @@ public class DealUpsertRequest {
     @Size(max = 16)
     private String status;
 
+    @NotNull(message = "请选择关联产品")
     private Long toolId;
 }

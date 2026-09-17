@@ -2,6 +2,7 @@ package com.zzh.personal_hub.tool.service;
 
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.security.CurrentUserService;
+import com.zzh.personal_hub.media.MediaStorageService;
 import com.zzh.personal_hub.tool.dto.ToolResponse;
 import com.zzh.personal_hub.tool.dto.ToolUpsertRequest;
 import com.zzh.personal_hub.tool.entity.Tool;
@@ -12,6 +13,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +28,7 @@ public class ToolService {
     private final ToolRepository toolRepository;
     private final ToolCategoryRepository toolCategoryRepository;
     private final CurrentUserService currentUserService;
+    private final MediaStorageService mediaStorageService;
 
     public List<ToolResponse> listPublished(String categorySlug) {
         List<Tool> tools;
@@ -114,6 +117,18 @@ public class ToolService {
         toolRepository.save(row);
     }
 
+    @Transactional
+    public ToolResponse uploadLogo(Long id, MultipartFile file) {
+        currentUserService.requireAdmin();
+        Tool row = toolRepository.findById(id)
+                .filter(t -> t.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(404, "工具不存在"));
+        String url = mediaStorageService.saveImage(file, "logos/tools/" + id);
+        row.setLogoUrl(url);
+        row.setUpdatedAt(Instant.now());
+        return toResponse(toolRepository.save(row), categoryMap());
+    }
+
     private void ensureCategory(Long categoryId) {
         if (!toolCategoryRepository.existsById(categoryId)) {
             throw new BusinessException(400, "分类不存在");
@@ -129,6 +144,7 @@ public class ToolService {
         row.setAudience(blankToNull(request.getAudience()));
         row.setPricing(request.getPricing().trim());
         row.setWebsiteUrl(request.getWebsiteUrl().trim());
+        row.setLogoUrl(request.getLogoUrl().trim());
         row.setAffiliateUrl(blankToNull(request.getAffiliateUrl()));
         row.setKeywordsJson(blankToNull(request.getKeywordsJson()));
         row.setTagsJson(blankToNull(request.getTagsJson()));
@@ -164,6 +180,7 @@ public class ToolService {
                 t.getAudience(),
                 t.getPricing(),
                 t.getWebsiteUrl(),
+                t.getLogoUrl(),
                 t.getAffiliateUrl(),
                 t.getKeywordsJson(),
                 t.getTagsJson(),

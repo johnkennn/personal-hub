@@ -121,6 +121,7 @@ export async function runChatStream(
   message: string,
   handlers: AiStreamHandlers,
   attachmentUrls?: string[],
+  history?: { role: string; content: string }[],
 ): Promise<void> {
   await postStream(
     '/api/chat/stream',
@@ -128,6 +129,7 @@ export async function runChatStream(
       intent,
       message,
       ...(attachmentUrls?.length ? { attachmentUrls } : {}),
+      ...(history?.length ? { history } : {}),
     },
     handlers,
   )
@@ -154,9 +156,10 @@ export async function runSkillStream(
   prompt: string,
   handlers: AiStreamHandlers,
   attachmentUrls?: string[],
+  history?: { role: string; content: string }[],
 ): Promise<void> {
   try {
-    await runChatStream(slug, prompt, handlers, attachmentUrls)
+    await runChatStream(slug, prompt, handlers, attachmentUrls, history)
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
     if (status === 404 || status === 405) {

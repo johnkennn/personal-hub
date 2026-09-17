@@ -3,25 +3,21 @@ import { Link } from 'react-router-dom'
 import { Button, Card, Col, Empty, Row, Tag, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
-import { AuthorChip } from '../../components/AuthorChip'
-import { CoverStrip, coverToneFromId } from '../../components/CoverStrip'
+import { ArticleReviewCard } from '../../components/ArticleReviewCard'
+import { ToolLogo } from '../../components/ToolLogoChips'
 import { PageHero, pageHeroStyles, SectionHead } from '../../components/PageHero'
 import type { PublicArticle } from '../../mocks/publicDemo'
 import { usePageMeta } from '../../hooks/usePageMeta'
-import {
-  articleDetailPath,
-  ROUTES,
-  toolDetailPath,
-} from '../../router/paths'
+import { ROUTES, toolDetailPath } from '../../router/paths'
 import { loadPublicArticles } from '../../services/publicContent'
-import { loadFeaturedHubTools } from '../../services/toolCatalog'
+import { loadFeaturedHubTools, loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
-import { excerpt, formatDateTime } from '../../utils/format'
 import ui from '../../styles/ui.module.css'
 
 export function HomePage() {
   const [articles, setArticles] = useState<PublicArticle[]>([])
   const [hotTools, setHotTools] = useState<HubTool[]>([])
+  const [toolsBySlug, setToolsBySlug] = useState<Record<string, HubTool>>({})
 
   usePageMeta({
     title: '发现',
@@ -39,6 +35,12 @@ export function HomePage() {
       })
     loadFeaturedHubTools(4).then((list) => {
       if (!cancelled) setHotTools(list)
+    })
+    loadHubTools().then((list) => {
+      if (cancelled) return
+      const map: Record<string, HubTool> = {}
+      for (const t of list) map[t.slug] = t
+      setToolsBySlug(map)
     })
     return () => {
       cancelled = true
@@ -74,13 +76,18 @@ export function HomePage() {
             <Col key={t.slug} xs={24} sm={12} lg={6}>
               <Link to={toolDetailPath(t.slug)} className={ui.cardLink}>
                 <Card className={ui.contentCard} variant="borderless" hoverable>
-                  <Tag style={{ marginBottom: 8 }}>{t.category}</Tag>
-                  <Typography.Title level={4} style={{ marginTop: 0 }}>
-                    {t.name}
-                  </Typography.Title>
-                  <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                    {t.summary}
-                  </Typography.Paragraph>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <ToolLogo name={t.name} logoUrl={t.logoUrl} size={44} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <Tag style={{ marginBottom: 8 }}>{t.category}</Tag>
+                      <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
+                        {t.name}
+                      </Typography.Title>
+                      <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                        {t.summary}
+                      </Typography.Paragraph>
+                    </div>
+                  </div>
                 </Card>
               </Link>
             </Col>
@@ -151,49 +158,30 @@ export function HomePage() {
           <Empty description="暂无评测" />
         ) : (
           <Row gutter={[14, 14]}>
-            {featuredReviews.map((item) => (
-              <Col xs={24} sm={12} lg={6} key={item.id} style={{ display: 'flex' }}>
-                <motion.div
-                  className={ui.catalogCardMotion}
-                  whileHover={{ y: -3 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className={`${ui.cardLink} ${ui.catalogCardShell}`}>
-                    <Link
-                      to={articleDetailPath(item.id)}
-                      className={ui.catalogCardHit}
-                      aria-label={item.title}
-                    />
-                    <Card className={`${ui.contentCard} ${ui.catalogCard}`} variant="borderless">
-                      <CoverStrip
-                        title={item.title}
-                        tone={item.coverTone ?? coverToneFromId(item.id)}
-                        coverUrl={item.coverUrl}
-                        compact
-                      />
-                      <Tag style={{ marginBottom: 8, width: 'fit-content' }}>评测</Tag>
-                      <Typography.Title level={5} className={ui.catalogCardTitle}>
-                        {item.title}
-                      </Typography.Title>
-                      <Typography.Paragraph type="secondary" className={ui.catalogCardExcerpt}>
-                        {excerpt(item.content, 72)}
-                      </Typography.Paragraph>
-                      <div className={`${ui.catalogCardMeta} ${ui.catalogCardMetaInteractive}`}>
-                        <AuthorChip
-                          authorId={item.authorId || undefined}
-                          authorName={item.authorName}
-                          avatarUrl={item.avatarUrl}
-                          size={22}
-                        />
-                        <Typography.Text type="secondary" className={ui.muted}>
-                          {formatDateTime(item.createdAt)}
-                        </Typography.Text>
-                      </div>
-                    </Card>
-                  </div>
-                </motion.div>
-              </Col>
-            ))}
+            {featuredReviews.map((item) => {
+              const tools = (item.relatedToolSlugs ?? [])
+                .map((slug) => toolsBySlug[slug])
+                .filter(Boolean)
+                .map((t) => ({ slug: t.slug, name: t.name, logoUrl: t.logoUrl }))
+              return (
+                <Col xs={24} sm={12} lg={6} key={item.id} style={{ display: 'flex' }}>
+                  <ArticleReviewCard
+                    showReviewTag
+                    article={{
+                      id: item.id,
+                      title: item.title,
+                      content: item.content,
+                      authorId: item.authorId,
+                      authorName: item.authorName,
+                      avatarUrl: item.avatarUrl,
+                      createdAt: item.createdAt,
+                      likeCount: item.likeCount ?? 0,
+                    }}
+                    tools={tools}
+                  />
+                </Col>
+              )
+            })}
           </Row>
         )}
       </motion.section>

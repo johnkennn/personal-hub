@@ -21,6 +21,8 @@ export type PublicArticle = {
   coverUrl?: string | null
   relatedProjectId?: number | null
   relatedToolSlugs?: string[]
+  /** 服务端点赞数（有则优先于本地 demo 赞） */
+  likeCount?: number
 }
 
 export type PublicProject = {

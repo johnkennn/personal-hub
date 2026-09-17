@@ -12,6 +12,7 @@ import {
   fetchAdminDeletedProject,
   type AdminDeletedContent,
 } from '../api/adminDeleted'
+import { fetchFeedHot, fetchFeedLatest, type FeedItem } from '../api/feed'
 import { fetchPublicProfile } from '../api/users'
 import type { Article } from '../types/article'
 import type { Project } from '../types/project'
@@ -29,25 +30,36 @@ export type ViewerLoadResult<T> = {
 }
 
 const authorCache = new Map<number, AuthorInfo>()
+const authorInflight = new Map<number, Promise<AuthorInfo>>()
 
 async function loadAuthor(authorId?: number | null): Promise<AuthorInfo> {
   if (!authorId) return { name: '未知作者' }
   const cached = authorCache.get(authorId)
   if (cached) return cached
-  try {
-    const res = await fetchPublicProfile(authorId)
-    const p = res.data.data
-    const info: AuthorInfo = {
-      name: (p.nickname?.trim() || p.username || `用户${authorId}`).trim(),
-      avatarUrl: resolveMediaUrl(p.avatarUrl) || undefined,
+  const pending = authorInflight.get(authorId)
+  if (pending) return pending
+
+  const task = (async () => {
+    try {
+      const res = await fetchPublicProfile(authorId)
+      const p = res.data?.data
+      if (!p) throw new Error('empty profile')
+      const info: AuthorInfo = {
+        name: (p.nickname?.trim() || p.username || `用户${authorId}`).trim(),
+        avatarUrl: resolveMediaUrl(p.avatarUrl) || undefined,
+      }
+      authorCache.set(authorId, info)
+      return info
+    } catch {
+      // 失败不写入缓存，避免一次超时永久显示「用户N」
+      return { name: `用户${authorId}` }
+    } finally {
+      authorInflight.delete(authorId)
     }
-    authorCache.set(authorId, info)
-    return info
-  } catch {
-    const fallback = { name: `用户${authorId}` }
-    authorCache.set(authorId, fallback)
-    return fallback
-  }
+  })()
+
+  authorInflight.set(authorId, task)
+  return task
 }
 
 async function asPublicArticle(a: Article): Promise<PublicArticle> {
@@ -109,7 +121,49 @@ async function asPublicProjectFromDeleted(d: AdminDeletedContent): Promise<Publi
 }
 
 async function mapArticles(list: Article[]) {
+  const authorIds = [
+    ...new Set(
+      list.map((a) => a.authorId).filter((id): id is number => typeof id === 'number' && id > 0),
+    ),
+  ]
+  await Promise.all(authorIds.map((id) => loadAuthor(id)))
   return Promise.all(list.map(asPublicArticle))
+}
+
+/** 用 Feed 补全作者展示名/头像与服务端点赞（避免列表 N+1 失败时落到「用户N」） */
+async function enrichArticlesFromFeed(items: PublicArticle[]): Promise<PublicArticle[]> {
+  if (!items.length) return items
+  try {
+    const [latestRes, hotRes] = await Promise.all([
+      fetchFeedLatest(100).catch(() => null),
+      fetchFeedHot(100).catch(() => null),
+    ])
+    const byId = new Map<number, FeedItem>()
+    for (const row of latestRes?.data.data ?? []) {
+      if (row.type === 'ARTICLE') byId.set(row.id, row)
+    }
+    for (const row of hotRes?.data.data ?? []) {
+      if (row.type !== 'ARTICLE') continue
+      const prev = byId.get(row.id)
+      // latest 里 likeCount 恒为 0，点赞以 hot 为准
+      byId.set(row.id, prev ? { ...prev, likeCount: row.likeCount } : row)
+    }
+    return items.map((a) => {
+      const f = byId.get(a.id)
+      if (!f) return a
+      const display =
+        (f.authorDisplayName?.trim() || f.authorUsername?.trim() || '').trim() || a.authorName
+      const avatar = resolveMediaUrl(f.authorAvatarUrl) || a.avatarUrl
+      return {
+        ...a,
+        authorName: display,
+        avatarUrl: avatar,
+        likeCount: typeof f.likeCount === 'number' ? f.likeCount : a.likeCount,
+      }
+    })
+  } catch {
+    return items
+  }
 }
 
 async function mapProjects(list: Project[]) {
@@ -120,7 +174,8 @@ async function mapProjects(list: Project[]) {
 export async function loadPublicArticles(): Promise<{ items: PublicArticle[] }> {
   try {
     const res = await fetchArticles()
-    return { items: await mapArticles(res.data.data ?? []) }
+    const items = await mapArticles(res.data.data ?? [])
+    return { items: await enrichArticlesFromFeed(items) }
   } catch {
     return { items: [] }
   }
@@ -282,7 +337,8 @@ export async function loadRelatedArticlesForProject(
 ): Promise<{ items: PublicArticle[] }> {
   try {
     const res = await fetchProjectRelatedArticles(projectId)
-    return { items: await mapArticles(res.data.data ?? []) }
+    const items = await mapArticles(res.data.data ?? [])
+    return { items: await enrichArticlesFromFeed(items) }
   } catch {
     return { items: [] }
   }
@@ -294,7 +350,8 @@ export async function loadRelatedArticlesForTool(
 ): Promise<{ items: PublicArticle[] }> {
   try {
     const res = await fetchToolRelatedArticles(slug)
-    return { items: await mapArticles(res.data.data ?? []) }
+    const items = await mapArticles(res.data.data ?? [])
+    return { items: await enrichArticlesFromFeed(items) }
   } catch {
     return { items: [] }
   }

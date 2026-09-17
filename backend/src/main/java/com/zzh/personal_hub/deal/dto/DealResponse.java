@@ -21,6 +21,8 @@ public class DealResponse {
     private Long toolId;
     private String toolSlug;
     private String toolName;
+    /** 关联产品 Logo（来自 tool.logo_url） */
+    private String toolLogoUrl;
     private Instant createdAt;
     private Instant updatedAt;
 }

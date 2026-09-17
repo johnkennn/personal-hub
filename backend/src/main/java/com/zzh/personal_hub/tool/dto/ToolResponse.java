@@ -21,6 +21,7 @@ public class ToolResponse {
     private String audience;
     private String pricing;
     private String websiteUrl;
+    private String logoUrl;
     private String affiliateUrl;
     private String keywordsJson;
     private String tagsJson;

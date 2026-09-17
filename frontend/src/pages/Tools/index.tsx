@@ -9,6 +9,7 @@ import {
   CatalogPager,
 } from '../../components/CatalogPager'
 import { PageHero } from '../../components/PageHero'
+import { ToolLogo } from '../../components/ToolLogoChips'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { toolDetailPath } from '../../router/paths'
@@ -136,7 +137,10 @@ export function ToolsPage() {
               >
                 <Link to={toolDetailPath(t.slug)} className={styles.card}>
                   <div className={styles.cardTop}>
-                    <span className={styles.cardName}>{t.name}</span>
+                    <div className={styles.cardIdentity}>
+                      <ToolLogo name={t.name} logoUrl={t.logoUrl} size={36} />
+                      <span className={styles.cardName}>{t.name}</span>
+                    </div>
                     {t.featured ? <span className={styles.badge}>精选</span> : null}
                   </div>
                   <p className={styles.cardSummary}>{t.summary}</p>

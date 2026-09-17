@@ -14,11 +14,10 @@ import {
 } from 'antd'
 import { motion } from 'framer-motion'
 
-import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
 import { BackNavButton } from '../../components/BackNavButton'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
-import { createArticle, updateArticle, uploadArticleCover } from '../../api/article'
+import { createArticle, updateArticle } from '../../api/article'
 import { articleDetailPath, ROUTES } from '../../router/paths'
 import { invalidateDiscoverCatalog } from '../../services/publicContent'
 import { loadHubTools } from '../../services/toolCatalog'
@@ -42,7 +41,6 @@ export function ArticleNewPage() {
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [preview, setPreview] = useState({ title: '', content: '' })
-  const [coverFile, setCoverFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [hubTools, setHubTools] = useState<HubTool[]>([])
   const fromStudio = location.pathname.startsWith('/studio')
@@ -106,14 +104,6 @@ export function ArticleNewPage() {
         published: false,
       })
       const article = res.data.data
-
-      if (coverFile) {
-        try {
-          await uploadArticleCover(article.id, coverFile)
-        } catch {
-          message.warning('评测已创建，封面上传失败，可在详情页点「编辑」重试')
-        }
-      }
 
       if (values.published) {
         await updateArticle(article.id, {
@@ -208,7 +198,6 @@ export function ArticleNewPage() {
               },
             ]}
           />
-          <ArticleCoverEditor pendingFile={coverFile} onPendingFileChange={setCoverFile} />
           <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>

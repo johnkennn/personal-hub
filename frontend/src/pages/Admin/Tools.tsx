@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   App,
+  Avatar,
   Button,
   Form,
   Input,
@@ -14,9 +15,10 @@ import {
   Tabs,
   Tag,
   Typography,
+  Upload,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import {
@@ -29,6 +31,7 @@ import {
   unpublishAdminTool,
   updateAdminTool,
   updateAdminToolCategory,
+  uploadAdminToolLogo,
   type AdminCategoryUpsertBody,
   type AdminToolUpsertBody,
 } from '../../api/adminTools'
@@ -37,8 +40,10 @@ import { BackNavButton } from '../../components/BackNavButton'
 import { ROUTES, toolDetailPath } from '../../router/paths'
 import { invalidateToolCatalogCache } from '../../services/toolCatalog'
 import type { ToolCategoryDto, ToolDto } from '../../types/tool'
+import { apiErrorMessage } from '../../utils/apiError'
 import { isAdmin, isLoggedIn } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from '../../styles/ui.module.css'
 
 function parseJsonList(raw: string | null | undefined): string[] {
@@ -56,6 +61,18 @@ function toJsonList(list: string[] | undefined): string | null {
   return JSON.stringify(list.map((s) => s.trim()).filter(Boolean))
 }
 
+/** 根据官网域名生成可读的默认 Logo 地址（可再上传覆盖） */
+function faviconLogoFromWebsite(websiteUrl: string): string {
+  const raw = websiteUrl.trim()
+  if (!raw) return ''
+  try {
+    const host = new URL(raw.includes('://') ? raw : `https://${raw}`).hostname
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=128`
+  } catch {
+    return ''
+  }
+}
+
 type ToolFormValues = {
   slug: string
   name: string
@@ -65,6 +82,7 @@ type ToolFormValues = {
   audience?: string
   pricing: string
   websiteUrl: string
+  logoUrl: string
   affiliateUrl?: string
   keywords?: string[]
   tags?: string[]
@@ -185,6 +203,7 @@ export function AdminToolsPage() {
       audience: row.audience ?? undefined,
       pricing: row.pricing,
       websiteUrl: row.websiteUrl,
+      logoUrl: row.logoUrl ?? '',
       affiliateUrl: row.affiliateUrl ?? undefined,
       keywords: parseJsonList(row.keywordsJson),
       tags: parseJsonList(row.tagsJson),
@@ -209,6 +228,7 @@ export function AdminToolsPage() {
       audience: values.audience?.trim() || null,
       pricing: values.pricing.trim(),
       websiteUrl: values.websiteUrl.trim(),
+      logoUrl: values.logoUrl.trim(),
       affiliateUrl: values.affiliateUrl?.trim() || null,
       keywordsJson: toJsonList(values.keywords),
       tagsJson: toJsonList(values.tags),
@@ -335,6 +355,20 @@ export function AdminToolsPage() {
   }
 
   const toolColumns: ColumnsType<ToolDto> = [
+    {
+      title: 'Logo',
+      width: 64,
+      render: (_, row) => (
+        <Avatar
+          shape="square"
+          size={36}
+          src={resolveMediaUrl(row.logoUrl) || undefined}
+          style={{ borderRadius: 8, background: 'rgba(46, 230, 166, 0.16)' }}
+        >
+          {row.name.slice(0, 1)}
+        </Avatar>
+      ),
+    },
     {
       title: '名称',
       dataIndex: 'name',
@@ -559,9 +593,84 @@ export function AdminToolsPage() {
               rules={[{ required: true, message: '请输入官网' }]}
               style={{ minWidth: 240, flex: 2 }}
             >
-              <Input placeholder="https://..." />
+              <Input
+                placeholder="https://..."
+                onBlur={(e) => {
+                  const current = toolForm.getFieldValue('logoUrl') as string | undefined
+                  if (current?.trim()) return
+                  const auto = faviconLogoFromWebsite(e.target.value)
+                  if (auto) toolForm.setFieldValue('logoUrl', auto)
+                }}
+              />
             </Form.Item>
           </Space>
+          <Form.Item
+            name="logoUrl"
+            label="Logo"
+            rules={[{ required: true, message: '请上传或填写 Logo 地址' }]}
+            extra="必填。可粘贴图片 URL；填写官网后若为空会自动用站点图标；编辑已有工具时可直接上传。"
+          >
+            <Input placeholder="https://... 或 /media/..." />
+          </Form.Item>
+          <Form.Item shouldUpdate={(prev, next) => prev.logoUrl !== next.logoUrl} noStyle>
+            {() => {
+              const logo = toolForm.getFieldValue('logoUrl') as string | undefined
+              const preview = resolveMediaUrl(logo)
+              return (
+                <Space align="center" style={{ marginBottom: 16 }} wrap>
+                  <Avatar
+                    shape="square"
+                    size={48}
+                    src={preview || undefined}
+                    style={{ borderRadius: 10, background: 'rgba(46, 230, 166, 0.16)' }}
+                  >
+                    Logo
+                  </Avatar>
+                  {editingTool ? (
+                    <Upload
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      showUploadList={false}
+                      beforeUpload={(file) => {
+                        void uploadAdminToolLogo(editingTool.id, file)
+                          .then((res) => {
+                            const url = res.data.data?.logoUrl
+                            if (url) {
+                              toolForm.setFieldValue('logoUrl', url)
+                              setEditingTool({ ...editingTool, logoUrl: url })
+                            }
+                            message.success('Logo 已上传')
+                            invalidateToolCatalogCache()
+                          })
+                          .catch((e) => message.error(apiErrorMessage(e, '上传失败')))
+                        return false
+                      }}
+                    >
+                      <Button icon={<UploadOutlined />}>上传 Logo</Button>
+                    </Upload>
+                  ) : (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      新建时可先用官网图标；保存后再上传更高清图。
+                    </Typography.Text>
+                  )}
+                  <Button
+                    type="link"
+                    onClick={() => {
+                      const auto = faviconLogoFromWebsite(
+                        String(toolForm.getFieldValue('websiteUrl') ?? ''),
+                      )
+                      if (!auto) {
+                        message.warning('请先填写有效官网地址')
+                        return
+                      }
+                      toolForm.setFieldValue('logoUrl', auto)
+                    }}
+                  >
+                    用官网图标
+                  </Button>
+                </Space>
+              )
+            }}
+          </Form.Item>
           <Form.Item name="affiliateUrl" label="联盟/跳转链接（可选）">
             <Input placeholder="可空" />
           </Form.Item>

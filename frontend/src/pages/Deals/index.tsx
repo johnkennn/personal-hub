@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Empty, Skeleton, Tag } from 'antd'
-import { GiftOutlined, LinkOutlined } from '@ant-design/icons'
+import { LinkOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 
 import {
@@ -10,6 +10,7 @@ import {
   CatalogPager,
 } from '../../components/CatalogPager'
 import { PageHero } from '../../components/PageHero'
+import { ToolLogo } from '../../components/ToolLogoChips'
 import { CATALOG_PAGE_SIZE } from '../../constants/catalog'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { ROUTES, toolDetailPath } from '../../router/paths'
@@ -122,7 +123,11 @@ export function DealsPage() {
                   transition={{ delay: Math.min(i * 0.05, 0.3) }}
                 >
                   <div className={styles.cardTop}>
-                    <GiftOutlined className={styles.icon} />
+                    <ToolLogo
+                      name={d.toolName || d.title}
+                      logoUrl={d.toolLogoUrl}
+                      size={40}
+                    />
                     <div className={styles.meta}>
                       <h3 className={styles.title}>{d.title}</h3>
                       <div className={styles.tags}>

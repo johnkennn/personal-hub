@@ -16,7 +16,6 @@ import {
 } from 'antd'
 import { motion } from 'framer-motion'
 
-import { ArticleCoverEditor } from '../../components/ArticleCoverEditor'
 import { MarkdownBody } from '../../components/MarkdownBody'
 import { BackNavButton } from '../../components/BackNavButton'
 import { RelatedProjectField } from '../../components/RelatedProjectField'
@@ -47,7 +46,6 @@ export function ArticleEditPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [publishedLocked, setPublishedLocked] = useState(false)
-  const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [preview, setPreview] = useState({ title: '', content: '' })
   const [hubTools, setHubTools] = useState<HubTool[]>([])
 
@@ -89,7 +87,6 @@ export function ArticleEditPage() {
           setPublishedLocked(true)
           return
         }
-        setCoverUrl(article.coverUrl ?? null)
         form.setFieldsValue({
           title: article.title,
           content: article.content,
@@ -230,7 +227,6 @@ export function ArticleEditPage() {
               },
             ]}
           />
-          {id ? <ArticleCoverEditor articleId={id} initialCoverUrl={coverUrl} /> : null}
           <RelatedProjectField />
           <Form.Item name="published" valuePropName="checked">
             <Space align="center" wrap size={8}>

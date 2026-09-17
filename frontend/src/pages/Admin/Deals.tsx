@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   App,
+  Avatar,
   Button,
   DatePicker,
   Form,
@@ -32,6 +33,7 @@ import type { DealDto, DealStatus, DealUpsertBody } from '../../types/deal'
 import type { ToolDto } from '../../types/tool'
 import { isAdmin, isLoggedIn } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
+import { resolveMediaUrl } from '../../utils/mediaUrl'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = {
@@ -41,7 +43,7 @@ type FormValues = {
   url: string
   range: [Dayjs, Dayjs]
   status: DealStatus
-  toolId?: number | null
+  toolId: number
 }
 
 const STATUS_OPTIONS: { value: DealStatus; label: string }[] = [
@@ -97,7 +99,7 @@ export function AdminDealsPage() {
       url: '',
       range: [dayjs(), dayjs().add(14, 'day')],
       status: 'ACTIVE',
-      toolId: undefined,
+      toolId: tools[0]?.id,
     })
     setOpen(true)
   }
@@ -130,7 +132,7 @@ export function AdminDealsPage() {
       startsAt: v.range[0].toISOString(),
       endsAt: v.range[1].toISOString(),
       status: v.status,
-      toolId: v.toolId ?? null,
+      toolId: v.toolId,
     }
     try {
       if (editing) {
@@ -176,15 +178,31 @@ export function AdminDealsPage() {
 
   const columns: ColumnsType<DealDto> = [
     {
+      title: '产品',
+      key: 'tool',
+      width: 160,
+      render: (_, r) => {
+        const tool = tools.find((t) => t.id === r.toolId)
+        const logo = tool?.logoUrl
+        return (
+          <Space size={8}>
+            <Avatar
+              shape="square"
+              size={28}
+              src={resolveMediaUrl(logo) || undefined}
+              style={{ borderRadius: 6, background: 'rgba(46, 230, 166, 0.16)' }}
+            >
+              {(r.toolName || r.title).slice(0, 1)}
+            </Avatar>
+            <span>{r.toolName || '—'}</span>
+          </Space>
+        )
+      },
+    },
+    {
       title: '标题',
       dataIndex: 'title',
       ellipsis: true,
-    },
-    {
-      title: '产品',
-      dataIndex: 'toolName',
-      width: 120,
-      render: (v: string | null) => v || '—',
     },
     {
       title: '状态',
@@ -295,11 +313,16 @@ export function AdminDealsPage() {
           <Form.Item name="promoCode" label="优惠码（可选）">
             <Input maxLength={64} />
           </Form.Item>
-          <Form.Item name="toolId" label="关联产品（可选）">
+          <Form.Item
+            name="toolId"
+            label="关联产品"
+            rules={[{ required: true, message: '请选择关联 AI 产品（卡片会展示其 Logo）' }]}
+            extra="必填。前台优惠卡会显示该产品 Logo，方便一眼认出。"
+          >
             <Select
-              allowClear
               showSearch
               optionFilterProp="label"
+              placeholder="选择 AI 产品"
               options={tools.map((t) => ({
                 value: t.id,
                 label: `${t.name} (${t.slug})`,

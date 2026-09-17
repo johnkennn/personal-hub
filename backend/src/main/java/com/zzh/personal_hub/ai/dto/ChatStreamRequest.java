@@ -1,5 +1,6 @@
 package com.zzh.personal_hub.ai.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -20,4 +21,12 @@ public class ChatStreamRequest {
 
     /** 可选：临时附件公开路径，如 /media/chat-temp/20260911/xxx.txt */
     private List<String> attachmentUrls;
-}   
+
+    /**
+     * 可选：本轮之前的对话上下文（不含本轮 message）。
+     * 服务端会再做轮数/字数双限制。
+     */
+    @Valid
+    @Size(max = 24, message = "上下文条数过多")
+    private List<ChatHistoryItem> history;
+}

@@ -14,6 +14,8 @@ export type DealDto = {
   toolId: number | null
   toolSlug: string | null
   toolName: string | null
+  /** 关联产品 Logo（来自 tool.logo_url） */
+  toolLogoUrl?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -26,5 +28,6 @@ export type DealUpsertBody = {
   startsAt: string
   endsAt: string
   status: DealStatus
-  toolId?: number | null
+  /** 必填：关联 AI 产品（卡片展示其 Logo） */
+  toolId: number
 }

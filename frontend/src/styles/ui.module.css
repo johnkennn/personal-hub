@@ -157,6 +157,11 @@
   overflow: hidden;
 }
 
+.catalogCardLogos {
+  margin-bottom: 10px;
+  min-height: 28px;
+}
+
 .catalogCardMeta {
   display: flex;
   justify-content: space-between;
@@ -171,6 +176,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.catalogCardStats {
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.catalogCardStats :global(.ant-typography) {
+  font-size: 0.78rem !important;
 }
 
 .cardLink {

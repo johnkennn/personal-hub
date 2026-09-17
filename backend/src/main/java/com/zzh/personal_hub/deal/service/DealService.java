@@ -78,14 +78,10 @@ public class DealService {
             throw new BusinessException(400, "结束时间不能早于开始时间");
         }
         Long toolId = request.getToolId();
-        if (toolId != null) {
-            Tool tool = toolRepository.findById(toolId)
-                    .filter(t -> t.getDeletedAt() == null)
-                    .orElseThrow(() -> new BusinessException(400, "关联产品不存在"));
-            row.setToolId(tool.getId());
-        } else {
-            row.setToolId(null);
-        }
+        Tool tool = toolRepository.findById(toolId)
+                .filter(t -> t.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(400, "关联产品不存在"));
+        row.setToolId(tool.getId());
         row.setTitle(request.getTitle().trim());
         row.setDescription(request.getDescription().trim());
         row.setPromoCode(StringUtils.hasText(request.getPromoCode())
@@ -147,6 +143,7 @@ public class DealService {
                 d.getToolId(),
                 tool == null ? null : tool.getSlug(),
                 tool == null ? null : tool.getName(),
+                tool == null ? null : tool.getLogoUrl(),
                 d.getCreatedAt(),
                 d.getUpdatedAt()
         );

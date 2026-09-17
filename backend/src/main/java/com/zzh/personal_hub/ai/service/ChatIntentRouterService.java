@@ -30,7 +30,8 @@ public class ChatIntentRouterService {
     private static final String SYSTEM = """
             你是意图分类器。根据用户一句话，只输出一行 JSON（不要 markdown）：
             {"intent":"search|chat|clarify|deals|articles|tools|discover|about","query":"可选，搜产品时的关键词"}
-            规则：想找站内 AI 产品/评测 → search；闲聊、问答、翻译、文案、简历、总结、合同等生成类 → chat；打开优惠/评测/导览/发现/关于 → 对应板块；实在不清 → clarify。
+            规则：想找 / 推荐站内 AI 产品、工具、软件、评测 → search（query 填关键词，去掉「推荐」「好用」等虚词）；
+            闲聊、问答、翻译、文案、简历、总结、合同等生成类 → chat；打开优惠/评测/导览/发现/关于 → 对应板块；实在不清 → clarify。
             """;
 
     private final AiClient aiClient;
