@@ -41,8 +41,8 @@ function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
 
 /**
  * 客户端写入 title / description / Open Graph。
- * 说明：微信等爬虫通常不执行 SPA JS；真正外链预览需后续 SSR 或后端分享页。
- * 本期覆盖浏览器标签、部分抓取器，以及页面内分享卡片体验。
+ * 说明：微信等爬虫通常不执行 SPA JS；首页分享预览以 index.html 静态 og:* 为准。
+ * 本 hook 覆盖浏览器标签、部分抓取器，以及站内页面切换时的 meta 更新。
  */
 export function usePageMeta(meta: PageMetaInput | null) {
   useEffect(() => {
@@ -51,7 +51,8 @@ export function usePageMeta(meta: PageMetaInput | null) {
     const pageTitle = meta.title.includes(SITE) ? meta.title : `${meta.title} · ${SITE}`
     const description = (meta.description?.trim() || DEFAULT_DESC).slice(0, 160)
     const url = absoluteUrl(meta.url) || (typeof window !== 'undefined' ? window.location.href : '')
-    const image = absoluteUrl(meta.image) || absoluteUrl('/favicon.svg')
+    // 微信不吃 SVG；默认用站内 JPG 分享图
+    const image = absoluteUrl(meta.image) || absoluteUrl('/og-share.jpg')
     const type = meta.type ?? 'website'
 
     const prevTitle = document.title

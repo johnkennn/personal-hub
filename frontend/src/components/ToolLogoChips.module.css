@@ -19,6 +19,8 @@
   border: 1px solid rgba(100, 140, 200, 0.28);
   overflow: hidden;
   background: rgba(14, 22, 38, 0.92) !important;
+  color: #2ee6a6 !important;
+  font-weight: 650;
 }
 
 .avatar :global(img) {

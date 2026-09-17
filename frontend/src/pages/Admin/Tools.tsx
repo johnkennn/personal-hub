@@ -43,7 +43,7 @@ import type { ToolCategoryDto, ToolDto } from '../../types/tool'
 import { apiErrorMessage } from '../../utils/apiError'
 import { isAdmin, isLoggedIn } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
-import { resolveMediaUrl } from '../../utils/mediaUrl'
+import { faviconLogoFromWebsite, resolveToolLogoUrl } from '../../utils/toolLogo'
 import styles from '../../styles/ui.module.css'
 
 function parseJsonList(raw: string | null | undefined): string[] {
@@ -59,18 +59,6 @@ function parseJsonList(raw: string | null | undefined): string[] {
 function toJsonList(list: string[] | undefined): string | null {
   if (!list?.length) return null
   return JSON.stringify(list.map((s) => s.trim()).filter(Boolean))
-}
-
-/** 根据官网域名生成可读的默认 Logo 地址（可再上传覆盖） */
-function faviconLogoFromWebsite(websiteUrl: string): string {
-  const raw = websiteUrl.trim()
-  if (!raw) return ''
-  try {
-    const host = new URL(raw.includes('://') ? raw : `https://${raw}`).hostname
-    return `https://www.google.com/s2/favicons?domain=${host}&sz=128`
-  } catch {
-    return ''
-  }
 }
 
 type ToolFormValues = {
@@ -362,7 +350,7 @@ export function AdminToolsPage() {
         <Avatar
           shape="square"
           size={36}
-          src={resolveMediaUrl(row.logoUrl) || undefined}
+          src={resolveToolLogoUrl(row.logoUrl) || undefined}
           style={{ borderRadius: 8, background: 'rgba(46, 230, 166, 0.16)' }}
         >
           {row.name.slice(0, 1)}
@@ -615,7 +603,7 @@ export function AdminToolsPage() {
           <Form.Item shouldUpdate={(prev, next) => prev.logoUrl !== next.logoUrl} noStyle>
             {() => {
               const logo = toolForm.getFieldValue('logoUrl') as string | undefined
-              const preview = resolveMediaUrl(logo)
+              const preview = resolveToolLogoUrl(logo)
               return (
                 <Space align="center" style={{ marginBottom: 16 }} wrap>
                   <Avatar

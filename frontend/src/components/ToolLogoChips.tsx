@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { Avatar, Space, Tooltip } from 'antd'
 import { Link } from 'react-router-dom'
 
 import { toolDetailPath } from '../router/paths'
-import { resolveMediaUrl } from '../utils/mediaUrl'
+import { resolveToolLogoUrl } from '../utils/toolLogo'
 import styles from './ToolLogoChips.module.css'
 
 export type ToolLogoItem = {
@@ -23,29 +24,18 @@ export function ToolLogoChips({ tools, size = 28, className }: ToolLogoChipsProp
   if (!tools.length) return null
   return (
     <Space size={6} wrap className={[styles.row, className].filter(Boolean).join(' ')}>
-      {tools.map((t) => {
-        const src = resolveMediaUrl(t.logoUrl) || undefined
-        return (
-          <Tooltip key={t.slug} title={t.name}>
-            <Link
-              to={toolDetailPath(t.slug)}
-              className={styles.chip}
-              aria-label={t.name}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Avatar
-                size={size}
-                src={src}
-                shape="square"
-                className={styles.avatar}
-                style={{ background: 'rgba(46, 230, 166, 0.16)' }}
-              >
-                {t.name.slice(0, 1)}
-              </Avatar>
-            </Link>
-          </Tooltip>
-        )
-      })}
+      {tools.map((t) => (
+        <Tooltip key={t.slug} title={t.name}>
+          <Link
+            to={toolDetailPath(t.slug)}
+            className={styles.chip}
+            aria-label={t.name}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ToolLogo name={t.name} logoUrl={t.logoUrl} size={size} />
+          </Link>
+        </Tooltip>
+      ))}
     </Space>
   )
 }
@@ -57,9 +47,12 @@ type ToolLogoProps = {
   className?: string
 }
 
-/** 单个工具 Logo（列表卡 / 详情头） */
+/** 单个工具 Logo（列表卡 / 详情头）；加载失败时回退为首字，避免白块 */
 export function ToolLogo({ name, logoUrl, size = 40, className }: ToolLogoProps) {
-  const src = resolveMediaUrl(logoUrl) || undefined
+  const resolved = resolveToolLogoUrl(logoUrl)
+  const [broken, setBroken] = useState(false)
+  const src = broken ? undefined : resolved
+
   return (
     <Avatar
       size={size}
@@ -67,6 +60,10 @@ export function ToolLogo({ name, logoUrl, size = 40, className }: ToolLogoProps)
       shape="square"
       className={[styles.avatar, className].filter(Boolean).join(' ')}
       style={{ background: 'rgba(46, 230, 166, 0.16)', flexShrink: 0 }}
+      onError={() => {
+        setBroken(true)
+        return false
+      }}
     >
       {name.slice(0, 1)}
     </Avatar>

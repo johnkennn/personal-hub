@@ -19,6 +19,7 @@ import { loadRelatedArticlesForTool } from '../../services/publicContent'
 import { loadHubToolBySlug, loadHubTools } from '../../services/toolCatalog'
 import type { HubTool } from '../../types/tool'
 import { excerpt } from '../../utils/format'
+import { resolveToolLogoUrl } from '../../utils/toolLogo'
 import {
   getCommentCount,
   getHeatScore,
@@ -55,7 +56,7 @@ export function ToolDetailPage() {
   usePageMeta({
     title: tool ? tool.name : '工具详情',
     description: tool?.summary ?? 'AI 产品详情',
-    image: tool?.logoUrl ?? undefined,
+    image: resolveToolLogoUrl(tool?.logoUrl) ?? '/og-share.jpg',
   })
 
   useEffect(() => {

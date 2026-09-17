@@ -26,6 +26,7 @@ import type { HubTool } from '../../types/tool'
 import { getArticleToolBindings } from '../../utils/articleToolBindings'
 import { getUserId } from '../../utils/authStorage'
 import { excerpt, formatDateTime } from '../../utils/format'
+import { resolveToolLogoUrl } from '../../utils/toolLogo'
 import styles from '../../styles/ui.module.css'
 
 export function ArticleDetailPage() {
@@ -96,7 +97,7 @@ export function ArticleDetailPage() {
       ? {
           title: article.title,
           description: excerpt(article.content, 120),
-          image: relatedTools[0]?.logoUrl ?? undefined,
+          image: resolveToolLogoUrl(relatedTools[0]?.logoUrl) ?? '/og-share.jpg',
           type: 'article',
         }
       : null,

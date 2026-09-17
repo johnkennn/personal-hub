@@ -33,7 +33,7 @@ import type { DealDto, DealStatus, DealUpsertBody } from '../../types/deal'
 import type { ToolDto } from '../../types/tool'
 import { isAdmin, isLoggedIn } from '../../utils/authStorage'
 import { formatDateTime } from '../../utils/format'
-import { resolveMediaUrl } from '../../utils/mediaUrl'
+import { resolveToolLogoUrl } from '../../utils/toolLogo'
 import styles from '../../styles/ui.module.css'
 
 type FormValues = {
@@ -189,7 +189,7 @@ export function AdminDealsPage() {
             <Avatar
               shape="square"
               size={28}
-              src={resolveMediaUrl(logo) || undefined}
+              src={resolveToolLogoUrl(logo) || undefined}
               style={{ borderRadius: 6, background: 'rgba(46, 230, 166, 0.16)' }}
             >
               {(r.toolName || r.title).slice(0, 1)}
