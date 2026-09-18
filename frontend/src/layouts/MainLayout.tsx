@@ -18,7 +18,7 @@ export function MainLayout() {
         <Suspense
             fallback={
               <div style={{ padding: 48, textAlign: 'center' }}>
-                <Spin tip="页面加载中…" />
+                <Spin description="页面加载中…" />
               </div>
             }
           >
