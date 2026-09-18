@@ -3,6 +3,12 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  data:
+    redis:
+      # 生产 Redis：同机 127.0.0.1，或内网 IP；密码用环境变量
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   jpa:
     hibernate:
       # 生产禁止用 update 自动改表，避免静默破坏结构
@@ -15,7 +21,6 @@ spring:
     add-properties: false
     restart:
       enabled: false      
-
 management:
   endpoints:
     web:
@@ -24,7 +29,6 @@ management:
   endpoint:
     health:
       show-details: never   # 对外不暴露库密码等细节
-
 app:
   jwt:
     secret: ${JWT_SECRET}
@@ -61,3 +65,8 @@ app:
     # 留空则复用 base-url / api-key（同一家 DeepSeek）
     vision-base-url: ${AI_VISION_BASE_URL:}
     vision-api-key: ${AI_VISION_API_KEY:}
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

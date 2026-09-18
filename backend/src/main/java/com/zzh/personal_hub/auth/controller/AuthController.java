@@ -5,7 +5,7 @@ import com.zzh.personal_hub.auth.dto.LoginResponse;
 import com.zzh.personal_hub.auth.dto.RegisterRequest;
 import com.zzh.personal_hub.auth.service.AuthService;
 import com.zzh.personal_hub.common.response.ApiResponse;
-import com.zzh.personal_hub.common.ratelimit.InMemoryRateLimiter;
+import com.zzh.personal_hub.common.ratelimit.RedisRateLimiter;
 import com.zzh.personal_hub.common.exception.BusinessException;
 import com.zzh.personal_hub.common.ratelimit.RateLimitProperties;
 import com.zzh.personal_hub.auth.dto.ForgotPasswordRequest;
@@ -25,7 +25,7 @@ public class AuthController {
 
     private static final long WINDOW_MS = 60_000L;
     private final AuthService authService;
-    private final InMemoryRateLimiter rateLimiter;
+    private final RedisRateLimiter rateLimiter;
     private final RateLimitProperties rateLimitProperties;
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {

@@ -310,6 +310,9 @@ DB_URL='jdbc:mysql://127.0.0.1:3306/personal_hub?useSSL=false&allowPublicKeyRetr
 DB_USERNAME=hub
 DB_PASSWORD=YOUR_HUB_PASSWORD
 JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+# REDIS_PASSWORD=  # 若 Redis 设了 requirepass 再取消注释
 CORS_ALLOWED_ORIGINS=http://YOUR_PUBLIC_IP
 PUBLIC_BASE_URL=http://YOUR_PUBLIC_IP
 ADMIN_BOOTSTRAP_PASSWORD=YOUR_FIRST_ADMIN_PASSWORD
@@ -340,6 +343,8 @@ echo "AI_PROVIDER=$AI_PROVIDER"
 | `DB_URL` | JDBC；含 `&` 时务必加引号 |
 | `DB_USERNAME` / `DB_PASSWORD` | 建议用 `hub`，不要用 root 跑应用 |
 | `JWT_SECRET` | ≥32 字符随机串 |
+| `REDIS_HOST` / `REDIS_PORT` | 配额与限流用；同机默认 `127.0.0.1:6379` |
+| `REDIS_PASSWORD` | 可选；本机无密码可省略 |
 | `CORS_ALLOWED_ORIGINS` | 前端源，如 `http://IP` 或以后的域名；多个逗号分隔 |
 | `PUBLIC_BASE_URL` | 站点根 URL（无尾斜杠），写入 `sitemap.xml` / `robots.txt` |
 | `ADMIN_BOOTSTRAP_PASSWORD` | 仅库中尚无管理员时用于初始化；有管理员后可留空 |
@@ -543,7 +548,9 @@ journalctl -u personal-hub -n 80 --no-pager | grep -i flyway
 | Health | 本机执行 `curl -s http://127.0.0.1:8080/actuator/health`，期望 `{"status":"UP"}` |
 | JWT | 环境变量 `JWT_SECRET`（至少 32 位随机串） |
 | CORS | `CORS_ALLOWED_ORIGINS`，例如 `https://你的域名`；前端若同源反代可收紧 |
-| 限流 | 配置在 `app.ratelimit.*`（登录/注册/上传/忘记密码） |
+| 限流 | `RedisRateLimiter` + `app.ratelimit.*`；计数在 Redis（`rl:` 前缀） |
+| AI 配额 | `AiQuotaRedisService`；键 `ai:quota:{client}:{yyyyMMdd}`，过期到次日 0 点（上海） |
+| Redis | `REDIS_HOST` / `REDIS_PORT`（可选 `REDIS_PASSWORD`）；需先装并启动 Redis |
 | AI | `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`；生产走 OpenRouter 时见第 8.2 节 |
 
 `/opt/personal-hub/personal-hub.env` 建议字段：
@@ -554,6 +561,8 @@ DB_URL='jdbc:mysql://127.0.0.1:3306/personal_hub?useSSL=false&allowPublicKeyRetr
 DB_USERNAME=hub
 DB_PASSWORD=YOUR_HUB_PASSWORD
 JWT_SECRET=YOUR_JWT_SECRET_AT_LEAST_32_CHARS
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
 CORS_ALLOWED_ORIGINS=https://YOUR_DOMAIN
 PUBLIC_BASE_URL=https://YOUR_DOMAIN
 ADMIN_BOOTSTRAP_PASSWORD=
@@ -565,7 +574,6 @@ AI_MODEL=deepseek-flash
 AI_VISION_MODEL=deepseek-flash
 AI_QUOTA_ENABLED=true
 ```
-
 头像等上传目录要可写（与 `MEDIA_ROOT` 一致）。未设置时默认是 jar 工作目录下的 `./data/media`（当前生产即 `/opt/personal-hub/data/media`）：
 
 ```bash

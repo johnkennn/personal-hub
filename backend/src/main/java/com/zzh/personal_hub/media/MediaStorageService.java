@@ -3,7 +3,7 @@ package com.zzh.personal_hub.media;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.zzh.personal_hub.common.exception.BusinessException;
-import com.zzh.personal_hub.common.ratelimit.InMemoryRateLimiter;
+import com.zzh.personal_hub.common.ratelimit.RedisRateLimiter;
 import com.zzh.personal_hub.common.ratelimit.RateLimitProperties;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 
@@ -25,7 +25,7 @@ public class MediaStorageService {
     private static final long UPLOAD_WINDOW_MS = 60_000L;
     private final MediaProperties mediaProperties;
     private final CurrentUserService currentUserService;
-    private final InMemoryRateLimiter rateLimiter;
+    private final RedisRateLimiter rateLimiter;
     private final RateLimitProperties rateLimitProperties;
 
     /**

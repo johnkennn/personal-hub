@@ -45,6 +45,13 @@ public class SecurityConfig {
                             "/api/auth/forgot-password").permitAll()
 
                     // —— 探活 / 静态媒体 / Feed / 搜索 ——
+                    // —— 本地接口文档（生产用配置关掉）——
+                    .requestMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**"
+                    ).permitAll()
                     .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
                     .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()

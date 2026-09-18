@@ -1,4 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import { Suspense } from 'react'
+import { Spin } from 'antd'
 
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
@@ -13,7 +15,15 @@ export function MainLayout() {
       <Header />
       <main className={isChat ? styles.mainFill : `${styles.main} ph-scroll`}>
         <div className={isChat ? styles.mainInnerFillBleed : styles.mainInner}>
-          <Outlet />
+        <Suspense
+            fallback={
+              <div style={{ padding: 48, textAlign: 'center' }}>
+                <Spin tip="页面加载中…" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
       </main>
       {!isChat ? <Footer /> : null}

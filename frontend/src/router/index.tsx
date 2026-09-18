@@ -1,57 +1,99 @@
-import { createBrowserRouter, Navigate, useParams } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { lazy, type ComponentType } from 'react'
 
 import { MainLayout } from '../layouts/MainLayout'
-import { AboutPage } from '../pages/About'
-import { ArticlesPage } from '../pages/Articles'
-import { ArticleDetailPage } from '../pages/Articles/Details'
-import { HomePage } from '../pages/Home'
-import { ChatPage } from '../pages/Chat'
-import { ToolsPage } from '../pages/Tools'
-import { ToolDetailPage } from '../pages/Tools/Details'
-import { DealsPage } from '../pages/Deals'
-import { AiToolsPage } from '../pages/AiTools'
-import { ProductDescPage } from '../pages/AiTools/ProductDesc'
-import { ProjectsPage } from '../pages/Projects'
-import { LoginPage } from '../pages/Login'
-import { RegisterPage } from '../pages/Register'
-import { ArticleNewPage } from '../pages/Articles/New'
-import { ProjectDetailPage } from '../pages/Projects/Details'
-import { ProjectNewPage } from '../pages/Projects/New'
-import { ArticleEditPage } from '../pages/Articles/Edit'
-import { ProjectEditPage } from '../pages/Projects/Edit'
-import { AdminArticlesPage } from '../pages/Admin/Articles'
-import { AdminDeletedArticlesPage } from '../pages/Admin/DeletedArticles'
-import { AdminDeletedProjectsPage } from '../pages/Admin/DeletedProjects'
-import { AdminProjectsPage } from '../pages/Admin/Projects'
-import { AdminUsersPage } from '../pages/Admin/Users'
-import { AdminSuggestionsPage } from '../pages/Admin/Suggestions'
-import { AdminToolsPage } from '../pages/Admin/Tools'
-import { AdminDealsPage } from '../pages/Admin/Deals'
-import { AdminHomePage } from '../pages/Admin'
+import { HomePage } from '../pages/Home' // 首页保持同步加载，首屏更快
 import {
-  StudioArticleDraftsPage,
-  StudioArticlePublishedPage,
-  StudioHomePage,
-  StudioProjectDraftsPage,
-  StudioProjectPublishedPage,
-} from '../pages/Studio'
-import { UserProfilePage } from '../pages/UserProfile'
-import { UserFollowersPage, UserFollowingPage } from '../pages/UserProfile/FollowList'
-import { ProfileSettingsPage } from '../pages/Studio/ProfileSettings'
-import { ChangePasswordPage } from '../pages/Studio/ChangePassword'
-import { SuggestionsPage } from '../pages/Studio/Suggestions'
-import { ForgotPasswordPage } from '../pages/ForgotPassword'
+  LegacyBlogDetailRedirect,
+  LegacyBlogEditRedirect,
+} from './LegacyBlogRedirects'
 
-/** 旧 /blog/:id → /articles/:id */
-function LegacyBlogDetailRedirect() {
-  const { id } = useParams()
-  return <Navigate to={id ? `/articles/${id}` : '/articles'} replace />
+/** 具名导出 → lazy 需要的 default */
+function lazyNamed<T extends Record<string, unknown>>(
+  loader: () => Promise<T>,
+  name: keyof T & string,
+) {
+  return lazy(() =>
+    loader().then((mod) => ({
+      default: mod[name] as ComponentType,
+    })),
+  )
 }
 
-function LegacyBlogEditRedirect() {
-  const { id } = useParams()
-  return <Navigate to={id ? `/articles/${id}/edit` : '/articles'} replace />
-}
+const AboutPage = lazyNamed(() => import('../pages/About'), 'AboutPage')
+const ArticlesPage = lazyNamed(() => import('../pages/Articles'), 'ArticlesPage')
+const ArticleDetailPage = lazyNamed(() => import('../pages/Articles/Details'), 'ArticleDetailPage')
+const ChatPage = lazyNamed(() => import('../pages/Chat'), 'ChatPage')
+const ToolsPage = lazyNamed(() => import('../pages/Tools'), 'ToolsPage')
+const ToolDetailPage = lazyNamed(() => import('../pages/Tools/Details'), 'ToolDetailPage')
+const DealsPage = lazyNamed(() => import('../pages/Deals'), 'DealsPage')
+const AiToolsPage = lazyNamed(() => import('../pages/AiTools'), 'AiToolsPage')
+const ProductDescPage = lazyNamed(() => import('../pages/AiTools/ProductDesc'), 'ProductDescPage')
+const ProjectsPage = lazyNamed(() => import('../pages/Projects'), 'ProjectsPage')
+const LoginPage = lazyNamed(() => import('../pages/Login'), 'LoginPage')
+const RegisterPage = lazyNamed(() => import('../pages/Register'), 'RegisterPage')
+const ArticleNewPage = lazyNamed(() => import('../pages/Articles/New'), 'ArticleNewPage')
+const ProjectDetailPage = lazyNamed(() => import('../pages/Projects/Details'), 'ProjectDetailPage')
+const ProjectNewPage = lazyNamed(() => import('../pages/Projects/New'), 'ProjectNewPage')
+const ArticleEditPage = lazyNamed(() => import('../pages/Articles/Edit'), 'ArticleEditPage')
+const ProjectEditPage = lazyNamed(() => import('../pages/Projects/Edit'), 'ProjectEditPage')
+const AdminArticlesPage = lazyNamed(() => import('../pages/Admin/Articles'), 'AdminArticlesPage')
+const AdminDeletedArticlesPage = lazyNamed(
+  () => import('../pages/Admin/DeletedArticles'),
+  'AdminDeletedArticlesPage',
+)
+const AdminDeletedProjectsPage = lazyNamed(
+  () => import('../pages/Admin/DeletedProjects'),
+  'AdminDeletedProjectsPage',
+)
+const AdminProjectsPage = lazyNamed(() => import('../pages/Admin/Projects'), 'AdminProjectsPage')
+const AdminUsersPage = lazyNamed(() => import('../pages/Admin/Users'), 'AdminUsersPage')
+const AdminSuggestionsPage = lazyNamed(
+  () => import('../pages/Admin/Suggestions'),
+  'AdminSuggestionsPage',
+)
+const AdminToolsPage = lazyNamed(() => import('../pages/Admin/Tools'), 'AdminToolsPage')
+const AdminDealsPage = lazyNamed(() => import('../pages/Admin/Deals'), 'AdminDealsPage')
+const AdminHomePage = lazyNamed(() => import('../pages/Admin'), 'AdminHomePage')
+const StudioHomePage = lazyNamed(() => import('../pages/Studio'), 'StudioHomePage')
+const StudioArticleDraftsPage = lazyNamed(
+  () => import('../pages/Studio'),
+  'StudioArticleDraftsPage',
+)
+const StudioArticlePublishedPage = lazyNamed(
+  () => import('../pages/Studio'),
+  'StudioArticlePublishedPage',
+)
+const StudioProjectDraftsPage = lazyNamed(
+  () => import('../pages/Studio'),
+  'StudioProjectDraftsPage',
+)
+const StudioProjectPublishedPage = lazyNamed(
+  () => import('../pages/Studio'),
+  'StudioProjectPublishedPage',
+)
+const UserProfilePage = lazyNamed(() => import('../pages/UserProfile'), 'UserProfilePage')
+const UserFollowersPage = lazyNamed(
+  () => import('../pages/UserProfile/FollowList'),
+  'UserFollowersPage',
+)
+const UserFollowingPage = lazyNamed(
+  () => import('../pages/UserProfile/FollowList'),
+  'UserFollowingPage',
+)
+const ProfileSettingsPage = lazyNamed(
+  () => import('../pages/Studio/ProfileSettings'),
+  'ProfileSettingsPage',
+)
+const ChangePasswordPage = lazyNamed(
+  () => import('../pages/Studio/ChangePassword'),
+  'ChangePasswordPage',
+)
+const SuggestionsPage = lazyNamed(() => import('../pages/Studio/Suggestions'), 'SuggestionsPage')
+const ForgotPasswordPage = lazyNamed(
+  () => import('../pages/ForgotPassword'),
+  'ForgotPasswordPage',
+)
 
 export const router = createBrowserRouter([
   {

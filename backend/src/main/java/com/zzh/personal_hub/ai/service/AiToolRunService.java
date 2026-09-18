@@ -40,6 +40,7 @@ import java.util.concurrent.Executors;
 public class AiToolRunService {
 
     private final ChatTempImageLoader chatTempImageLoader;
+    private final AiQuotaRedisService aiQuotaRedisService;
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
 
     /** 统一大模型人设；旧技能 slug 会归一到 chat */
@@ -191,9 +192,10 @@ public class AiToolRunService {
                 ? aiProperties.getUserDailyQuota()
                 : aiProperties.getGuestDailyQuota();
 
-        Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
-        long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
-                clientKey, dayStart);
+        // Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
+        // long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
+        //         clientKey, dayStart);
+        long used = aiQuotaRedisService.getUsed(clientKey);
         if (aiProperties.isQuotaEnabled() && used >= dailyQuota) {
             throw new BusinessException(429, "今日额度已用完，登录或明天再试");
         }
@@ -217,6 +219,7 @@ public class AiToolRunService {
         log.setClientKey(ctx.clientKey());
         log.setCreatedAt(Instant.now());
         aiRunLogRepository.save(log);
+        aiQuotaRedisService.increment(ctx.clientKey());
     }
 
     private String buildPrompt(String prompt, java.util.List<String> attachmentUrls) {
@@ -305,9 +308,10 @@ public class AiToolRunService {
         int dailyQuota = userId != null
                 ? aiProperties.getUserDailyQuota()
                 : aiProperties.getGuestDailyQuota();
-        Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
-        long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
-                clientKey, dayStart);
+        // Instant dayStart = LocalDate.now(ZONE).atStartOfDay(ZONE).toInstant();
+        // long used = aiRunLogRepository.countByClientKeyAndCreatedAtGreaterThanEqual(
+        //         clientKey, dayStart);
+        long used = aiQuotaRedisService.getUsed(clientKey);
         int remaining = (int) Math.max(0, dailyQuota - used);
         return new ChatQuotaResponse(remaining, dailyQuota, aiProperties.isQuotaEnabled());
     }

@@ -15,6 +15,8 @@ request.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // 每次请求一个 id（浏览器原生 UUID）
+  config.headers['X-Request-Id'] = crypto.randomUUID()
   // 上传 multipart 容易超过默认 5s
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     config.timeout = Math.max(config.timeout ?? 0, 60_000)

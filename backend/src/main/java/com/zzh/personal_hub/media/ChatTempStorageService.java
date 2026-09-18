@@ -1,7 +1,7 @@
 package com.zzh.personal_hub.media;
 
 import com.zzh.personal_hub.common.exception.BusinessException;
-import com.zzh.personal_hub.common.ratelimit.InMemoryRateLimiter;
+import com.zzh.personal_hub.common.ratelimit.RedisRateLimiter;
 import com.zzh.personal_hub.common.ratelimit.RateLimitProperties;
 import com.zzh.personal_hub.common.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ public class ChatTempStorageService {
 
     private final MediaProperties mediaProperties;
     private final CurrentUserService currentUserService;
-    private final InMemoryRateLimiter rateLimiter;
+    private final RedisRateLimiter rateLimiter;
     private final RateLimitProperties rateLimitProperties;
 
     public ChatTempFile save(MultipartFile file, String clientIp) {
