@@ -1,4 +1,5 @@
 import { getToken } from '../utils/authStorage'
+import { requestIdHeader } from '../utils/requestId'
 
 export type AiStreamHandlers = {
   onDelta: (text: string) => void
@@ -90,6 +91,7 @@ async function postStream(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
+      ...requestIdHeader(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),

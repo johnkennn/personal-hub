@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { clearAuth, getToken, isLoggedIn } from '../utils/authStorage'
 import { ensureLoggedIn } from '../utils/requireLogin'
+import { newRequestId, REQUEST_ID_HEADER } from '../utils/requestId'
 import { ROUTES } from '../router/paths'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
@@ -15,8 +16,7 @@ request.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  // 每次请求一个 id（浏览器原生 UUID）
-  config.headers['X-Request-Id'] = crypto.randomUUID()
+  config.headers[REQUEST_ID_HEADER] = newRequestId()
   // 上传 multipart 容易超过默认 5s
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     config.timeout = Math.max(config.timeout ?? 0, 60_000)

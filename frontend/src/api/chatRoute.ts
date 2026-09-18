@@ -1,4 +1,5 @@
 import { getToken } from '../utils/authStorage'
+import { requestIdHeader } from '../utils/requestId'
 import type { LlmRouteDto } from '../services/chatRouter'
 import type { ApiResponse } from '../types/api'
 
@@ -18,6 +19,7 @@ export async function fetchChatRoute(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...requestIdHeader(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ message }),
