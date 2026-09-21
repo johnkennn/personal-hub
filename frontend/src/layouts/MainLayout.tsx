@@ -4,7 +4,13 @@ import { Spin } from 'antd'
 
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
+import { ROUTES } from '../router/paths'
 import styles from './MainLayout.module.css'
+
+/** 仅发现首页、关于页展示页脚（含备案号） */
+function showFooter(pathname: string): boolean {
+  return pathname === ROUTES.HOME || pathname === ROUTES.ABOUT
+}
 
 export function MainLayout() {
   const { pathname } = useLocation()
@@ -15,7 +21,7 @@ export function MainLayout() {
       <Header />
       <main className={isChat ? styles.mainFill : `${styles.main} ph-scroll`}>
         <div className={isChat ? styles.mainInnerFillBleed : styles.mainInner}>
-        <Suspense
+          <Suspense
             fallback={
               <div style={{ padding: 48, textAlign: 'center' }}>
                 <Spin description="页面加载中…" />
@@ -26,7 +32,7 @@ export function MainLayout() {
           </Suspense>
         </div>
       </main>
-      {!isChat ? <Footer /> : null}
+      {showFooter(pathname) ? <Footer /> : null}
     </div>
   )
 }
