@@ -5,6 +5,7 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons'
 
 import { login } from '../../api/auth'
 import { ROUTES, SITE_BRAND } from '../../router/paths'
+import { apiErrorMessage } from '../../utils/apiError'
 import { setAuth } from '../../utils/authStorage'
 import styles from '../../styles/ui.module.css'
 
@@ -31,8 +32,8 @@ export function LoginPage() {
       setAuth(data.token, data.username, data.userId, data.role)
       message.success('登录成功')
       navigate(safeInternalPath(searchParams.get('from')) ?? ROUTES.HOME, { replace: true })
-    } catch {
-      message.error('登录失败，请检查用户名或密码')
+    } catch (err) {
+      message.error(apiErrorMessage(err, '登录失败，请检查用户名或密码'))
     }
   }
 
