@@ -27,7 +27,7 @@ jobs:
         env:
           VITE_API_BASE_URL: ""
           # 与线上站点根一致；微信 og:image 需要绝对 URL
-          VITE_PUBLIC_SITE_URL: "http://xiaozhiai.cyou"
+          VITE_PUBLIC_SITE_URL: "https://xiaozhiai.cyou"
         run: |
           npm ci
           npm run build
