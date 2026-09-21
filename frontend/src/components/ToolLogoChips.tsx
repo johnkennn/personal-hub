@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Avatar, Space, Tooltip } from 'antd'
 import { Link } from 'react-router-dom'
 
@@ -51,13 +51,20 @@ type ToolLogoProps = {
 export function ToolLogo({ name, logoUrl, size = 40, className }: ToolLogoProps) {
   const resolved = resolveToolLogoUrl(logoUrl)
   const [broken, setBroken] = useState(false)
-  const src = broken ? undefined : resolved
+
+  // URL 变化时允许重试（例如从种子切到 API）
+  useEffect(() => {
+    setBroken(false)
+  }, [resolved])
+
+  const showImg = Boolean(resolved) && !broken
 
   return (
     <Avatar
       size={size}
-      src={src}
+      src={showImg ? resolved : undefined}
       shape="square"
+      alt={name}
       className={[styles.avatar, className].filter(Boolean).join(' ')}
       style={{ background: 'rgba(46, 230, 166, 0.16)', flexShrink: 0 }}
       onError={() => {

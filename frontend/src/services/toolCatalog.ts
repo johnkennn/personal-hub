@@ -51,7 +51,8 @@ export function toolFromSeed(t: SeedTool): HubTool {
     pros: t.pros,
     cons: t.cons,
     websiteUrl: t.websiteUrl,
-    logoUrl: null,
+    // 与线上 DB / Flyway 一致：同源静态 Logo，避免降级时只显示首字
+    logoUrl: `/logos/${t.slug}.png`,
     featured: Boolean(t.featured),
   }
 }
@@ -76,20 +77,20 @@ export function invalidateToolCatalogCache() {
   categoriesCache = null
 }
 
-/** 公开工具列表：优先 API，失败回退种子 */
+/** 公开工具列表：优先 API；失败/空列表用种子，但不写入 cache，避免一次失败整站锁死无 Logo */
 export async function loadHubTools(): Promise<HubTool[]> {
   if (toolsCache) return toolsCache
   if (!toolsCachePromise) {
     toolsCachePromise = fetchTools()
       .then((res) => {
         const list = (res.data.data ?? []).map(toolFromApi)
-        toolsCache = list.length > 0 ? list : SEED_TOOLS.map(toolFromSeed)
-        return toolsCache
+        if (list.length > 0) {
+          toolsCache = list
+          return toolsCache
+        }
+        return SEED_TOOLS.map(toolFromSeed)
       })
-      .catch(() => {
-        toolsCache = SEED_TOOLS.map(toolFromSeed)
-        return toolsCache
-      })
+      .catch(() => SEED_TOOLS.map(toolFromSeed))
       .finally(() => {
         toolsCachePromise = null
       })

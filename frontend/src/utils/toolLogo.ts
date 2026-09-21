@@ -54,8 +54,13 @@ export function resolveToolLogoUrl(logoUrl: string | null | undefined): string |
   const fromGoogle = domainFromGoogleFavicon(raw)
   if (fromGoogle) return duckDuckGoIconUrl(fromGoogle)
 
-  // 前端 public/logos 静态资源：同源路径，不要拼后端 API 域名
-  if (raw.startsWith('/logos/')) return raw
+  // 前端 public/logos 静态资源：同源路径；拼成绝对地址，避免个别环境下相对路径异常
+  if (raw.startsWith('/logos/')) {
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}${raw}`
+    }
+    return raw
+  }
 
   // 已是 duckduckgo / 站内上传 / 其它 CDN
   return resolveMediaUrl(raw)

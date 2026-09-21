@@ -345,7 +345,7 @@ echo "AI_PROVIDER=$AI_PROVIDER"
 | `JWT_SECRET` | ≥32 字符随机串 |
 | `REDIS_HOST` / `REDIS_PORT` | 配额与限流用；同机默认 `127.0.0.1:6379` |
 | `REDIS_PASSWORD` | 可选；本机无密码可省略 |
-| `CORS_ALLOWED_ORIGINS` | 前端源，如 `http://IP` 或以后的域名；多个逗号分隔 |
+| `CORS_ALLOWED_ORIGINS` | 前端源，如 `http://8.148.75.79` 或以后的域名；多个逗号分隔。**须与浏览器地址栏一致**，否则接口失败会降级成无 Logo 的种子数据 |
 | `PUBLIC_BASE_URL` | 站点根 URL（无尾斜杠），写入 `sitemap.xml` / `robots.txt` |
 | `ADMIN_BOOTSTRAP_PASSWORD` | 仅库中尚无管理员时用于初始化；有管理员后可留空 |
 | `SPRING_PROFILES_ACTIVE` | `prod` |
