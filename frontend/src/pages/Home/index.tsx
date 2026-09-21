@@ -4,6 +4,7 @@ import { Button, Card, Col, Empty, Row, Tag, Typography } from 'antd'
 import { motion } from 'framer-motion'
 
 import { ArticleReviewCard } from '../../components/ArticleReviewCard'
+import { BrandLogo } from '../../components/BrandLogo'
 import { ToolLogo } from '../../components/ToolLogoChips'
 import { PageHero, pageHeroStyles, SectionHead } from '../../components/PageHero'
 import type { PublicArticle } from '../../mocks/publicDemo'
@@ -113,13 +114,18 @@ export function HomePage() {
           <Col xs={24} sm={12} lg={8}>
             <Link to={ROUTES.CHAT} className={ui.cardLink}>
               <Card className={ui.contentCard} variant="borderless" hoverable>
-                <Tag style={{ marginBottom: 8 }}>小智</Tag>
-                <Typography.Title level={4} style={{ marginTop: 0 }}>
-                  找小智聊聊
-                </Typography.Title>
-                <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  问答、文案、翻译、总结，一句话吩咐小智
-                </Typography.Paragraph>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <BrandLogo size={52} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <Tag style={{ marginBottom: 8 }}>小智</Tag>
+                    <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
+                      找小智聊聊
+                    </Typography.Title>
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                      问答、文案、翻译、总结，一句话吩咐小智
+                    </Typography.Paragraph>
+                  </div>
+                </div>
               </Card>
             </Link>
           </Col>
